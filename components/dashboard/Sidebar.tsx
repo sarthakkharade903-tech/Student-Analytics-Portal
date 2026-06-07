@@ -15,7 +15,7 @@ import {
 
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, active: true },
-  { href: '#', label: 'Students', icon: Users, active: false, soon: true },
+  { href: '/dashboard/students', label: 'Students', icon: Users, active: true },
   { href: '#', label: 'Tests', icon: ClipboardList, active: false, soon: true },
   { href: '#', label: 'Attendance', icon: CalendarCheck, active: false, soon: true },
   { href: '/dashboard/settings', label: 'Settings', icon: Settings, active: true },

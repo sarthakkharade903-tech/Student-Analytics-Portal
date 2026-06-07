@@ -1,30 +1,7 @@
+import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import StatCard from '@/components/dashboard/StatCard'
 import { Users, ClipboardList, MessageCircle, CalendarCheck, ArrowRight, CheckCircle } from 'lucide-react'
-
-const gettingStartedSteps = [
-  {
-    step: 1,
-    title: 'Add Students',
-    description: 'Import your student roster by entering details or uploading a CSV file.',
-    icon: Users,
-    comingSoon: true,
-  },
-  {
-    step: 2,
-    title: 'Upload Test Results',
-    description: 'Share test scores to automatically track performance over time.',
-    icon: ClipboardList,
-    comingSoon: true,
-  },
-  {
-    step: 3,
-    title: 'Invite Parents',
-    description: 'Send parents a link to view their child\'s performance dashboard.',
-    icon: MessageCircle,
-    comingSoon: true,
-  },
-]
 
 export default async function DashboardPage() {
   const supabase = await createClient()
@@ -47,8 +24,46 @@ export default async function DashboardPage() {
         .single()
     : { data: null }
 
+  // Fetch real student count
+  const { count: studentCount } = userProfile?.coaching_center_id
+    ? await supabase
+        .from('students')
+        .select('id', { count: 'exact', head: true })
+        .eq('coaching_center_id', userProfile.coaching_center_id)
+    : { count: 0 }
+
   const displayName = userProfile?.name ?? user?.email ?? 'there'
   const centerName = coachingCenter?.name ?? 'your institute'
+
+  const gettingStartedSteps = [
+    {
+      step: 1,
+      title: 'Add Students',
+      description: 'Add your students manually with their roll number, batch, and parent contact.',
+      icon: Users,
+      comingSoon: false,
+      href: '/dashboard/students',
+      actionLabel: 'Go to Students',
+    },
+    {
+      step: 2,
+      title: 'Upload Test Results',
+      description: 'Share test scores to automatically track performance over time.',
+      icon: ClipboardList,
+      comingSoon: true,
+      href: '#',
+      actionLabel: 'Coming soon',
+    },
+    {
+      step: 3,
+      title: 'Invite Parents',
+      description: "Send parents a link to view their child's performance dashboard.",
+      icon: MessageCircle,
+      comingSoon: true,
+      href: '#',
+      actionLabel: 'Coming soon',
+    },
+  ]
 
   return (
     <div className="p-6 lg:p-8 max-w-6xl mx-auto">
@@ -72,9 +87,9 @@ export default async function DashboardPage() {
       <section className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
         <StatCard
           title="Total Students"
-          value={0}
+          value={studentCount ?? 0}
           icon={Users}
-          description="Add students to get started"
+          description={studentCount ? 'Students enrolled' : 'Add students to get started'}
           color="purple"
         />
         <StatCard
@@ -106,9 +121,8 @@ export default async function DashboardPage() {
         <div className="relative">
           <h2 className="text-xl font-semibold mb-2">Welcome to Parent Analytics Portal</h2>
           <p className="text-[var(--muted-foreground)] text-sm max-w-2xl leading-relaxed">
-            You&apos;re all set! Your account is created and your coaching institute is ready.
-            Follow the steps below to unlock the full power of automated parent communication
-            and student performance tracking.
+            Your account is ready. Start by adding your students, then upload test results to
+            unlock powerful analytics and automated parent communication.
           </p>
         </div>
       </div>
@@ -117,13 +131,13 @@ export default async function DashboardPage() {
       <section>
         <h2 className="text-lg font-semibold mb-4">Getting Started</h2>
         <div className="grid sm:grid-cols-3 gap-4">
-          {gettingStartedSteps.map(({ step, title, description, icon: Icon, comingSoon }) => (
+          {gettingStartedSteps.map(({ step, title, description, icon: Icon, comingSoon, href, actionLabel }) => (
             <div
               key={step}
-              className="glass-card rounded-2xl p-6 group relative overflow-hidden"
+              className="glass-card rounded-2xl p-6 group relative overflow-hidden hover:border-[oklch(0.62_0.22_265/0.4)] transition-all duration-300"
             >
               <div className="flex items-start justify-between mb-4">
-                <div className="w-10 h-10 rounded-xl bg-[oklch(0.62_0.22_265/0.12)] flex items-center justify-center">
+                <div className="w-10 h-10 rounded-xl bg-[oklch(0.62_0.22_265/0.12)] flex items-center justify-center group-hover:bg-[oklch(0.62_0.22_265/0.22)] transition-colors">
                   <Icon className="w-5 h-5 text-[var(--primary)]" />
                 </div>
                 <span className="text-3xl font-bold text-[oklch(0.62_0.22_265/0.12)] select-none">
@@ -141,10 +155,20 @@ export default async function DashboardPage() {
               <p className="text-sm text-[var(--muted-foreground)] leading-relaxed mb-4">
                 {description}
               </p>
-              <div className="flex items-center gap-1 text-xs text-[var(--muted-foreground)] group-hover:text-[var(--primary)] transition-colors">
-                Coming soon
-                <ArrowRight className="w-3 h-3" />
-              </div>
+              {comingSoon ? (
+                <div className="flex items-center gap-1 text-xs text-[var(--muted-foreground)]">
+                  {actionLabel}
+                  <ArrowRight className="w-3 h-3" />
+                </div>
+              ) : (
+                <Link
+                  href={href}
+                  className="inline-flex items-center gap-1 text-xs font-medium text-[var(--primary)] hover:underline group-hover:gap-2 transition-all"
+                >
+                  {actionLabel}
+                  <ArrowRight className="w-3 h-3" />
+                </Link>
+              )}
             </div>
           ))}
         </div>
