@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
@@ -14,8 +14,21 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  // Prevents duplicate router.replace() calls on double-submit or StrictMode double-invoke.
+  const redirectingRef = useRef(false)
+
+  // ─── No useEffect / authInitializing / getSession() here ──────────────────
+  // The middleware (middleware.ts) is the single source of truth for
+  // redirecting authenticated users away from this page. Adding a
+  // client-side getSession() check created a second redirect path that
+  // (a) conflicted with the middleware and (b) showed a spinner on every
+  // HMR rebuild, producing the spinner↔form flicker.
+  // ──────────────────────────────────────────────────────────────────────────
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (redirectingRef.current) return
+
     setLoading(true)
     setError(null)
 
@@ -36,8 +49,12 @@ export default function LoginPage() {
       return
     }
 
-    router.push('/dashboard')
-    router.refresh()
+    // Use replace() so the login page is removed from browser history.
+    // Do NOT call router.refresh() — it fires a server request for /login
+    // while navigation to /dashboard is still in flight, causing the
+    // middleware to issue a competing redirect (the original flickering bug).
+    redirectingRef.current = true
+    router.replace('/dashboard')
   }
 
   return (
@@ -69,6 +86,7 @@ export default function LoginPage() {
               <label htmlFor="email" className="text-sm font-medium">Email Address</label>
               <input
                 id="email"
+                name="email"
                 type="email"
                 required
                 autoComplete="email"
@@ -87,6 +105,7 @@ export default function LoginPage() {
               <div className="relative">
                 <input
                   id="password"
+                  name="password"
                   type={showPassword ? 'text' : 'password'}
                   required
                   autoComplete="current-password"

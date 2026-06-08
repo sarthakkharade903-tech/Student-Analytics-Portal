@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { Search, UserPlus, Users } from 'lucide-react'
+import { Search, UserPlus, Users, Upload } from 'lucide-react'
 
 interface Student {
   id: string
@@ -31,7 +31,7 @@ export default function StudentTable({ students }: StudentTableProps) {
 
   return (
     <div>
-      {/* Top bar: Search + Add Button */}
+      {/* Top bar: Search + Buttons */}
       <div className="flex flex-col sm:flex-row gap-3 mb-6">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--muted-foreground)] pointer-events-none" />
@@ -44,14 +44,24 @@ export default function StudentTable({ students }: StudentTableProps) {
             className="w-full pl-10 pr-4 py-2.5 rounded-lg bg-[var(--input)] border border-[var(--border)] text-[var(--foreground)] placeholder:text-[var(--muted-foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--ring)] transition-all text-sm"
           />
         </div>
-        <Link
-          id="add-student-btn"
-          href="/dashboard/students/new"
-          className="inline-flex items-center gap-2 px-4 py-2.5 bg-[var(--primary)] text-white text-sm font-semibold rounded-lg hover:opacity-90 transition-all duration-200 glow-primary whitespace-nowrap"
-        >
-          <UserPlus className="w-4 h-4" />
-          Add Student
-        </Link>
+        <div className="flex gap-2 flex-shrink-0">
+          <Link
+            id="import-students-btn"
+            href="/dashboard/students/import"
+            className="inline-flex items-center gap-2 px-4 py-2.5 border border-[var(--border)] text-[var(--foreground)] text-sm font-medium rounded-lg hover:bg-[var(--secondary)] transition-all duration-200 whitespace-nowrap"
+          >
+            <Upload className="w-4 h-4" />
+            Import CSV
+          </Link>
+          <Link
+            id="add-student-btn"
+            href="/dashboard/students/new"
+            className="inline-flex items-center gap-2 px-4 py-2.5 bg-[var(--primary)] text-white text-sm font-semibold rounded-lg hover:opacity-90 transition-all duration-200 glow-primary whitespace-nowrap"
+          >
+            <UserPlus className="w-4 h-4" />
+            Add Student
+          </Link>
+        </div>
       </div>
 
       {/* Table / Empty State */}
@@ -63,19 +73,28 @@ export default function StudentTable({ students }: StudentTableProps) {
           <h3 className="font-semibold mb-1">
             {query ? 'No students found' : 'No students added yet'}
           </h3>
-          <p className="text-sm text-[var(--muted-foreground)] max-w-xs">
+          <p className="text-sm text-[var(--muted-foreground)] max-w-xs mb-5">
             {query
               ? `No results for "${query}". Try a different name or roll number.`
-              : 'Add your first student to get started tracking their performance.'}
+              : 'Add students manually or import a CSV file to get started.'}
           </p>
           {!query && (
-            <Link
-              href="/dashboard/students/new"
-              className="mt-5 inline-flex items-center gap-2 px-4 py-2 bg-[var(--primary)] text-white text-sm font-medium rounded-lg hover:opacity-90 transition-all"
-            >
-              <UserPlus className="w-4 h-4" />
-              Add First Student
-            </Link>
+            <div className="flex gap-3">
+              <Link
+                href="/dashboard/students/import"
+                className="inline-flex items-center gap-2 px-4 py-2 border border-[var(--border)] text-sm font-medium rounded-lg hover:bg-[var(--secondary)] transition-all"
+              >
+                <Upload className="w-4 h-4" />
+                Import CSV
+              </Link>
+              <Link
+                href="/dashboard/students/new"
+                className="inline-flex items-center gap-2 px-4 py-2 bg-[var(--primary)] text-white text-sm font-medium rounded-lg hover:opacity-90 transition-all"
+              >
+                <UserPlus className="w-4 h-4" />
+                Add Student
+              </Link>
+            </div>
           )}
         </div>
       ) : (

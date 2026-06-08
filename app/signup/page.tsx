@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
@@ -9,6 +9,8 @@ import { BarChart3, Eye, EyeOff, Loader2 } from 'lucide-react'
 
 export default function SignupPage() {
   const router = useRouter()
+  // Prevents duplicate router.replace() calls
+  const redirectingRef = useRef(false)
   const [formData, setFormData] = useState<SignupFormData>({
     coachingName: '',
     ownerName: '',
@@ -96,8 +98,14 @@ export default function SignupPage() {
 
       setSuccess(true)
       setTimeout(() => {
-        router.push('/dashboard')
-        router.refresh()
+        if (!redirectingRef.current) {
+          redirectingRef.current = true
+          // Use replace() so users cannot navigate "back" to the signup page.
+          // Do NOT call router.refresh() — it triggers a middleware re-evaluation
+          // of the current /signup path while navigation is in flight, causing
+          // a redirect race that produces the flickering symptom.
+          router.replace('/dashboard')
+        }
       }, 1500)
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err)

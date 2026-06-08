@@ -28,8 +28,9 @@ export default function Sidebar() {
   const handleLogout = async () => {
     const supabase = createClient()
     await supabase.auth.signOut()
-    router.push('/')
-    router.refresh()
+    // Perform a hard navigation to clear all Next.js client-side route cache
+    // and ensure the middleware properly catches the cleared session
+    window.location.href = '/login'
   }
 
   return (
