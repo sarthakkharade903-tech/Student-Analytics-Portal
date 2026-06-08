@@ -50,7 +50,7 @@ type Step = 'upload' | 'preview' | 'importing' | 'done'
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
-const TEMPLATE_CSV = `roll_no,name,parent_phone,batch\n101,Rohan Sharma,9876543210,JEE-A\n102,Priya Patel,9123456789,JEE-B\n103,Arjun Mehta,8765432109,NEET-A`
+const TEMPLATE_CSV = `roll_no,name,parent_phone,batch\n101,Rohan Sharma,9876543210,JEE\n102,Priya Patel,9123456789,NEET\n103,Arjun Mehta,8765432109,CET A\n104,Sneha Rao,9988776655,CET B`
 
 const REQUIRED_COLUMNS = ['roll_no', 'name']
 
@@ -341,8 +341,10 @@ export default function ImportStudentsPage() {
             </p>
             <div className="rounded-lg bg-[oklch(0.08_0.01_240)] border border-[var(--border)] p-3 font-mono text-xs text-[var(--muted-foreground)] overflow-x-auto">
               <p className="text-[var(--primary)]">roll_no,name,parent_phone,batch</p>
-              <p>101,Rohan Sharma,9876543210,JEE-A</p>
-              <p>102,Priya Patel,9123456789,JEE-B</p>
+              <p>101,Rohan Sharma,9876543210,JEE</p>
+              <p>102,Priya Patel,9123456789,NEET</p>
+              <p>103,Arjun Mehta,8765432109,CET A</p>
+              <p>104,Sneha Rao,9988776655,CET B</p>
             </div>
             <div className="mt-3 flex flex-wrap gap-4 text-xs text-[var(--muted-foreground)]">
               <span className="flex items-center gap-1">

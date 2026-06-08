@@ -32,6 +32,14 @@ export default async function DashboardPage() {
         .eq('coaching_center_id', userProfile.coaching_center_id)
     : { count: 0 }
 
+  // Fetch real test count
+  const { count: testCount } = userProfile?.coaching_center_id
+    ? await supabase
+        .from('tests')
+        .select('id', { count: 'exact', head: true })
+        .eq('coaching_center_id', userProfile.coaching_center_id)
+    : { count: 0 }
+
   const displayName = userProfile?.name ?? user?.email ?? 'there'
   const centerName = coachingCenter?.name ?? 'your institute'
 
@@ -48,11 +56,11 @@ export default async function DashboardPage() {
     {
       step: 2,
       title: 'Upload Test Results',
-      description: 'Share test scores to automatically track performance over time.',
+      description: 'Create a test and upload a CSV of marks — ranks and percentages are calculated automatically.',
       icon: ClipboardList,
-      comingSoon: true,
-      href: '#',
-      actionLabel: 'Coming soon',
+      comingSoon: false,
+      href: '/dashboard/tests',
+      actionLabel: 'Go to Tests',
     },
     {
       step: 3,
@@ -94,9 +102,9 @@ export default async function DashboardPage() {
         />
         <StatCard
           title="Tests Uploaded"
-          value={0}
+          value={testCount ?? 0}
           icon={ClipboardList}
-          description="No tests uploaded yet"
+          description={testCount ? 'Tests created' : 'Create your first test'}
           color="blue"
         />
         <StatCard
