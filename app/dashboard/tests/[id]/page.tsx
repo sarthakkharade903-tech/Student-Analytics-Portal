@@ -13,6 +13,7 @@ import {
 import AddScoreForm from '@/components/dashboard/AddScoreForm'
 import TestResultsTable from '@/components/dashboard/TestResultsTable'
 import type { ScoreRecord } from '@/components/dashboard/TestResultsTable'
+import DeleteTestButton from '@/components/dashboard/DeleteTestButton'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -72,6 +73,7 @@ interface ScoreRow {
   total: number
   percentage: number
   subject_scores: Record<string, number>
+  is_absent: boolean
   student: {
     id: string
     name: string
@@ -121,7 +123,7 @@ export default async function TestDetailsPage({ params }: { params: Promise<{ id
   // Fetch scores joined with students
   const { data: rawScores } = await supabase
     .from('scores')
-    .select('id, rank, total, percentage, subject_scores, student:students(id, name, roll_no)')
+    .select('id, rank, total, percentage, subject_scores, is_absent, student:students(id, name, roll_no)')
     .eq('test_id', id)
     .order('rank', { ascending: true })
 
@@ -182,14 +184,18 @@ export default async function TestDetailsPage({ params }: { params: Promise<{ id
           </div>
         </div>
 
-        <Link
-          id="upload-results-btn"
-          href={`/dashboard/tests/${id}/upload`}
-          className="inline-flex items-center gap-2 px-4 py-2.5 bg-[var(--primary)] text-white text-sm font-semibold rounded-lg hover:opacity-90 transition-all glow-primary flex-shrink-0"
-        >
-          <Upload className="w-4 h-4" />
-          Upload Results
-        </Link>
+        {/* Action buttons */}
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <DeleteTestButton testId={id} testName={test.test_name} />
+          <Link
+            id="upload-results-btn"
+            href={`/dashboard/tests/${id}/upload`}
+            className="inline-flex items-center gap-2 px-4 py-2.5 bg-[var(--primary)] text-white text-sm font-semibold rounded-lg hover:opacity-90 transition-all glow-primary flex-shrink-0"
+          >
+            <Upload className="w-4 h-4" />
+            Upload Results
+          </Link>
+        </div>
       </div>
 
       {/* Stats row */}

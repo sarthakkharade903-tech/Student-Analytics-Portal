@@ -120,24 +120,26 @@ export default function AddScoreForm({
 
     // ── Check for duplicate score ────────────────────────────────────────────
 
-    const { count: existingCount } = await supabase
+    const { data: existingScoreData } = await supabase
       .from('scores')
-      .select('id', { count: 'exact', head: true })
+      .select('id, is_absent')
       .eq('test_id', testId)
       .eq('student_id', studentData.id)
+      .maybeSingle()
 
-    if (existingCount && existingCount > 0) {
+    if (existingScoreData && !existingScoreData.is_absent) {
       setError(`${studentData.name} already has a score recorded for this test.`)
       setLoading(false)
       return
     }
 
-    // ── Fetch all existing scores for re-ranking ─────────────────────────────
+    // ── Fetch all existing present scores for re-ranking ─────────────────────
 
     const { data: existingScores } = await supabase
       .from('scores')
       .select('id, student_id, total')
       .eq('test_id', testId)
+      .eq('is_absent', false)
 
     const allScores: ExistingScore[] = [
       ...(existingScores ?? []) as ExistingScore[],
@@ -147,19 +149,29 @@ export default function AddScoreForm({
     const rankMap = calcRanks(allScores)
     const newRank = rankMap.get('__new__') ?? 1
 
-    // ── Insert new score ─────────────────────────────────────────────────────
+    // ── Insert or Update new score ───────────────────────────────────────────
 
-    const { error: insertErr } = await supabase.from('scores').insert({
+    const scorePayload = {
       test_id: testId,
       student_id: studentData.id,
       subject_scores: subjectScores,
       total,
       percentage,
       rank: newRank,
-    })
+      is_absent: false,
+    }
 
-    if (insertErr) {
-      setError(`Failed to save score: ${insertErr.message}`)
+    let saveErr
+    if (existingScoreData) {
+      const { error } = await supabase.from('scores').update(scorePayload).eq('id', existingScoreData.id)
+      saveErr = error
+    } else {
+      const { error } = await supabase.from('scores').insert(scorePayload)
+      saveErr = error
+    }
+
+    if (saveErr) {
+      setError(`Failed to save score: ${saveErr.message}`)
       setLoading(false)
       return
     }

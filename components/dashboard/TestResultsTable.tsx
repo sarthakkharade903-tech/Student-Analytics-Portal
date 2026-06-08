@@ -20,6 +20,7 @@ export interface ScoreRecord {
   total: number
   percentage: number
   subject_scores: Record<string, number>
+  is_absent: boolean
   student: { id: string; name: string; roll_no: string } | null
 }
 
@@ -76,11 +77,16 @@ function RankBadge({ rank }: { rank: number }) {
 // ── Dense rank recalculator ────────────────────────────────────────────────────
 
 function recalcRanks(scores: ScoreRecord[]): ScoreRecord[] {
-  const sorted = [...scores].sort((a, b) => b.total - a.total)
+  const present = scores.filter((s) => !s.is_absent).sort((a, b) => b.total - a.total)
   let rank = 1
-  return sorted.map((s, idx) => {
-    if (idx > 0 && s.total < sorted[idx - 1].total) rank = idx + 1
-    return { ...s, rank }
+  present.forEach((s, idx) => {
+    if (idx > 0 && s.total < present[idx - 1].total) rank = idx + 1
+    s.rank = rank
+  })
+
+  return scores.map((s) => {
+    if (s.is_absent) return { ...s, rank: null as any }
+    return present.find((p) => p.id === s.id)!
   })
 }
 
@@ -139,8 +145,9 @@ export default function TestResultsTable({
     )
 
     // 4. Update test aggregates
-    if (reranked.length > 0) {
-      const totals = reranked.map((s) => s.total)
+    const presentOnly = reranked.filter((s) => !s.is_absent)
+    if (presentOnly.length > 0) {
+      const totals = presentOnly.map((s) => s.total)
       await supabase
         .from('tests')
         .update({
@@ -148,7 +155,7 @@ export default function TestResultsTable({
           average_score: parseFloat(
             (totals.reduce((a, b) => a + b, 0) / totals.length).toFixed(2)
           ),
-          students_appeared: reranked.length,
+          students_appeared: presentOnly.length,
         })
         .eq('id', testId)
     } else {
@@ -251,7 +258,13 @@ export default function TestResultsTable({
                   >
                     {/* Rank */}
                     <div className="flex items-center">
-                      <RankBadge rank={score.rank} />
+                      {score.is_absent ? (
+                        <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-red-500/10 text-red-400 text-xs font-semibold border border-red-500/20">
+                          —
+                        </span>
+                      ) : (
+                        <RankBadge rank={score.rank} />
+                      )}
                     </div>
 
                     {/* Roll No */}
@@ -272,16 +285,24 @@ export default function TestResultsTable({
                     {/* Subject scores */}
                     {subjects.map((s) => (
                       <span key={s} className="text-center text-[var(--muted-foreground)]">
-                        {score.subject_scores?.[s] ?? '—'}
+                        {score.is_absent ? '—' : (score.subject_scores?.[s] ?? '—')}
                       </span>
                     ))}
 
                     {/* Total */}
-                    <span className="text-center font-semibold">{score.total}</span>
+                    <span className="text-center font-semibold">
+                      {score.is_absent ? '—' : score.total}
+                    </span>
 
                     {/* % */}
                     <div className="flex justify-center">
-                      <PercentageBadge pct={score.percentage} />
+                      {score.is_absent ? (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-md border text-xs font-semibold text-red-400 bg-red-500/10 border-red-500/20">
+                          ABSENT
+                        </span>
+                      ) : (
+                        <PercentageBadge pct={score.percentage} />
+                      )}
                     </div>
 
                     {/* Delete button */}

@@ -26,6 +26,7 @@ interface TestInfo {
   id: string
   test_name: string
   subjects: string[]
+  target_batches: string[]
   max_marks: number
 }
 
@@ -140,7 +141,7 @@ export default function UploadResultsPage() {
       // Test info
       const { data: testData, error: testError } = await supabase
         .from('tests')
-        .select('id, test_name, subjects, max_marks')
+        .select('id, test_name, subjects, target_batches, max_marks')
         .eq('id', testId)
         .eq('coaching_center_id', profile.coaching_center_id)
         .single()
@@ -162,11 +163,17 @@ export default function UploadResultsPage() {
         return
       }
 
-      // Load all students for this coaching center (for roll_no lookup)
-      const { data: studentData } = await supabase
+      // Load all students for the target batches (for roll_no lookup & absent tracking)
+      let query = supabase
         .from('students')
         .select('id, roll_no, name')
         .eq('coaching_center_id', profile.coaching_center_id)
+
+      if (testData.target_batches && testData.target_batches.length > 0) {
+        query = query.in('batch', testData.target_batches)
+      }
+
+      const { data: studentData } = await query
 
       setStudents((studentData ?? []) as StudentRecord[])
     }
@@ -341,7 +348,7 @@ export default function UploadResultsPage() {
     // Calculate ranks
     const rankedRows = assignRanks(validRows)
 
-    // Build score records
+    // Build score records (present students)
     const scoreRecords = rankedRows.map((row) => ({
       test_id: testId,
       student_id: row.student!.id,
@@ -349,15 +356,32 @@ export default function UploadResultsPage() {
       total: row.total,
       percentage: parseFloat(((row.total / test.max_marks) * 100).toFixed(2)),
       rank: row.rank,
+      is_absent: false,
     }))
+
+    // Find absent students
+    const presentStudentIds = new Set(rankedRows.map((r) => r.student!.id))
+    const absentRecords = students
+      .filter((s) => !presentStudentIds.has(s.id))
+      .map((s) => ({
+        test_id: testId,
+        student_id: s.id,
+        subject_scores: {},
+        total: 0,
+        percentage: 0,
+        rank: null,
+        is_absent: true,
+      }))
+
+    const allRecords = [...scoreRecords, ...absentRecords]
 
     // Batch insert scores
     let imported = 0
     const failedErrors: string[] = []
     const BATCH_SIZE = 50
 
-    for (let i = 0; i < scoreRecords.length; i += BATCH_SIZE) {
-      const batch = scoreRecords.slice(i, i + BATCH_SIZE)
+    for (let i = 0; i < allRecords.length; i += BATCH_SIZE) {
+      const batch = allRecords.slice(i, i + BATCH_SIZE)
       const { error } = await supabase.from('scores').insert(batch)
       if (error) {
         failedErrors.push(error.message)
@@ -366,8 +390,8 @@ export default function UploadResultsPage() {
       }
     }
 
-    // Update test aggregates if at least some imported
-    if (imported > 0) {
+    // Update test aggregates if at least some imported (only count present students)
+    if (scoreRecords.length > 0) {
       const totals = rankedRows.map((r) => r.total)
       const highestScore = Math.max(...totals)
       const averageScore = parseFloat(
@@ -379,15 +403,15 @@ export default function UploadResultsPage() {
         .update({
           highest_score: highestScore,
           average_score: averageScore,
-          students_appeared: imported,
+          students_appeared: scoreRecords.length, // only present students
         })
         .eq('id', testId)
     }
 
     setSummary({
-      total: rows.length,
-      imported,
-      failed: rows.filter((r) => !r.isValid).length + (validRows.length - imported),
+      total: rows.length + absentRecords.length,
+      imported: allRecords.length - failedErrors.length,
+      failed: rows.filter((r) => !r.isValid).length + failedErrors.length,
       errors: failedErrors,
     })
     setStep('done')
@@ -747,7 +771,7 @@ export default function UploadResultsPage() {
             <p className="text-sm text-[var(--muted-foreground)] max-w-sm mb-6">
               {summary.failed > 0
                 ? `${summary.failed} row${summary.failed > 1 ? 's were' : ' was'} skipped due to validation errors.`
-                : 'All valid marks have been saved. Ranks and percentages have been calculated.'}
+                : 'All valid marks have been saved. Absent students have been marked correctly.'}
             </p>
             <div className="flex gap-3">
               <Link

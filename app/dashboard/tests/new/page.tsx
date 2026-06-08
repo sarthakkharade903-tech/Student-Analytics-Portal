@@ -11,9 +11,12 @@ import { ArrowLeft, Plus, X, Loader2, CheckCircle2, ClipboardList } from 'lucide
 const PRESETS: Record<string, string[]> = {
   PCM: ['physics', 'chemistry', 'maths'],
   PCB: ['physics', 'chemistry', 'biology'],
-  'Maths Only': ['maths'],
-  'Science': ['physics', 'chemistry', 'biology', 'maths'],
+  Physics: ['physics'],
+  Chemistry: ['chemistry'],
+  Maths: ['maths'],
 }
+
+const BATCH_PRESETS = ['JEE', 'NEET', 'CET A', 'CET B']
 
 // ── Input class helper ────────────────────────────────────────────────────────
 
@@ -30,6 +33,8 @@ export default function CreateTestPage() {
   const [maxMarks, setMaxMarks] = useState('')
   const [subjects, setSubjects] = useState<string[]>([])
   const [subjectInput, setSubjectInput] = useState('')
+  const [targetBatches, setTargetBatches] = useState<string[]>([])
+  const [batchInput, setBatchInput] = useState('')
   const [loading, setLoading] = useState(false)
   const [success, setSuccess] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -78,6 +83,31 @@ export default function CreateTestPage() {
     }
   }
 
+  // ── Batch helpers ─────────────────────────────────────────────────────────
+
+  const addBatch = (name: string) => {
+    const cleaned = name.trim()
+    if (!cleaned) return
+    // Case-insensitive check
+    if (targetBatches.some(b => b.toLowerCase() === cleaned.toLowerCase())) return
+    setTargetBatches((prev) => [...prev, cleaned])
+  }
+
+  const removeBatch = (name: string) => {
+    setTargetBatches((prev) => prev.filter((b) => b !== name))
+  }
+
+  const handleBatchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' || e.key === ',') {
+      e.preventDefault()
+      addBatch(batchInput)
+      setBatchInput('')
+    }
+    if (e.key === 'Backspace' && batchInput === '' && targetBatches.length > 0) {
+      setTargetBatches((prev) => prev.slice(0, -1))
+    }
+  }
+
   // ── Submit ────────────────────────────────────────────────────────────────
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -90,6 +120,10 @@ export default function CreateTestPage() {
     }
     if (subjects.length === 0) {
       setError('Please add at least one subject.')
+      return
+    }
+    if (targetBatches.length === 0) {
+      setError('Please specify at least one target batch.')
       return
     }
     const marks = Number(maxMarks)
@@ -106,6 +140,7 @@ export default function CreateTestPage() {
       test_name: testName.trim(),
       test_date: testDate,
       subjects,
+      target_batches: targetBatches,
       max_marks: marks,
     })
 
@@ -244,6 +279,60 @@ export default function CreateTestPage() {
               </div>
               <p className="text-xs text-[var(--muted-foreground)]">
                 Press <kbd className="px-1 py-0.5 rounded bg-[var(--secondary)] text-[10px] font-mono">Enter</kbd> or <kbd className="px-1 py-0.5 rounded bg-[var(--secondary)] text-[10px] font-mono">,</kbd> to add a subject
+              </p>
+            </div>
+
+            {/* Target Batches */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium">
+                Target Batches <span className="text-red-400">*</span>
+              </label>
+
+              {/* Quick batch presets */}
+              <div className="flex flex-wrap gap-2 mb-2">
+                <span className="text-xs text-[var(--muted-foreground)] self-center mr-1">Quick select:</span>
+                {BATCH_PRESETS.map((b) => (
+                  <button
+                    key={b}
+                    type="button"
+                    onClick={() => addBatch(b)}
+                    className="px-3 py-1 rounded-lg border border-[var(--border)] text-xs font-medium hover:bg-[var(--secondary)] hover:border-[oklch(0.62_0.22_265/0.4)] transition-all"
+                  >
+                    {b}
+                  </button>
+                ))}
+              </div>
+
+              {/* Batch tag input area */}
+              <div className="min-h-[48px] px-3 py-2 rounded-lg bg-[var(--input)] border border-[var(--border)] focus-within:ring-2 focus-within:ring-[var(--ring)] transition-all flex flex-wrap gap-2 items-center">
+                {targetBatches.map((b) => (
+                  <span
+                    key={b}
+                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-[oklch(0.62_0.22_265/0.18)] text-[var(--primary)] text-xs font-medium"
+                  >
+                    {b}
+                    <button
+                      type="button"
+                      onClick={() => removeBatch(b)}
+                      className="hover:text-red-400 transition-colors ml-0.5"
+                      aria-label={`Remove ${b}`}
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </span>
+                ))}
+                <input
+                  type="text"
+                  placeholder={targetBatches.length === 0 ? 'Type a batch name, then press Enter…' : 'Add more…'}
+                  value={batchInput}
+                  onChange={(e) => setBatchInput(e.target.value)}
+                  onKeyDown={handleBatchKeyDown}
+                  onBlur={() => { if (batchInput.trim()) { addBatch(batchInput); setBatchInput('') } }}
+                  className="flex-1 min-w-[140px] bg-transparent outline-none text-sm placeholder:text-[var(--muted-foreground)]"
+                />
+              </div>
+              <p className="text-xs text-[var(--muted-foreground)]">
+                Press <kbd className="px-1 py-0.5 rounded bg-[var(--secondary)] text-[10px] font-mono">Enter</kbd> to add a batch. Only students in these batches will be tracked.
               </p>
             </div>
 
