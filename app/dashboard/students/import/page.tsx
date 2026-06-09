@@ -37,6 +37,7 @@ interface ValidatedRow {
   batch: string
   errors: string[]
   isValid: boolean
+  isDuplicate: boolean
 }
 
 interface ImportSummary {
@@ -89,6 +90,7 @@ function validateRows(raw: RawRow[]): ValidatedRow[] {
       batch,
       errors,
       isValid: errors.length === 0,
+      isDuplicate: false,
     }
   })
 }
@@ -117,6 +119,8 @@ export default function ImportStudentsPage() {
   const [summary, setSummary] = useState<ImportSummary | null>(null)
   const [coachingCenterId, setCoachingCenterId] = useState<string | null>(null)
   const [parseError, setParseError] = useState<string | null>(null)
+  const [isCheckingDuplicates, setIsCheckingDuplicates] = useState(false)
+  const [duplicatesChecked, setDuplicatesChecked] = useState(false)
 
   // Fetch coaching_center_id on mount
   useEffect(() => {
@@ -191,17 +195,51 @@ export default function ImportStudentsPage() {
     if (file) parseFile(file)
   }
 
+  // ── Check Duplicates ────────────────────────────────────────────────────────
+
+  const checkAndPreviewDuplicates = async () => {
+    if (!coachingCenterId) return
+    setIsCheckingDuplicates(true)
+    const supabase = createClient()
+
+    // Fetch all existing students for this coaching center
+    const { data: existing } = await supabase
+      .from('students')
+      .select('name, roll_no, parent_phone, batch')
+      .eq('coaching_center_id', coachingCenterId)
+
+    const existingSet = new Set(
+      (existing ?? []).map((s) =>
+        `${s.name?.trim().toLowerCase()}|${s.roll_no?.trim().toLowerCase()}|${(s.parent_phone ?? '').trim()}|${(s.batch ?? '').trim().toLowerCase()}`
+      )
+    )
+
+    setRows((prev) =>
+      prev.map((row) => ({
+        ...row,
+        isDuplicate:
+          row.isValid &&
+          existingSet.has(
+            `${row.name.trim().toLowerCase()}|${row.roll_no.trim().toLowerCase()}|${row.parent_phone.trim()}|${row.batch.trim().toLowerCase()}`
+          ),
+      }))
+    )
+    setIsCheckingDuplicates(false)
+    setDuplicatesChecked(true)
+  }
+
   // ── Import ─────────────────────────────────────────────────────────────────
 
   const handleImport = async () => {
     if (!coachingCenterId) return
-    const validRows = rows.filter((r) => r.isValid)
-    if (validRows.length === 0) return
+    // Only insert rows that are valid AND not duplicates
+    const newRows = rows.filter((r) => r.isValid && !r.isDuplicate)
+    if (newRows.length === 0) return
 
     setStep('importing')
     const supabase = createClient()
 
-    const payload = validRows.map((r) => ({
+    const payload = newRows.map((r) => ({
       coaching_center_id: coachingCenterId,
       name: r.name,
       roll_no: r.roll_no,
@@ -214,19 +252,21 @@ export default function ImportStudentsPage() {
     const failedErrors: string[] = []
     const batchSize = 50
     for (let i = 0; i < payload.length; i += batchSize) {
-      const batch = payload.slice(i, i + batchSize)
-      const { error } = await supabase.from('students').insert(batch)
+      const chunk = payload.slice(i, i + batchSize)
+      const { error } = await supabase.from('students').insert(chunk)
       if (error) {
         failedErrors.push(error.message)
       } else {
-        imported += batch.length
+        imported += chunk.length
       }
     }
 
+    const duplicateCount = rows.filter((r) => r.isDuplicate).length
+    const invalidCount = rows.filter((r) => !r.isValid).length
     setSummary({
       total: rows.length,
       imported,
-      failed: rows.filter((r) => !r.isValid).length + (validRows.length - imported),
+      failed: invalidCount + duplicateCount + (newRows.length - imported),
       errors: failedErrors,
     })
     setStep('done')
@@ -237,6 +277,9 @@ export default function ImportStudentsPage() {
 
   const validCount = rows.filter((r) => r.isValid).length
   const invalidCount = rows.filter((r) => !r.isValid).length
+  const duplicateCount = rows.filter((r) => r.isDuplicate).length
+  const newCount = rows.filter((r) => r.isValid && !r.isDuplicate).length
+  // duplicatesChecked is managed as state — see useState above
 
   // ─────────────────────────────────────────────────────────────────────────
   // RENDER
@@ -372,14 +415,20 @@ export default function ImportStudentsPage() {
       {step === 'preview' && (
         <div className="space-y-6">
           {/* Summary cards */}
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-4 gap-4">
             <div className="glass-card rounded-2xl p-5 text-center">
               <p className="text-3xl font-bold mb-1">{rows.length}</p>
               <p className="text-sm text-[var(--muted-foreground)]">Total Rows</p>
             </div>
             <div className="glass-card rounded-2xl p-5 text-center border border-green-500/20">
-              <p className="text-3xl font-bold text-green-400 mb-1">{validCount}</p>
-              <p className="text-sm text-[var(--muted-foreground)]">Ready to Import</p>
+              <p className="text-3xl font-bold text-green-400 mb-1">{newCount}</p>
+              <p className="text-sm text-[var(--muted-foreground)]">New Students</p>
+            </div>
+            <div className={`glass-card rounded-2xl p-5 text-center ${duplicateCount > 0 ? 'border border-amber-500/20' : ''}`}>
+              <p className={`text-3xl font-bold mb-1 ${duplicateCount > 0 ? 'text-amber-400' : 'text-[var(--muted-foreground)]'}`}>
+                {duplicateCount}
+              </p>
+              <p className="text-sm text-[var(--muted-foreground)]">Already Exists</p>
             </div>
             <div className={`glass-card rounded-2xl p-5 text-center ${invalidCount > 0 ? 'border border-red-500/20' : ''}`}>
               <p className={`text-3xl font-bold mb-1 ${invalidCount > 0 ? 'text-red-400' : 'text-[var(--muted-foreground)]'}`}>
@@ -399,7 +448,7 @@ export default function ImportStudentsPage() {
               </div>
             </div>
             <button
-              onClick={() => { setStep('upload'); setRows([]); setFileName(''); setParseError(null) }}
+              onClick={() => { setStep('upload'); setRows([]); setFileName(''); setParseError(null); setDuplicatesChecked(false) }}
               className="inline-flex items-center gap-1.5 text-xs text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition-colors"
             >
               <RefreshCw className="w-3.5 h-3.5" />
@@ -429,28 +478,39 @@ export default function ImportStudentsPage() {
                 <div
                   key={row.rowIndex}
                   className={`grid grid-cols-[40px_80px_1fr_100px_100px_1fr] gap-3 px-5 py-3 items-center text-sm ${
-                    row.isValid ? '' : 'bg-red-500/5'
+                    row.isDuplicate
+                      ? 'bg-amber-500/5'
+                      : row.isValid
+                      ? ''
+                      : 'bg-red-500/5'
                   }`}
                 >
                   <span className="text-xs text-[var(--muted-foreground)]">{row.rowIndex}</span>
                   <span>
-                    {row.isValid ? (
+                    {row.isDuplicate ? (
+                      <AlertTriangle className="w-4 h-4 text-amber-400" />
+                    ) : row.isValid ? (
                       <CheckCircle2 className="w-4 h-4 text-green-400" />
                     ) : (
                       <XCircle className="w-4 h-4 text-red-400" />
                     )}
                   </span>
-                  <span className={`truncate font-medium ${!row.name ? 'text-red-400 italic' : ''}`}>
+                  <span className={`truncate font-medium ${!row.name ? 'text-red-400 italic' : row.isDuplicate ? 'text-amber-400/80' : ''}`}>
                     {row.name || '(empty)'}
                   </span>
-                  <span className={`font-mono text-xs ${!row.roll_no ? 'text-red-400 italic' : 'text-[var(--primary)]'}`}>
+                  <span className={`font-mono text-xs ${!row.roll_no ? 'text-red-400 italic' : row.isDuplicate ? 'text-amber-400/80' : 'text-[var(--primary)]'}`}>
                     {row.roll_no || '(empty)'}
                   </span>
-                  <span className="text-xs text-[var(--muted-foreground)] font-mono">
+                  <span className={`text-xs font-mono ${row.isDuplicate ? 'text-amber-400/80' : 'text-[var(--muted-foreground)]'}`}>
                     {row.parent_phone || '—'}
                   </span>
                   <span className="text-xs">
-                    {row.isValid ? (
+                    {row.isDuplicate ? (
+                      <span className="inline-flex items-center gap-1 text-amber-400 font-medium">
+                        <AlertTriangle className="w-3 h-3" />
+                        Already exists — will be skipped
+                      </span>
+                    ) : row.isValid ? (
                       <span className="text-[var(--muted-foreground)]">{row.batch || '—'}</span>
                     ) : (
                       <span className="text-red-400">{row.errors.join(' · ')}</span>
@@ -468,29 +528,54 @@ export default function ImportStudentsPage() {
               No valid rows found. Please fix the errors in your CSV and re-upload.
             </div>
           ) : (
-            <div className="flex items-center justify-between gap-4">
-              {invalidCount > 0 && (
-                <p className="text-sm text-[var(--muted-foreground)]">
-                  <AlertTriangle className="w-3.5 h-3.5 inline mr-1 text-yellow-400" />
-                  {invalidCount} invalid row{invalidCount > 1 ? 's' : ''} will be skipped.
-                </p>
-              )}
+            <div className="flex items-center justify-between gap-4 flex-wrap gap-y-3">
+              <div className="flex flex-col gap-1">
+                {invalidCount > 0 && (
+                  <p className="text-sm text-[var(--muted-foreground)]">
+                    <AlertTriangle className="w-3.5 h-3.5 inline mr-1 text-yellow-400" />
+                    {invalidCount} invalid row{invalidCount > 1 ? 's' : ''} will be skipped.
+                  </p>
+                )}
+                {duplicateCount > 0 && (
+                  <p className="text-sm text-amber-400/90">
+                    <AlertTriangle className="w-3.5 h-3.5 inline mr-1" />
+                    {duplicateCount} duplicate{duplicateCount > 1 ? 's' : ''} detected — will be skipped.
+                  </p>
+                )}
+              </div>
               <div className="flex items-center gap-3 ml-auto">
                 <button
-                  onClick={() => { setStep('upload'); setRows([]); setFileName('') }}
+                  onClick={() => { setStep('upload'); setRows([]); setFileName(''); setDuplicatesChecked(false) }}
                   className="px-4 py-2.5 border border-[var(--border)] text-sm font-medium rounded-lg hover:bg-[var(--secondary)] transition-all"
                 >
                   Cancel
                 </button>
-                <button
-                  id="confirm-import-btn"
-                  onClick={handleImport}
-                  disabled={!coachingCenterId}
-                  className="inline-flex items-center gap-2 px-6 py-2.5 bg-[var(--primary)] text-white text-sm font-semibold rounded-lg hover:opacity-90 disabled:opacity-60 disabled:cursor-not-allowed transition-all glow-primary"
-                >
-                  Import {validCount} Student{validCount > 1 ? 's' : ''}
-                  <ChevronRight className="w-4 h-4" />
-                </button>
+                {/* Step 1: Check duplicates first */}
+                {!duplicatesChecked ? (
+                  <button
+                    id="check-duplicates-btn"
+                    onClick={checkAndPreviewDuplicates}
+                    disabled={!coachingCenterId || isCheckingDuplicates}
+                    className="inline-flex items-center gap-2 px-6 py-2.5 bg-[var(--primary)] text-white text-sm font-semibold rounded-lg hover:opacity-90 disabled:opacity-60 disabled:cursor-not-allowed transition-all glow-primary"
+                  >
+                    {isCheckingDuplicates ? (
+                      <><Loader2 className="w-4 h-4 animate-spin" /> Checking…</>
+                    ) : (
+                      <><ChevronRight className="w-4 h-4" /> Check for Duplicates</>
+                    )}
+                  </button>
+                ) : (
+                  /* Step 2: Confirm import after seeing duplicates */
+                  <button
+                    id="confirm-import-btn"
+                    onClick={handleImport}
+                    disabled={!coachingCenterId || newCount === 0}
+                    className="inline-flex items-center gap-2 px-6 py-2.5 bg-[var(--primary)] text-white text-sm font-semibold rounded-lg hover:opacity-90 disabled:opacity-60 disabled:cursor-not-allowed transition-all glow-primary"
+                  >
+                    Import {newCount} New Student{newCount !== 1 ? 's' : ''}
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+                )}
               </div>
             </div>
           )}
@@ -544,7 +629,7 @@ export default function ImportStudentsPage() {
             </p>
             <div className="flex gap-3">
               <button
-                onClick={() => { setStep('upload'); setRows([]); setFileName(''); setSummary(null) }}
+                onClick={() => { setStep('upload'); setRows([]); setFileName(''); setSummary(null); setDuplicatesChecked(false) }}
                 className="inline-flex items-center gap-2 px-4 py-2.5 border border-[var(--border)] text-sm font-medium rounded-lg hover:bg-[var(--secondary)] transition-all"
               >
                 <Upload className="w-4 h-4" />
