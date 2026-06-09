@@ -3,6 +3,7 @@
 import { useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import { recalculateTestStats } from '@/lib/scoring'
 import {
   UserPlus,
   Loader2,
@@ -27,18 +28,7 @@ interface ExistingScore {
   total: number
 }
 
-// ── Dense rank helper ─────────────────────────────────────────────────────────
 
-function calcRanks(items: { id?: string; total: number }[]): Map<string | undefined, number> {
-  const sorted = [...items].sort((a, b) => b.total - a.total)
-  const rankMap = new Map<string | undefined, number>()
-  let rank = 1
-  sorted.forEach((item, idx) => {
-    if (idx > 0 && item.total < sorted[idx - 1].total) rank = idx + 1
-    rankMap.set(item.id, rank)
-  })
-  return rankMap
-}
 
 // ── Input class ───────────────────────────────────────────────────────────────
 
@@ -133,23 +123,7 @@ export default function AddScoreForm({
       return
     }
 
-    // ── Fetch all existing present scores for re-ranking ─────────────────────
-
-    const { data: existingScores } = await supabase
-      .from('scores')
-      .select('id, student_id, total')
-      .eq('test_id', testId)
-      .eq('is_absent', false)
-
-    const allScores: ExistingScore[] = [
-      ...(existingScores ?? []) as ExistingScore[],
-      { id: '__new__', student_id: studentData.id, total },
-    ]
-
-    const rankMap = calcRanks(allScores)
-    const newRank = rankMap.get('__new__') ?? 1
-
-    // ── Insert or Update new score ───────────────────────────────────────────
+    // ── Insert or Update score ───────────────────────────────────────────────
 
     const scorePayload = {
       test_id: testId,
@@ -157,7 +131,7 @@ export default function AddScoreForm({
       subject_scores: subjectScores,
       total,
       percentage,
-      rank: newRank,
+      rank: null as number | null,
       is_absent: false,
     }
 
@@ -176,41 +150,12 @@ export default function AddScoreForm({
       return
     }
 
-    // ── Update ranks of existing scores ─────────────────────────────────────
-    // Only update rows whose rank changed
-
-    if (existingScores && existingScores.length > 0) {
-      const updates = (existingScores as ExistingScore[])
-        .map((sc) => ({ id: sc.id, rank: rankMap.get(sc.id) ?? 1 }))
-
-      // Batch individual rank updates (no upsert needed — just update rank col)
-      await Promise.all(
-        updates.map((u) =>
-          supabase.from('scores').update({ rank: u.rank }).eq('id', u.id)
-        )
-      )
-    }
-
-    // ── Update test aggregates ───────────────────────────────────────────────
-
-    const allTotals = allScores.map((s) => s.total)
-    const highestScore = Math.max(...allTotals)
-    const averageScore = parseFloat(
-      (allTotals.reduce((a, b) => a + b, 0) / allTotals.length).toFixed(2)
-    )
-
-    await supabase
-      .from('tests')
-      .update({
-        highest_score: highestScore,
-        average_score: averageScore,
-        students_appeared: allTotals.length,
-      })
-      .eq('id', testId)
+    // ── Recalculate ranks + test aggregates (centralized) ────────────────────
+    await recalculateTestStats(supabase, testId)
 
     // ── Done ─────────────────────────────────────────────────────────────────
 
-    setSuccess(`Score saved for ${studentData.name} (Rank #${newRank}, ${percentage}%)`)
+    setSuccess(`Score saved for ${studentData.name} (${percentage}%)`)
     setLoading(false)
     resetForm()
     router.refresh()

@@ -209,7 +209,7 @@ export default function ImportStudentsPage() {
       .eq('coaching_center_id', coachingCenterId)
 
     const existingSet = new Set(
-      (existing ?? []).map((s: any) =>
+      (existing ?? []).map((s: { name: string; roll_no: string; parent_phone: string | null; batch: string | null }) =>
         `${s.name?.trim().toLowerCase()}|${s.roll_no?.trim().toLowerCase()}|${(s.parent_phone ?? '').trim()}|${(s.batch ?? '').trim().toLowerCase()}`
       )
     )

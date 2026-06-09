@@ -4,6 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import { recalculateTestStats } from '@/lib/scoring'
 import {
   Upload,
   Hash,
@@ -75,22 +76,6 @@ function RankBadge({ rank }: { rank: number }) {
   )
 }
 
-// ── Dense rank recalculator ────────────────────────────────────────────────────
-
-function recalcRanks(scores: ScoreRecord[]): ScoreRecord[] {
-  const present = scores.filter((s) => !s.is_absent).sort((a, b) => b.total - a.total)
-  let rank = 1
-  present.forEach((s, idx) => {
-    if (idx > 0 && s.total < present[idx - 1].total) rank = idx + 1
-    s.rank = rank
-  })
-
-  return scores.map((s) => {
-    if (s.is_absent) return { ...s, rank: null as any }
-    return present.find((p) => p.id === s.id)!
-  })
-}
-
 // ─────────────────────────────────────────────────────────────────────────────
 // Main component
 // ─────────────────────────────────────────────────────────────────────────────
@@ -137,45 +122,14 @@ export default function TestResultsTable({
       return
     }
 
-    // 2. Optimistic local update — remove row, recalc ranks
+    // 2. Optimistic local update — remove row from UI
     const remaining = scores.filter((s) => s.id !== score.id)
-    const reranked = recalcRanks(remaining)
-    setScores(reranked)
+    setScores(remaining)
     setDeletingId(null)
     setConfirmId(null)
 
-    // 3. Persist new ranks to DB
-    await Promise.all(
-      reranked.map((s) =>
-        supabase.from('scores').update({ rank: s.rank }).eq('id', s.id)
-      )
-    )
-
-    // 4. Update test aggregates
-    const presentOnly = reranked.filter((s) => !s.is_absent)
-    if (presentOnly.length > 0) {
-      const totals = presentOnly.map((s) => s.total)
-      await supabase
-        .from('tests')
-        .update({
-          highest_score: Math.max(...totals),
-          average_score: parseFloat(
-            (totals.reduce((a, b) => a + b, 0) / totals.length).toFixed(2)
-          ),
-          students_appeared: presentOnly.length,
-        })
-        .eq('id', testId)
-    } else {
-      // No scores left — reset aggregates to null
-      await supabase
-        .from('tests')
-        .update({
-          highest_score: null,
-          average_score: null,
-          students_appeared: null,
-        })
-        .eq('id', testId)
-    }
+    // 3. Recalculate ranks + test aggregates (centralized)
+    await recalculateTestStats(supabase, testId)
 
     router.refresh()
   }

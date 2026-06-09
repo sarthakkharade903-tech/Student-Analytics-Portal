@@ -11,6 +11,7 @@ import {
   ClipboardList,
 } from 'lucide-react'
 import AddScoreForm from '@/components/dashboard/AddScoreForm'
+import BatchGrader from '@/components/dashboard/BatchGrader'
 import TestResultsTable from '@/components/dashboard/TestResultsTable'
 import type { ScoreRecord } from '@/components/dashboard/TestResultsTable'
 import DeleteTestButton from '@/components/dashboard/DeleteTestButton'
@@ -236,14 +237,24 @@ export default async function TestDetailsPage({ params }: { params: Promise<{ id
         uploadHref={`/dashboard/tests/${id}/upload`}
       />
 
-      {/* Add score manually — always available */}
+      {/* Entry Methods */}
       {coachingCenterId && (
-        <AddScoreForm
-          testId={id}
-          subjects={subjects}
-          maxMarks={test.max_marks}
-          coachingCenterId={coachingCenterId}
-        />
+        <div className="space-y-4">
+          <BatchGrader
+            testId={id}
+            subjects={subjects}
+            maxMarks={test.max_marks}
+            targetBatches={test.target_batches ?? []}
+            coachingCenterId={coachingCenterId}
+          />
+
+          <AddScoreForm
+            testId={id}
+            subjects={subjects}
+            maxMarks={test.max_marks}
+            coachingCenterId={coachingCenterId}
+          />
+        </div>
       )}
     </div>
   )

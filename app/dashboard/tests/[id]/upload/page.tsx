@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Papa from 'papaparse'
 import { createClient } from '@/lib/supabase/client'
+import { recalculateTestStats } from '@/lib/scoring'
 import {
   ArrowLeft,
   Upload,
@@ -390,22 +391,9 @@ export default function UploadResultsPage() {
       }
     }
 
-    // Update test aggregates if at least some imported (only count present students)
+    // Update test aggregates (centralized engine)
     if (scoreRecords.length > 0) {
-      const totals = rankedRows.map((r) => r.total)
-      const highestScore = Math.max(...totals)
-      const averageScore = parseFloat(
-        (totals.reduce((a, b) => a + b, 0) / totals.length).toFixed(2)
-      )
-
-      await supabase
-        .from('tests')
-        .update({
-          highest_score: highestScore,
-          average_score: averageScore,
-          students_appeared: scoreRecords.length, // only present students
-        })
-        .eq('id', testId)
+      await recalculateTestStats(supabase, testId)
     }
 
     setSummary({
