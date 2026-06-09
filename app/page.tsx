@@ -141,7 +141,7 @@ export default function LandingPage() {
 
           <div className="sap-nav-ctas">
             <Link href="/login" className="sap-btn sap-btn-ghost">Admin Login</Link>
-            <Link href="/login" className="sap-btn sap-btn-primary">Student Login</Link>
+            <Link href="/parent/login" className="sap-btn sap-btn-primary">Student Login</Link>
           </div>
         </div>
       </nav>
@@ -170,7 +170,7 @@ export default function LandingPage() {
             </p>
 
             <div className="sap-hero-actions">
-              <Link href="/login" className="sap-btn sap-btn-primary sap-btn-lg">
+              <Link href="/parent/login" className="sap-btn sap-btn-primary sap-btn-lg">
                 Student / Parent Login
                 <ArrowRight size={16} />
               </Link>
@@ -345,7 +345,7 @@ export default function LandingPage() {
             Join coaching institutes simplifying analytics and parent communication.
           </p>
           <div className="sap-cta-actions">
-            <Link href="/login" className="sap-btn sap-btn-white sap-btn-lg">
+            <Link href="/parent/login" className="sap-btn sap-btn-white sap-btn-lg">
               Student / Parent Login
               <ArrowRight size={16} />
             </Link>
@@ -425,7 +425,7 @@ export default function LandingPage() {
             <div className="sap-footer-col">
               <h4 className="sap-footer-col-title">Access</h4>
               <Link href="/login" className="sap-footer-link">Admin Login</Link>
-              <Link href="/login" className="sap-footer-link">Student Login</Link>
+              <Link href="/parent/login" className="sap-footer-link">Student Login</Link>
             </div>
             <div className="sap-footer-col">
               <h4 className="sap-footer-col-title">Legal</h4>

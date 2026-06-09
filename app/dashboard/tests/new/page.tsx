@@ -18,6 +18,16 @@ const PRESETS: Record<string, string[]> = {
 
 const BATCH_PRESETS = ['JEE', 'NEET', 'CET A', 'CET B']
 
+const TEST_TYPES = [
+  'Weekly Test',
+  'Subject Test',
+  'Grand Test',
+  'Mock Exam',
+  'Revision Test',
+  'Unit Test',
+  'Custom Test'
+]
+
 // ── Input class helper ────────────────────────────────────────────────────────
 
 const inputCls =
@@ -30,6 +40,7 @@ export default function CreateTestPage() {
   const [coachingCenterId, setCoachingCenterId] = useState<string | null>(null)
   const [testName, setTestName] = useState('')
   const [testDate, setTestDate] = useState('')
+  const [testType, setTestType] = useState('Weekly Test')
   const [maxMarks, setMaxMarks] = useState('')
   const [subjects, setSubjects] = useState<string[]>([])
   const [subjectInput, setSubjectInput] = useState('')
@@ -138,6 +149,7 @@ export default function CreateTestPage() {
     const { error: insertError } = await supabase.from('tests').insert({
       coaching_center_id: coachingCenterId,
       test_name: testName.trim(),
+      test_type: testType,
       test_date: testDate,
       subjects,
       target_batches: targetBatches,
@@ -196,20 +208,40 @@ export default function CreateTestPage() {
         ) : (
           <form onSubmit={handleSubmit} className="space-y-6">
 
-            {/* Test Name */}
-            <div className="space-y-1.5">
-              <label htmlFor="test-name" className="text-sm font-medium">
-                Test Name <span className="text-red-400">*</span>
-              </label>
-              <input
-                id="test-name"
-                type="text"
-                required
-                placeholder="e.g. Weekly Test – June Week 1"
-                value={testName}
-                onChange={(e) => { setTestName(e.target.value); setError(null) }}
-                className={inputCls}
-              />
+            {/* Test Name & Type row */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <label htmlFor="test-name" className="text-sm font-medium">
+                  Test Name <span className="text-red-400">*</span>
+                </label>
+                <input
+                  id="test-name"
+                  type="text"
+                  required
+                  placeholder="e.g. Weekly Test – June Week 1"
+                  value={testName}
+                  onChange={(e) => { setTestName(e.target.value); setError(null) }}
+                  className={inputCls}
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label htmlFor="test-type" className="text-sm font-medium">
+                  Test Type <span className="text-red-400">*</span>
+                </label>
+                <select
+                  id="test-type"
+                  required
+                  value={testType}
+                  onChange={(e) => setTestType(e.target.value)}
+                  className={inputCls}
+                  style={{ colorScheme: 'dark' }}
+                >
+                  {TEST_TYPES.map(type => (
+                    <option key={type} value={type}>{type}</option>
+                  ))}
+                </select>
+              </div>
             </div>
 
             {/* Test Date */}

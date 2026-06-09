@@ -32,8 +32,10 @@ export interface Test {
   id: string
   coaching_center_id: string
   test_name: string
+  test_type?: string
   test_date: string
   subjects: string[]
+  target_batches: string[]
   max_marks: number
   highest_score: number | null
   average_score: number | null

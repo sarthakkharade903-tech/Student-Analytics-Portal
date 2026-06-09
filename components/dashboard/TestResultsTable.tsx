@@ -10,6 +10,7 @@ import {
   Trash2,
   Loader2,
   AlertTriangle,
+  Search,
 } from 'lucide-react'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -106,8 +107,14 @@ export default function TestResultsTable({
   const [confirmId, setConfirmId] = useState<string | null>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [deleteError, setDeleteError] = useState<string | null>(null)
+  const [searchQuery, setSearchQuery] = useState('')
 
   const hasResults = scores.length > 0
+  
+  const filteredScores = scores.filter(score => 
+    !searchQuery || 
+    (score.student?.roll_no?.toLowerCase().includes(searchQuery.toLowerCase()))
+  )
 
   // Grid template: Rank | Roll | Name | ...subjects | Total | % | Delete
   const colTemplate = `56px 80px 1fr repeat(${subjects.length}, 72px) 80px 90px 48px`
@@ -186,10 +193,22 @@ export default function TestResultsTable({
           </p>
         </div>
         {hasResults && (
-          <span className="text-xs text-[var(--muted-foreground)] flex items-center gap-1">
-            <Hash className="w-3.5 h-3.5" />
-            Sorted by rank
-          </span>
+          <div className="flex items-center gap-4">
+            <div className="relative">
+              <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted-foreground)]" />
+              <input
+                type="text"
+                placeholder="Search by Roll No..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9 pr-4 py-1.5 rounded-lg bg-[oklch(0.62_0.22_265/0.1)] border border-[var(--border)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--ring)] transition-all placeholder:text-[var(--muted-foreground)] w-48"
+              />
+            </div>
+            <span className="text-xs text-[var(--muted-foreground)] flex items-center gap-1 hidden md:flex">
+              <Hash className="w-3.5 h-3.5" />
+              Sorted by rank
+            </span>
+          </div>
         )}
       </div>
 
@@ -239,9 +258,14 @@ export default function TestResultsTable({
 
           {/* Rows */}
           <div className="divide-y divide-[var(--border)]">
-            {scores.map((score, idx) => {
-              const isConfirming = confirmId === score.id
-              const isDeleting = deletingId === score.id
+            {filteredScores.length === 0 ? (
+              <div className="py-8 text-center text-sm text-[var(--muted-foreground)]">
+                No students found matching "{searchQuery}"
+              </div>
+            ) : (
+              filteredScores.map((score, idx) => {
+                const isConfirming = confirmId === score.id
+                const isDeleting = deletingId === score.id
 
               return (
                 <div key={score.id}>
@@ -359,7 +383,7 @@ export default function TestResultsTable({
                   )}
                 </div>
               )
-            })}
+            }))}
           </div>
 
           {/* Footer */}

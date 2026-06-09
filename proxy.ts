@@ -1,5 +1,6 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
+import { jwtVerify } from 'jose'
 
 export async function proxy(request: NextRequest) {
   let supabaseResponse = NextResponse.next({
@@ -46,6 +47,33 @@ export async function proxy(request: NextRequest) {
   if (user && (pathname === '/login' || pathname === '/signup')) {
     const url = request.nextUrl.clone()
     url.pathname = '/dashboard'
+    return NextResponse.redirect(url)
+  }
+
+  // Parent Authentication
+  const parentToken = request.cookies.get('parent_token')?.value
+  let isParentAuth = false
+  if (parentToken) {
+    try {
+      const secret = new TextEncoder().encode(
+        process.env.JWT_SECRET || 'super-secret-parent-token-key-change-me-in-prod'
+      )
+      await jwtVerify(parentToken, secret)
+      isParentAuth = true
+    } catch (err) {
+      // Invalid token
+    }
+  }
+
+  if (!isParentAuth && pathname.startsWith('/parent') && pathname !== '/parent/login') {
+    const url = request.nextUrl.clone()
+    url.pathname = '/parent/login'
+    return NextResponse.redirect(url)
+  }
+
+  if (isParentAuth && pathname === '/parent/login') {
+    const url = request.nextUrl.clone()
+    url.pathname = '/parent'
     return NextResponse.redirect(url)
   }
 
