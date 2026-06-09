@@ -6,6 +6,8 @@ import Link from 'next/link'
 import Papa from 'papaparse'
 import { createClient } from '@/lib/supabase/client'
 import { recalculateTestStats } from '@/lib/scoring'
+import { normaliseSubjects } from '@/lib/subjects'
+import type { SubjectConfig } from '@/lib/types'
 import {
   ArrowLeft,
   Upload,
@@ -26,7 +28,7 @@ import {
 interface TestInfo {
   id: string
   test_name: string
-  subjects: string[]
+  subjects: SubjectConfig[]
   target_batches: string[]
   max_marks: number
 }
@@ -80,8 +82,8 @@ const normalizeHeader = (h: string) =>
 
 // ── Download template ─────────────────────────────────────────────────────────
 
-function downloadTemplate(testName: string, subjects: string[]) {
-  const headers = ['roll_no', ...subjects].join(',')
+function downloadTemplate(testName: string, subjects: SubjectConfig[]) {
+  const headers = ['roll_no', ...subjects.map((s) => s.name)].join(',')
   const example1 = ['101', ...subjects.map((_, i) => String(70 + i * 5))].join(',')
   const example2 = ['102', ...subjects.map((_, i) => String(80 + i * 3))].join(',')
   const csv = [headers, example1, example2].join('\n')
@@ -151,7 +153,9 @@ export default function UploadResultsPage() {
         setLoadError('Test not found or you do not have access to it.')
         return
       }
-      setTest(testData as TestInfo)
+      
+      const normalisedSubjects = normaliseSubjects(testData.subjects)
+      setTest({ ...testData, subjects: normalisedSubjects } as TestInfo)
 
       // Check if scores already exist (Option A — block re-upload)
       const { count: existingCount } = await supabase
@@ -190,7 +194,7 @@ export default function UploadResultsPage() {
   const validateRows = useCallback(
     (
       raw: Record<string, string>[],
-      subjects: string[],
+      subjects: SubjectConfig[],
       subjectMap: Map<string, string>
     ): ValidatedRow[] => {
       const studentMap = new Map(students.map((s) => [s.roll_no.trim().toLowerCase(), s]))
@@ -211,7 +215,8 @@ export default function UploadResultsPage() {
         }
 
         let total = 0
-        for (const originalSubject of subjects) {
+        for (const subject of subjects) {
+          const originalSubject = subject.name
           const normKey = normalizeHeader(originalSubject)
           const raw_val = (row[normKey] ?? '').trim()
           if (raw_val === '') {
@@ -220,6 +225,8 @@ export default function UploadResultsPage() {
             const num = Number(raw_val)
             if (isNaN(num)) {
               errors.push(`${originalSubject} marks must be numeric`)
+            } else if (subject.max_marks > 0 && num > subject.max_marks) {
+              errors.push(`${originalSubject} marks (${num}) exceed max (${subject.max_marks})`)
             } else {
               // Key in subject_scores uses original name, not normalized key
               subject_scores[originalSubject] = num
@@ -274,8 +281,8 @@ export default function UploadResultsPage() {
 
       // Build normalizedKey → originalSubject map once
       // e.g. "cet b" → normKey "cet_b", so CSV header "cet b" or "CET B" all match
-      const subjectMap = new Map(test.subjects.map((s) => [normalizeHeader(s), s]))
-      const normalizedExpected = ['roll_no', ...test.subjects.map(normalizeHeader)]
+      const subjectMap = new Map(test.subjects.map((s) => [normalizeHeader(s.name), s.name]))
+      const normalizedExpected = ['roll_no', ...test.subjects.map(s => normalizeHeader(s.name))]
 
       Papa.parse<Record<string, string>>(file, {
         header: true,
@@ -297,7 +304,7 @@ export default function UploadResultsPage() {
             )
             setParseError(
               `CSV is missing columns: ${missingOriginal.join(', ')}.\n` +
-              `Expected: roll_no, ${test.subjects.join(', ')}`
+              `Expected: roll_no, ${test.subjects.map(s => s.name).join(', ')}`
             )
             return
           }
@@ -461,7 +468,7 @@ export default function UploadResultsPage() {
               <ClipboardList className="w-3.5 h-3.5" />
               {test.test_name}
               <span className="text-[var(--border)]">·</span>
-              Subjects: <span className="capitalize">{test.subjects.join(', ')}</span>
+              Subjects: <span className="capitalize">{test.subjects.map(s => s.name).join(', ')}</span>
             </p>
           )}
         </div>
@@ -507,7 +514,7 @@ export default function UploadResultsPage() {
               <div>
                 <p className="text-sm font-medium">Download Template</p>
                 <p className="text-xs text-[var(--muted-foreground)]">
-                  Pre-filled CSV template for <span className="capitalize">{test.subjects.join(', ')}</span>
+                  Pre-filled CSV template for <span className="capitalize">{test.subjects.map(s => s.name).join(', ')}</span>
                 </p>
               </div>
             </div>
@@ -567,7 +574,7 @@ export default function UploadResultsPage() {
               Expected CSV Format
             </p>
             <div className="rounded-lg bg-[oklch(0.08_0.01_240)] border border-[var(--border)] p-3 font-mono text-xs text-[var(--muted-foreground)] overflow-x-auto">
-              <p className="text-[var(--primary)]">roll_no,{test.subjects.join(',')}</p>
+              <p className="text-[var(--primary)]">roll_no,{test.subjects.map(s => s.name).join(',')}</p>
               <p>101,{test.subjects.map((_, i) => 70 + i * 5).join(',')}</p>
               <p>102,{test.subjects.map((_, i) => 80 + i * 3).join(',')}</p>
             </div>
@@ -577,9 +584,9 @@ export default function UploadResultsPage() {
                 roll_no — required, must match a student
               </span>
               {test.subjects.map((s) => (
-                <span key={s} className="flex items-center gap-1 capitalize">
+                <span key={s.name} className="flex items-center gap-1 capitalize">
                   <span className="w-1.5 h-1.5 rounded-full bg-red-400 inline-block" />
-                  {s} — required, numeric
+                  {s.name} — numeric {s.max_marks > 0 ? `(max ${s.max_marks})` : ''}
                 </span>
               ))}
             </div>
@@ -638,8 +645,8 @@ export default function UploadResultsPage() {
               className="grid gap-3 px-5 py-2.5 border-b border-[var(--border)] bg-[oklch(0.10_0.01_240/0.3)]"
               style={{ gridTemplateColumns: `40px 80px 80px 1fr repeat(${test.subjects.length}, 70px) 70px 1fr` }}
             >
-              {['#', 'Status', 'Roll No.', 'Student', ...test.subjects.map(s => s.substring(0, 4)), 'Total', 'Errors'].map((h) => (
-                <span key={h} className="text-[10px] font-semibold uppercase tracking-wider text-[var(--muted-foreground)] capitalize">
+              {['#', 'Status', 'Roll No.', 'Student', ...test.subjects.map(s => s.name.substring(0, 4)), 'Total', 'Errors'].map((h, i) => (
+                <span key={`${h}-${i}`} className="text-[10px] font-semibold uppercase tracking-wider text-[var(--muted-foreground)] capitalize">
                   {h}
                 </span>
               ))}
@@ -667,8 +674,8 @@ export default function UploadResultsPage() {
                     {row.student?.name ?? (row.roll_no ? 'Not found' : '—')}
                   </span>
                   {test.subjects.map((s) => (
-                    <span key={s} className="text-xs text-center text-[var(--muted-foreground)]">
-                      {row.subject_scores[s] ?? <span className="text-red-400">—</span>}
+                    <span key={s.name} className="text-xs text-center text-[var(--muted-foreground)]">
+                      {row.subject_scores[s.name] ?? <span className="text-red-400">—</span>}
                     </span>
                   ))}
                   <span className="text-xs text-center font-semibold">{row.total || '—'}</span>

@@ -4,6 +4,8 @@ import { useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { recalculateTestStats } from '@/lib/scoring'
+import { normaliseSubjects } from '@/lib/subjects'
+import type { SubjectConfig } from '@/lib/types'
 import {
   Users,
   CheckCircle2,
@@ -20,7 +22,7 @@ import {
 
 interface BatchGraderProps {
   testId: string
-  subjects: string[]
+  subjects: SubjectConfig[] | string[]
   maxMarks: number
   targetBatches: string[]
   coachingCenterId: string
@@ -31,7 +33,7 @@ interface GraderRow {
   rollNo: string
   name: string
   isAbsent: boolean
-  marks: Record<string, string> // subject key → value; or '__total__' if no subjects
+  marks: Record<string, string> // subject name → value string
 }
 
 // ── Constants ──────────────────────────────────────────────────────────────────
@@ -41,11 +43,14 @@ const TOTAL_KEY = '__total__'
 const inputCls =
   'w-full px-2 py-1.5 rounded-lg bg-[var(--input)] border border-[var(--border)] text-[var(--foreground)] placeholder:text-[var(--muted-foreground)] focus:outline-none focus:ring-1 focus:ring-[var(--ring)] transition-all text-sm text-center disabled:opacity-40 disabled:cursor-not-allowed'
 
+const inputOverCls =
+  'w-full px-2 py-1.5 rounded-lg bg-red-500/10 border border-red-500/50 text-red-400 placeholder:text-[var(--muted-foreground)] focus:outline-none focus:ring-1 focus:ring-red-500 transition-all text-sm text-center disabled:opacity-40 disabled:cursor-not-allowed'
+
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export default function BatchGrader({
   testId,
-  subjects,
+  subjects: rawSubjects,
   maxMarks,
   targetBatches,
   coachingCenterId,
@@ -60,15 +65,25 @@ export default function BatchGrader({
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
 
-  const markFields = subjects.length > 0 ? subjects : [TOTAL_KEY]
+  // Normalise subjects to SubjectConfig[]
+  const subjects: SubjectConfig[] = normaliseSubjects(rawSubjects)
+  const hasSubjects = subjects.length > 0
+
+  // When no subjects defined (legacy), use a single __total__ field
+  const markFields: SubjectConfig[] = hasSubjects
+    ? subjects
+    : [{ name: TOTAL_KEY, max_marks: maxMarks }]
 
   // ── Helpers ────────────────────────────────────────────────────────────────
 
   const calcRowTotal = (marks: Record<string, string>): number => {
-    if (subjects.length === 0) {
-      return Number(marks[TOTAL_KEY] ?? 0) || 0
-    }
-    return subjects.reduce((sum, s) => sum + (Number(marks[s] ?? 0) || 0), 0)
+    if (!hasSubjects) return Number(marks[TOTAL_KEY] ?? 0) || 0
+    return subjects.reduce((sum, s) => sum + (Number(marks[s.name] ?? 0) || 0), 0)
+  }
+
+  const isSubjectOver = (marks: Record<string, string>, subject: SubjectConfig): boolean => {
+    const val = Number(marks[subject.name] ?? 0) || 0
+    return subject.max_marks > 0 && val > subject.max_marks
   }
 
   // ── Load students for a batch ──────────────────────────────────────────────
@@ -82,7 +97,6 @@ export default function BatchGrader({
 
     const supabase = createClient()
 
-    // 1. Fetch students in this batch
     const { data: students, error: stuErr } = await supabase
       .from('students')
       .select('id, name, roll_no')
@@ -96,7 +110,6 @@ export default function BatchGrader({
       return
     }
 
-    // 2. Fetch existing scores for this test
     const { data: existing } = await supabase
       .from('scores')
       .select('student_id')
@@ -106,16 +119,17 @@ export default function BatchGrader({
     const alreadyCount = students.filter((s: { id: string }) => scoredIds.has(s.id)).length
     setAlreadyScoredCount(alreadyCount)
 
-    // 3. Only include unscored students in the grid
     const unscoredStudents = students.filter((s: { id: string }) => !scoredIds.has(s.id))
 
-    const initialRows: GraderRow[] = unscoredStudents.map((s: { id: string; name: string | null; roll_no: string | null }) => ({
-      studentId: s.id,
-      rollNo: s.roll_no ?? '',
-      name: s.name ?? '',
-      isAbsent: false,
-      marks: {},
-    }))
+    const initialRows: GraderRow[] = unscoredStudents.map(
+      (s: { id: string; name: string | null; roll_no: string | null }) => ({
+        studentId: s.id,
+        rollNo: s.roll_no ?? '',
+        name: s.name ?? '',
+        isAbsent: false,
+        marks: {},
+      })
+    )
 
     setRows(initialRows)
     setFetchingStudents(false)
@@ -130,26 +144,24 @@ export default function BatchGrader({
 
   const toggleAbsent = (idx: number) => {
     setRows((prev) =>
-      prev.map((r, i) => i === idx ? { ...r, isAbsent: !r.isAbsent } : r)
+      prev.map((r, i) => (i === idx ? { ...r, isAbsent: !r.isAbsent } : r))
     )
   }
 
   const setMark = (idx: number, field: string, value: string) => {
     setRows((prev) =>
-      prev.map((r, i) => i === idx ? { ...r, marks: { ...r.marks, [field]: value } } : r)
+      prev.map((r, i) => (i === idx ? { ...r, marks: { ...r.marks, [field]: value } } : r))
     )
   }
 
   // ── Quick actions ─────────────────────────────────────────────────────────
 
-  const markAllPresent = () =>
-    setRows((prev) => prev.map((r) => ({ ...r, isAbsent: false })))
+  const markAllPresent = () => setRows((prev) => prev.map((r) => ({ ...r, isAbsent: false })))
 
   const markRemainingAbsent = () =>
     setRows((prev) =>
       prev.map((r) => {
         const total = calcRowTotal(r.marks)
-        // Only flip to absent if no marks entered yet
         if (!r.isAbsent && total === 0) return { ...r, isAbsent: true }
         return r
       })
@@ -169,18 +181,24 @@ export default function BatchGrader({
     // Validate present rows
     for (const row of rows) {
       if (row.isAbsent) continue
+      for (const field of markFields) {
+        const val = row.marks[field.name] ?? ''
+        if (val === '') {
+          const label = field.name === TOTAL_KEY ? 'Total' : field.name
+          setError(`Marks for ${row.name} (${label}) are missing.`)
+          return
+        }
+        const num = Number(val)
+        if (field.max_marks > 0 && num > field.max_marks) {
+          const label = field.name === TOTAL_KEY ? 'Total' : field.name
+          setError(`${row.name}: ${label} score (${num}) exceeds max (${field.max_marks}).`)
+          return
+        }
+      }
       const total = calcRowTotal(row.marks)
       if (total > maxMarks) {
         setError(`${row.name} has total ${total} which exceeds max marks ${maxMarks}.`)
         return
-      }
-      for (const field of markFields) {
-        const val = row.marks[field] ?? ''
-        if (val === '') {
-          const label = field === TOTAL_KEY ? 'Total' : field
-          setError(`Marks for ${row.name} (${label}) are missing.`)
-          return
-        }
       }
     }
 
@@ -190,10 +208,10 @@ export default function BatchGrader({
     const records = rows.map((row) => {
       const subjectScores: Record<string, number> = {}
       let total = 0
-      if (subjects.length > 0) {
+      if (hasSubjects) {
         subjects.forEach((s) => {
-          const v = Number(row.marks[s] ?? 0)
-          subjectScores[s] = v
+          const v = Number(row.marks[s.name] ?? 0)
+          subjectScores[s.name] = v
           total += v
         })
       } else {
@@ -212,7 +230,6 @@ export default function BatchGrader({
       }
     })
 
-    // Bulk insert in batches of 50
     const BATCH_SIZE = 50
     const errors: string[] = []
     for (let i = 0; i < records.length; i += BATCH_SIZE) {
@@ -228,7 +245,6 @@ export default function BatchGrader({
       return
     }
 
-    // Recalculate ranks + aggregates
     await recalculateTestStats(supabase, testId)
 
     const presentCount = records.filter((r) => !r.is_absent).length
@@ -239,7 +255,6 @@ export default function BatchGrader({
       `. Ranks recalculated.`
     )
 
-    // Reset grader so already-saved students disappear
     setSaving(false)
     await loadBatch(selectedBatch)
     router.refresh()
@@ -250,11 +265,9 @@ export default function BatchGrader({
   const presentCount = rows.filter((r) => !r.isAbsent).length
   const absentCount = rows.filter((r) => r.isAbsent).length
 
-  // Column template: Roll | Name | Status | ...subjects or total | Total
-  const subjectCols = subjects.length > 0
-    ? `repeat(${subjects.length}, 72px)`
-    : '100px'
-  const colTemplate = `80px 1fr 110px ${subjectCols} 80px`
+  // Column template: Roll | Name | Status | ...subjects | Total
+  const subjectColWidth = hasSubjects ? `repeat(${subjects.length}, 80px)` : '100px'
+  const colTemplate = `80px 1fr 110px ${subjectColWidth} 90px`
 
   return (
     <div className="glass-card rounded-2xl overflow-hidden mt-4">
@@ -343,7 +356,7 @@ export default function BatchGrader({
             )}
           </div>
 
-          {/* Loading state */}
+          {/* Loading */}
           {fetchingStudents && (
             <div className="flex items-center justify-center gap-2 py-12 text-[var(--muted-foreground)] text-sm">
               <Loader2 className="w-5 h-5 animate-spin" />
@@ -362,8 +375,12 @@ export default function BatchGrader({
           {!fetchingStudents && selectedBatch && rows.length === 0 && alreadyScoredCount > 0 && (
             <div className="py-12 text-center">
               <CheckCircle2 className="w-8 h-8 text-green-400 mx-auto mb-2 opacity-70" />
-              <p className="text-sm font-medium text-green-400">All {alreadyScoredCount} students in this batch already have scores.</p>
-              <p className="text-xs text-[var(--muted-foreground)] mt-1">Use the delete button in the table above to remove a score and re-enter it.</p>
+              <p className="text-sm font-medium text-green-400">
+                All {alreadyScoredCount} students in this batch already have scores.
+              </p>
+              <p className="text-xs text-[var(--muted-foreground)] mt-1">
+                Use the delete button in the table above to remove a score and re-enter it.
+              </p>
             </div>
           )}
 
@@ -373,14 +390,36 @@ export default function BatchGrader({
               {/* Info row */}
               <div className="px-5 pt-3 pb-2 flex items-center gap-4 flex-wrap">
                 <span className="text-xs text-[var(--muted-foreground)]">
-                  <span className="font-semibold text-[var(--foreground)]">{rows.length}</span> student{rows.length !== 1 ? 's' : ''} to grade
-                  {alreadyScoredCount > 0 && <span className="ml-2 text-yellow-400">· {alreadyScoredCount} already scored (hidden)</span>}
+                  <span className="font-semibold text-[var(--foreground)]">{rows.length}</span>{' '}
+                  student{rows.length !== 1 ? 's' : ''} to grade
+                  {alreadyScoredCount > 0 && (
+                    <span className="ml-2 text-yellow-400">· {alreadyScoredCount} already scored (hidden)</span>
+                  )}
                 </span>
                 <span className="text-xs text-[var(--muted-foreground)] ml-auto">
                   <span className="text-green-400 font-medium">{presentCount} present</span>
-                  {absentCount > 0 && <span className="text-red-400 font-medium ml-2">{absentCount} absent</span>}
+                  {absentCount > 0 && (
+                    <span className="text-red-400 font-medium ml-2">{absentCount} absent</span>
+                  )}
                 </span>
               </div>
+
+              {/* Per-subject max marks reference bar */}
+              {hasSubjects && (
+                <div className="mx-5 mb-2 px-3 py-2 rounded-lg bg-[oklch(0.62_0.22_265/0.06)] border border-[oklch(0.62_0.22_265/0.15)] flex flex-wrap gap-3 items-center">
+                  <span className="text-[10px] font-semibold text-[var(--muted-foreground)] uppercase tracking-wide">Max per subject:</span>
+                  {subjects.map((s) => (
+                    <span key={s.name} className="text-[10px] capitalize">
+                      <span className="text-[var(--foreground)] font-medium">{s.name}</span>
+                      <span className="text-[var(--muted-foreground)] ml-1">{s.max_marks}</span>
+                    </span>
+                  ))}
+                  <span className="ml-auto text-[10px]">
+                    <span className="text-[var(--muted-foreground)]">Total: </span>
+                    <span className="text-[var(--foreground)] font-semibold">{maxMarks}</span>
+                  </span>
+                </div>
+              )}
 
               {/* Header row */}
               <div
@@ -390,8 +429,17 @@ export default function BatchGrader({
                 <span>Roll No</span>
                 <span>Name</span>
                 <span className="text-center">Status</span>
-                {subjects.length > 0
-                  ? subjects.map((s) => <span key={s} className="text-center capitalize">{s}</span>)
+                {hasSubjects
+                  ? subjects.map((s) => (
+                      <span key={s.name} className="text-center capitalize">
+                        {s.name}
+                        {s.max_marks > 0 && (
+                          <span className="text-[var(--muted-foreground)] font-normal ml-0.5 normal-case">
+                            /{s.max_marks}
+                          </span>
+                        )}
+                      </span>
+                    ))
                   : <span className="text-center">Total Marks</span>
                 }
                 <span className="text-center">Total</span>
@@ -402,6 +450,7 @@ export default function BatchGrader({
                 {rows.map((row, idx) => {
                   const rowTotal = row.isAbsent ? 0 : calcRowTotal(row.marks)
                   const rowPct = maxMarks > 0 ? ((rowTotal / maxMarks) * 100).toFixed(1) : '0.0'
+                  const totalOver = rowTotal > maxMarks
 
                   return (
                     <div
@@ -450,21 +499,25 @@ export default function BatchGrader({
                         </button>
                       </div>
 
-                      {/* Mark inputs */}
-                      {markFields.map((field) => (
-                        <input
-                          key={field}
-                          id={`mark-${row.studentId}-${field}`}
-                          type="number"
-                          min={0}
-                          max={maxMarks}
-                          disabled={row.isAbsent}
-                          placeholder="0"
-                          value={row.marks[field] ?? ''}
-                          onChange={(e) => setMark(idx, field, e.target.value)}
-                          className={inputCls}
-                        />
-                      ))}
+                      {/* Mark inputs — one per subject */}
+                      {markFields.map((field) => {
+                        const over = !row.isAbsent && isSubjectOver(row.marks, field)
+                        return (
+                          <input
+                            key={field.name}
+                            id={`mark-${row.studentId}-${field.name}`}
+                            type="number"
+                            min={0}
+                            max={field.max_marks > 0 ? field.max_marks : undefined}
+                            disabled={row.isAbsent}
+                            placeholder="0"
+                            value={row.marks[field.name] ?? ''}
+                            onChange={(e) => setMark(idx, field.name, e.target.value)}
+                            className={over ? inputOverCls : inputCls}
+                            title={over ? `Exceeds max (${field.max_marks})` : undefined}
+                          />
+                        )
+                      })}
 
                       {/* Auto total */}
                       <div className="text-center">
@@ -472,10 +525,12 @@ export default function BatchGrader({
                           <span className="text-xs text-red-400 font-medium">—</span>
                         ) : (
                           <div>
-                            <span className={`text-sm font-bold ${rowTotal > maxMarks ? 'text-red-400' : 'text-[var(--foreground)]'}`}>
+                            <span className={`text-sm font-bold ${totalOver ? 'text-red-400' : 'text-[var(--foreground)]'}`}>
                               {rowTotal}
                             </span>
-                            <span className="text-[10px] text-[var(--muted-foreground)] block leading-none mt-0.5">{rowPct}%</span>
+                            <span className="text-[10px] text-[var(--muted-foreground)] block leading-none mt-0.5">
+                              {rowPct}%
+                            </span>
                           </div>
                         )}
                       </div>
@@ -487,7 +542,8 @@ export default function BatchGrader({
               {/* Save bar */}
               <div className="px-5 py-4 border-t border-[var(--border)] bg-[oklch(0.10_0.01_240/0.4)] flex items-center justify-between gap-4">
                 <span className="text-xs text-[var(--muted-foreground)]">
-                  Max marks per student: <span className="font-semibold text-[var(--foreground)]">{maxMarks}</span>
+                  Max marks per student:{' '}
+                  <span className="font-semibold text-[var(--foreground)]">{maxMarks}</span>
                 </span>
                 <button
                   id="save-batch-scores"

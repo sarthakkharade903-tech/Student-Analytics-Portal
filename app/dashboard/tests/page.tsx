@@ -1,17 +1,21 @@
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { ClipboardList, Plus, Trophy, Users, TrendingUp, Calendar } from 'lucide-react'
-import type { Test } from '@/lib/types'
+import type { Test, SubjectConfig } from '@/lib/types'
+import { normaliseSubjects } from '@/lib/subjects'
 
 export const metadata = {
   title: 'Tests – Parent Analytics Portal',
   description: 'Manage your tests and upload student marks.',
 }
 
-function SubjectPill({ subject }: { subject: string }) {
+function SubjectPill({ subject }: { subject: SubjectConfig }) {
   return (
-    <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-[oklch(0.62_0.22_265/0.12)] text-[var(--primary)] text-xs font-medium capitalize">
-      {subject}
+    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-[oklch(0.62_0.22_265/0.12)] text-[var(--primary)] text-xs font-medium capitalize">
+      {subject.name}
+      {subject.max_marks > 0 && (
+        <span className="text-[var(--primary)] opacity-50 font-normal">·{subject.max_marks}</span>
+      )}
     </span>
   )
 }
@@ -117,8 +121,8 @@ export default async function TestsPage() {
 
               {/* Subject pills */}
               <div className="flex flex-wrap gap-1.5 mb-4">
-                {(test.subjects ?? []).map((s: string) => (
-                  <SubjectPill key={s} subject={s} />
+                {normaliseSubjects(test.subjects ?? []).map((s) => (
+                  <SubjectPill key={s.name} subject={s} />
                 ))}
               </div>
 

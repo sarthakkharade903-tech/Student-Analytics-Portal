@@ -4,9 +4,10 @@ import { jwtVerify } from 'jose'
 import { createServerClient } from '@supabase/ssr'
 import { 
   TrendingUp, TrendingDown, AlertCircle, CheckCircle2, 
-  Calendar, Award, Target, BookOpen, AlertTriangle
+  Calendar, Award, Target, BookOpen, AlertTriangle, Activity
 } from 'lucide-react'
 import PerformanceChart from './PerformanceChart'
+import { normaliseSubjects } from '@/lib/subjects'
 
 export default async function ParentDashboard() {
   const cookieStore = await cookies()
@@ -23,7 +24,7 @@ export default async function ParentDashboard() {
     )
     const { payload } = await jwtVerify(token, secret)
     studentId = payload.student_id as string
-  } catch (e) {
+  } catch {
     redirect('/parent/login')
   }
 
@@ -54,7 +55,7 @@ export default async function ParentDashboard() {
       )
     `)
     .eq('student_id', studentId)
-    .order('created_at', { ascending: true }) // Oldest to newest
+    .order('created_at', { ascending: true })
 
   const validScores = scores || []
   
@@ -70,10 +71,43 @@ export default async function ParentDashboard() {
   const absentTests = validScores.filter(s => s.is_absent).length
   const presentTests = totalTests - absentTests
   const attendancePercentage = totalTests > 0 ? Math.round((presentTests / totalTests) * 100) : 100
+  const attendanceColor = attendancePercentage >= 90 
+    ? { hoverBorder: 'hover:border-emerald-500/50', iconBg: 'bg-emerald-500/10', iconText: 'text-emerald-400', iconGroupBg: 'group-hover:bg-emerald-500' }
+    : attendancePercentage >= 75
+    ? { hoverBorder: 'hover:border-amber-500/50', iconBg: 'bg-amber-500/10', iconText: 'text-amber-400', iconGroupBg: 'group-hover:bg-amber-500' }
+    : { hoverBorder: 'hover:border-orange-500/50', iconBg: 'bg-orange-500/10', iconText: 'text-orange-400', iconGroupBg: 'group-hover:bg-orange-500' }
 
   // Latest test logic
   const latestScore = validScores[validScores.length - 1]
   const previousScore = validScores.length > 1 ? validScores[validScores.length - 2] : null
+
+  // Percentile logic
+  let allTestScores: any[] = []
+  const testIds = validScores.map((s: any) => s.test_id)
+  if (testIds.length > 0) {
+    const { data } = await supabase
+      .from('scores')
+      .select('test_id, total, subject_scores, is_absent')
+      .in('test_id', testIds)
+      .eq('is_absent', false)
+    
+    allTestScores = data || []
+  }
+
+  const getTestScores = (testId: string) => allTestScores.filter(s => s.test_id === testId).map(s => s.total)
+  const latestTestScores = allTestScores.filter(s => s.test_id === latestScore?.test_id)
+
+  function calculatePercentile(score: number, allScores: number[]) {
+    if (allScores.length === 0) return 0
+    const equalOrLess = allScores.filter(s => s <= score).length
+    const perc = (equalOrLess / allScores.length) * 100
+    return Number.isInteger(perc) ? perc.toString() : perc.toFixed(1)
+  }
+
+  const totalScores = latestTestScores.map(s => s.total)
+  const totalPercentile = latestScore && !latestScore.is_absent 
+    ? calculatePercentile(latestScore.total, totalScores) 
+    : 0
 
   // Performance Status Engine
   let status = 'No Data'
@@ -86,9 +120,9 @@ export default async function ParentDashboard() {
       statusColor = 'text-gray-500'
       StatusIcon = AlertCircle
     } else if (attendancePercentage < 75) {
-      status = 'Irregular Attendance'
-      statusColor = 'text-yellow-400'
-      StatusIcon = AlertTriangle
+      status = 'Needs Consistency'
+      statusColor = 'text-amber-400'
+      StatusIcon = AlertCircle
     } else if (previousScore && !previousScore.is_absent) {
       if (latestScore.percentage > previousScore.percentage) {
         status = 'Improving'
@@ -119,6 +153,11 @@ export default async function ParentDashboard() {
   }))
 
   const initials = student.name.split(' ').map((n: string) => n[0]).join('').substring(0, 2).toUpperCase()
+
+  // Normalise subjects for the latest score's test (handles legacy string[] or new SubjectConfig[])
+  const latestSubjects = latestScore?.tests?.subjects
+    ? normaliseSubjects(latestScore.tests.subjects)
+    : []
 
   return (
     <div className="space-y-8 pb-12">
@@ -158,12 +197,12 @@ export default async function ParentDashboard() {
 
       {/* ── ALERTS ────────────────────────────────────────────────────────── */}
       {absentTests > 0 && (
-        <div className="bg-red-500/10 border border-red-500/20 rounded-2xl p-4 flex items-start gap-3">
-          <AlertTriangle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
+        <div className="bg-amber-500/10 border border-amber-500/20 rounded-2xl p-4 flex items-start gap-3">
+          <AlertCircle className="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5" />
           <div>
-            <h3 className="text-sm font-semibold text-red-400">Attendance Alert</h3>
-            <p className="text-sm text-red-400/80 mt-1">
-              Student was absent for {absentTests} test{absentTests > 1 ? 's' : ''}. Check the notifications panel for details.
+            <h3 className="text-sm font-semibold text-amber-400">Missed Test Notice</h3>
+            <p className="text-sm text-amber-400/80 mt-1">
+              The student missed {absentTests} recent test{absentTests > 1 ? 's' : ''}. Consistent test-taking is key to improving rank.
             </p>
           </div>
         </div>
@@ -180,7 +219,7 @@ export default async function ParentDashboard() {
       ) : (
         <>
           {/* ── SUMMARY CARDS ────────────────────────────────────────────────── */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
             <div className="bg-gradient-to-br from-white/[0.05] to-white/[0.01] border border-white/10 rounded-2xl p-5 hover:border-blue-500/50 transition-colors group">
               <div className="flex items-center gap-3 mb-3">
                 <div className="p-2 rounded-lg bg-blue-500/10 text-blue-400 group-hover:bg-blue-500 group-hover:text-white transition-colors">
@@ -219,12 +258,25 @@ export default async function ParentDashboard() {
               </div>
             </div>
 
-            <div className="bg-gradient-to-br from-white/[0.05] to-white/[0.01] border border-white/10 rounded-2xl p-5 hover:border-emerald-500/50 transition-colors group">
+            <div className="bg-gradient-to-br from-white/[0.05] to-white/[0.01] border border-white/10 rounded-2xl p-5 hover:border-pink-500/50 transition-colors group">
               <div className="flex items-center gap-3 mb-3">
-                <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-400 group-hover:bg-emerald-500 group-hover:text-white transition-colors">
+                <div className="p-2 rounded-lg bg-pink-500/10 text-pink-400 group-hover:bg-pink-500 group-hover:text-white transition-colors">
+                  <Activity className="w-4 h-4" />
+                </div>
+                <h3 className="text-xs font-semibold text-white/60 uppercase tracking-wider">Total Percentile</h3>
+              </div>
+              <div className="flex items-baseline gap-1">
+                <span className="text-2xl font-bold">{latestScore.is_absent ? '0' : totalPercentile}</span>
+                <span className="text-sm text-white/40">PR</span>
+              </div>
+            </div>
+
+            <div className={`bg-gradient-to-br from-white/[0.05] to-white/[0.01] border border-white/10 rounded-2xl p-5 transition-colors group ${attendanceColor.hoverBorder}`}>
+              <div className="flex items-center gap-3 mb-3">
+                <div className={`p-2 rounded-lg transition-colors ${attendanceColor.iconBg} ${attendanceColor.iconText} ${attendanceColor.iconGroupBg} group-hover:text-white`}>
                   <Calendar className="w-4 h-4" />
                 </div>
-                <h3 className="text-xs font-semibold text-white/60 uppercase tracking-wider">Attendance</h3>
+                <h3 className="text-xs font-semibold text-white/60 uppercase tracking-wider">Test Attendance</h3>
               </div>
               <div className="flex items-baseline gap-1">
                 <span className="text-2xl font-bold">{attendancePercentage}</span>
@@ -234,7 +286,7 @@ export default async function ParentDashboard() {
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* ── PERFORMANCE TREND ────────────────────────────────────────────── */}
+            {/* ── PERFORMANCE TREND ─────────────────────────────────────────── */}
             <div className="lg:col-span-2 bg-white/[0.02] border border-white/10 rounded-3xl p-6 relative overflow-hidden">
               <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/5 rounded-full blur-[80px]" />
               <h2 className="text-lg font-bold mb-6 relative z-10">Performance Trend</h2>
@@ -243,31 +295,58 @@ export default async function ParentDashboard() {
               </div>
             </div>
 
-            {/* ── SUBJECT PERFORMANCE ──────────────────────────────────────────── */}
+            {/* ── SUBJECT BREAKDOWN ─────────────────────────────────────────── */}
             <div className="bg-white/[0.02] border border-white/10 rounded-3xl p-6">
-              <h2 className="text-lg font-bold mb-6">Subject Breakdown</h2>
+              <h2 className="text-lg font-bold mb-1">Subject Breakdown</h2>
+              <p className="text-xs text-white/40 mb-5">Latest test performance</p>
               {latestScore.is_absent ? (
                 <div className="h-40 flex items-center justify-center text-sm text-white/40 italic">
                   Absent for latest test
                 </div>
+              ) : latestSubjects.length === 0 ? (
+                <div className="h-40 flex items-center justify-center text-sm text-white/40 italic">
+                  No subject data available
+                </div>
               ) : (
                 <div className="space-y-5">
-                  {latestScore.tests?.subjects?.map((sub: string) => {
-                    const score = latestScore.subject_scores[sub] || 0
-                    // Estimate subject percentage if max marks per subject isn't available
-                    // Assuming equal weightage for subjects
-                    const maxPerSubject = (latestScore.tests?.max_marks || 100) / latestScore.tests!.subjects.length
-                    const perc = Math.min(100, Math.round((score / maxPerSubject) * 100))
+                  {latestSubjects.map((sub) => {
+                    const score = latestScore.subject_scores?.[sub.name] ?? 0
+                    // Use the actual per-subject max_marks for accurate percentage
+                    const subMax = sub.max_marks > 0 ? sub.max_marks : latestScore.tests?.max_marks / latestSubjects.length
+                    const perc = subMax > 0 ? Math.min(100, Math.round((score / subMax) * 100)) : 0
                     
+                    const subScores = latestTestScores.map(s => s.subject_scores?.[sub.name] ?? 0)
+                    const subPercentile = calculatePercentile(score, subScores)
+
+                    const barColor =
+                      perc >= 75
+                        ? 'from-green-500 to-emerald-500'
+                        : perc >= 50
+                        ? 'from-yellow-500 to-amber-500'
+                        : 'from-red-500 to-rose-500'
+
                     return (
-                      <div key={sub}>
+                      <div key={sub.name}>
                         <div className="flex justify-between items-end mb-2">
-                          <span className="text-sm font-medium capitalize text-white/90">{sub}</span>
-                          <span className="text-xs font-bold text-white/70">{score} <span className="text-white/30 font-normal">marks</span></span>
+                          <span className="text-sm font-medium capitalize text-white/90">{sub.name}</span>
+                          <div className="text-right flex items-center justify-end gap-2">
+                            <span className="text-xs font-bold text-white/70">
+                              {score}
+                              {sub.max_marks > 0 && (
+                                <span className="text-white/30 font-normal"> / {sub.max_marks}</span>
+                              )}
+                            </span>
+                            <span className="text-[10px] text-white/40">({perc}%)</span>
+                            {!latestScore.is_absent && (
+                              <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-400">
+                                {subPercentile} PR
+                              </span>
+                            )}
+                          </div>
                         </div>
                         <div className="w-full h-2.5 bg-white/5 rounded-full overflow-hidden">
-                          <div 
-                            className="h-full bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full transition-all duration-1000 ease-out"
+                          <div
+                            className={`h-full bg-gradient-to-r ${barColor} rounded-full transition-all duration-1000 ease-out`}
                             style={{ width: `${perc}%` }}
                           />
                         </div>
@@ -291,7 +370,7 @@ export default async function ParentDashboard() {
                     <th className="px-6 py-4 font-semibold">Test Name</th>
                     <th className="px-6 py-4 font-semibold">Date</th>
                     <th className="px-6 py-4 font-semibold text-center">Score</th>
-                    <th className="px-6 py-4 font-semibold text-center">%</th>
+                    <th className="px-6 py-4 font-semibold text-center">PR</th>
                     <th className="px-6 py-4 font-semibold text-center">Rank</th>
                     <th className="px-6 py-4 font-semibold text-right">Status</th>
                   </tr>
@@ -307,10 +386,10 @@ export default async function ParentDashboard() {
                         {score.tests?.test_date ? new Date(score.tests.test_date).toLocaleDateString() : '-'}
                       </td>
                       <td className="px-6 py-4 text-center font-medium">
-                        {score.is_absent ? '-' : score.total}
+                        {score.is_absent ? '-' : `${score.total} / ${score.tests?.max_marks}`}
                       </td>
                       <td className="px-6 py-4 text-center">
-                        {score.is_absent ? '-' : `${score.percentage}%`}
+                        {score.is_absent ? '-' : `${calculatePercentile(score.total, getTestScores(score.test_id))} PR`}
                       </td>
                       <td className="px-6 py-4 text-center">
                         {score.is_absent || !score.rank ? '-' : `#${score.rank}`}

@@ -4,17 +4,20 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
-import { ArrowLeft, Plus, X, Loader2, CheckCircle2, ClipboardList } from 'lucide-react'
+import { SUBJECT_PRESETS, totalMaxMarks } from '@/lib/subjects'
+import type { SubjectConfig } from '@/lib/types'
+import {
+  ArrowLeft,
+  Plus,
+  X,
+  Loader2,
+  CheckCircle2,
+  ClipboardList,
+  BookOpen,
+  ChevronDown,
+} from 'lucide-react'
 
-// ── Preset subject groups ─────────────────────────────────────────────────────
-
-const PRESETS: Record<string, string[]> = {
-  PCM: ['physics', 'chemistry', 'maths'],
-  PCB: ['physics', 'chemistry', 'biology'],
-  Physics: ['physics'],
-  Chemistry: ['chemistry'],
-  Maths: ['maths'],
-}
+// ── Constants ─────────────────────────────────────────────────────────────────
 
 const BATCH_PRESETS = ['JEE', 'NEET', 'CET A', 'CET B']
 
@@ -25,30 +28,47 @@ const TEST_TYPES = [
   'Mock Exam',
   'Revision Test',
   'Unit Test',
-  'Custom Test'
+  'Custom Test',
 ]
 
-// ── Input class helper ────────────────────────────────────────────────────────
+// ── Helpers ───────────────────────────────────────────────────────────────────
 
 const inputCls =
   'w-full px-4 py-2.5 rounded-lg bg-[var(--input)] border border-[var(--border)] text-[var(--foreground)] placeholder:text-[var(--muted-foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--ring)] transition-all text-sm'
+
+const smallInputCls =
+  'w-full px-3 py-2 rounded-lg bg-[var(--input)] border border-[var(--border)] text-[var(--foreground)] placeholder:text-[var(--muted-foreground)] focus:outline-none focus:ring-1 focus:ring-[var(--ring)] transition-all text-sm text-center'
+
+// Colour the total display based on whether it's set
+function TotalBadge({ total }: { total: number }) {
+  if (total === 0)
+    return <span className="text-[var(--muted-foreground)] text-lg font-bold">—</span>
+  return (
+    <span className="text-2xl font-bold bg-gradient-to-r from-[var(--primary)] to-[oklch(0.75_0.18_200)] bg-clip-text text-transparent">
+      {total}
+    </span>
+  )
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 
 export default function CreateTestPage() {
   const router = useRouter()
   const [coachingCenterId, setCoachingCenterId] = useState<string | null>(null)
+
+  // ── Form state ────────────────────────────────────────────────────────────
   const [testName, setTestName] = useState('')
   const [testDate, setTestDate] = useState('')
   const [testType, setTestType] = useState('Weekly Test')
-  const [maxMarks, setMaxMarks] = useState('')
-  const [subjects, setSubjects] = useState<string[]>([])
+  const [subjects, setSubjects] = useState<SubjectConfig[]>([])
   const [subjectInput, setSubjectInput] = useState('')
   const [targetBatches, setTargetBatches] = useState<string[]>([])
   const [batchInput, setBatchInput] = useState('')
   const [loading, setLoading] = useState(false)
   const [success, setSuccess] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  const computedTotal = totalMaxMarks(subjects)
 
   // Fetch coaching_center_id on mount
   useEffect(() => {
@@ -71,16 +91,25 @@ export default function CreateTestPage() {
   const addSubject = (name: string) => {
     const cleaned = name.trim().toLowerCase().replace(/\s+/g, ' ')
     if (!cleaned) return
-    if (subjects.includes(cleaned)) return
-    setSubjects((prev) => [...prev, cleaned])
+    if (subjects.some((s) => s.name === cleaned)) return
+    setSubjects((prev) => [...prev, { name: cleaned, max_marks: 100 }])
   }
 
   const removeSubject = (name: string) => {
-    setSubjects((prev) => prev.filter((s) => s !== name))
+    setSubjects((prev) => prev.filter((s) => s.name !== name))
+  }
+
+  const updateSubjectMarks = (name: string, value: string) => {
+    const num = parseInt(value, 10)
+    setSubjects((prev) =>
+      prev.map((s) =>
+        s.name === name ? { ...s, max_marks: isNaN(num) ? 0 : Math.max(0, num) } : s
+      )
+    )
   }
 
   const applyPreset = (key: string) => {
-    setSubjects(PRESETS[key])
+    setSubjects(SUBJECT_PRESETS[key] ?? [])
   }
 
   const handleSubjectKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -99,8 +128,7 @@ export default function CreateTestPage() {
   const addBatch = (name: string) => {
     const cleaned = name.trim()
     if (!cleaned) return
-    // Case-insensitive check
-    if (targetBatches.some(b => b.toLowerCase() === cleaned.toLowerCase())) return
+    if (targetBatches.some((b) => b.toLowerCase() === cleaned.toLowerCase())) return
     setTargetBatches((prev) => [...prev, cleaned])
   }
 
@@ -133,13 +161,18 @@ export default function CreateTestPage() {
       setError('Please add at least one subject.')
       return
     }
-    if (targetBatches.length === 0) {
-      setError('Please specify at least one target batch.')
+    for (const s of subjects) {
+      if (!s.max_marks || s.max_marks <= 0) {
+        setError(`Please set max marks for ${s.name} (must be > 0).`)
+        return
+      }
+    }
+    if (computedTotal <= 0) {
+      setError('Total marks must be greater than 0.')
       return
     }
-    const marks = Number(maxMarks)
-    if (!marks || marks <= 0) {
-      setError('Max marks must be a positive number.')
+    if (targetBatches.length === 0) {
+      setError('Please specify at least one target batch.')
       return
     }
 
@@ -151,9 +184,9 @@ export default function CreateTestPage() {
       test_name: testName.trim(),
       test_type: testType,
       test_date: testDate,
-      subjects,
+      subjects,          // stored as SubjectConfig[]
       target_batches: targetBatches,
-      max_marks: marks,
+      max_marks: computedTotal,
     })
 
     if (insertError) {
@@ -237,7 +270,7 @@ export default function CreateTestPage() {
                   className={inputCls}
                   style={{ colorScheme: 'dark' }}
                 >
-                  {TEST_TYPES.map(type => (
+                  {TEST_TYPES.map((type) => (
                     <option key={type} value={type}>{type}</option>
                   ))}
                 </select>
@@ -260,7 +293,7 @@ export default function CreateTestPage() {
               />
             </div>
 
-            {/* Subjects */}
+            {/* ── SUBJECTS SECTION ─────────────────────────────────────────── */}
             <div className="space-y-2">
               <label className="text-sm font-medium">
                 Subjects <span className="text-red-400">*</span>
@@ -268,8 +301,10 @@ export default function CreateTestPage() {
 
               {/* Quick presets */}
               <div className="flex flex-wrap gap-2 mb-2">
-                <span className="text-xs text-[var(--muted-foreground)] self-center mr-1">Quick select:</span>
-                {Object.keys(PRESETS).map((key) => (
+                <span className="text-xs text-[var(--muted-foreground)] self-center mr-1">
+                  Quick select:
+                </span>
+                {Object.keys(SUBJECT_PRESETS).map((key) => (
                   <button
                     key={key}
                     type="button"
@@ -285,15 +320,15 @@ export default function CreateTestPage() {
               <div className="min-h-[48px] px-3 py-2 rounded-lg bg-[var(--input)] border border-[var(--border)] focus-within:ring-2 focus-within:ring-[var(--ring)] transition-all flex flex-wrap gap-2 items-center">
                 {subjects.map((s) => (
                   <span
-                    key={s}
+                    key={s.name}
                     className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-[oklch(0.62_0.22_265/0.18)] text-[var(--primary)] text-xs font-medium capitalize"
                   >
-                    {s}
+                    {s.name}
                     <button
                       type="button"
-                      onClick={() => removeSubject(s)}
+                      onClick={() => removeSubject(s.name)}
                       className="hover:text-red-400 transition-colors ml-0.5"
-                      aria-label={`Remove ${s}`}
+                      aria-label={`Remove ${s.name}`}
                     >
                       <X className="w-3 h-3" />
                     </button>
@@ -305,13 +340,86 @@ export default function CreateTestPage() {
                   value={subjectInput}
                   onChange={(e) => setSubjectInput(e.target.value)}
                   onKeyDown={handleSubjectKeyDown}
-                  onBlur={() => { if (subjectInput.trim()) { addSubject(subjectInput); setSubjectInput('') } }}
+                  onBlur={() => {
+                    if (subjectInput.trim()) { addSubject(subjectInput); setSubjectInput('') }
+                  }}
                   className="flex-1 min-w-[140px] bg-transparent outline-none text-sm placeholder:text-[var(--muted-foreground)]"
                 />
               </div>
               <p className="text-xs text-[var(--muted-foreground)]">
                 Press <kbd className="px-1 py-0.5 rounded bg-[var(--secondary)] text-[10px] font-mono">Enter</kbd> or <kbd className="px-1 py-0.5 rounded bg-[var(--secondary)] text-[10px] font-mono">,</kbd> to add a subject
               </p>
+
+              {/* ── Per-subject marks panel (slides in when subjects exist) ── */}
+              {subjects.length > 0 && (
+                <div className="mt-3 rounded-xl border border-[oklch(0.62_0.22_265/0.25)] bg-[oklch(0.62_0.22_265/0.05)] overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+
+                  {/* Panel header */}
+                  <div className="px-4 py-2.5 border-b border-[oklch(0.62_0.22_265/0.15)] flex items-center gap-2">
+                    <BookOpen className="w-3.5 h-3.5 text-[var(--primary)]" />
+                    <span className="text-xs font-semibold text-[var(--primary)] uppercase tracking-wide">
+                      Marks per Subject
+                    </span>
+                    <ChevronDown className="w-3 h-3 text-[var(--muted-foreground)] ml-auto" />
+                  </div>
+
+                  {/* Subject rows */}
+                  <div className="divide-y divide-[oklch(0.62_0.22_265/0.1)]">
+                    {subjects.map((s) => (
+                      <div
+                        key={s.name}
+                        className="grid grid-cols-[1fr_120px_80px] items-center gap-3 px-4 py-3"
+                      >
+                        {/* Subject name */}
+                        <div className="flex items-center gap-2">
+                          <div className="w-1.5 h-1.5 rounded-full bg-[var(--primary)] opacity-70" />
+                          <span className="text-sm font-medium capitalize">{s.name}</span>
+                        </div>
+
+                        {/* Marks input */}
+                        <div className="relative">
+                          <input
+                            id={`subject-marks-${s.name}`}
+                            type="number"
+                            min={1}
+                            max={1000}
+                            placeholder="100"
+                            value={s.max_marks === 0 ? '' : s.max_marks}
+                            onChange={(e) => {
+                              updateSubjectMarks(s.name, e.target.value)
+                              setError(null)
+                            }}
+                            className={smallInputCls}
+                          />
+                        </div>
+
+                        {/* "marks" label */}
+                        <span className="text-xs text-[var(--muted-foreground)] text-center">
+                          marks
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Total row */}
+                  <div className="px-4 py-3 border-t border-[oklch(0.62_0.22_265/0.2)] bg-[oklch(0.62_0.22_265/0.07)] flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-semibold text-[var(--muted-foreground)] uppercase tracking-wide">
+                        Total Max Marks
+                      </span>
+                      <span className="text-[10px] text-[var(--muted-foreground)]">
+                        (auto-computed)
+                      </span>
+                    </div>
+                    <div className="flex items-baseline gap-1.5">
+                      <TotalBadge total={computedTotal} />
+                      {computedTotal > 0 && (
+                        <span className="text-xs text-[var(--muted-foreground)]">marks</span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Target Batches */}
@@ -365,26 +473,6 @@ export default function CreateTestPage() {
               </div>
               <p className="text-xs text-[var(--muted-foreground)]">
                 Press <kbd className="px-1 py-0.5 rounded bg-[var(--secondary)] text-[10px] font-mono">Enter</kbd> to add a batch. Only students in these batches will be tracked.
-              </p>
-            </div>
-
-            {/* Max Marks */}
-            <div className="space-y-1.5">
-              <label htmlFor="max-marks" className="text-sm font-medium">
-                Max Marks (Total) <span className="text-red-400">*</span>
-              </label>
-              <input
-                id="max-marks"
-                type="number"
-                required
-                min={1}
-                placeholder="e.g. 300 for a 3-subject test with 100 each"
-                value={maxMarks}
-                onChange={(e) => { setMaxMarks(e.target.value); setError(null) }}
-                className={inputCls}
-              />
-              <p className="text-xs text-[var(--muted-foreground)]">
-                Total possible score across all subjects.
               </p>
             </div>
 

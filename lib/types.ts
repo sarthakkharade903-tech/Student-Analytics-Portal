@@ -28,14 +28,25 @@ export interface LoginFormData {
   password: string
 }
 
+/**
+ * Represents a single subject with its individual max marks allocation.
+ * Stored as JSONB inside the `tests.subjects` column.
+ */
+export interface SubjectConfig {
+  name: string       // e.g. "physics"
+  max_marks: number  // e.g. 50
+}
+
 export interface Test {
   id: string
   coaching_center_id: string
   test_name: string
   test_type?: string
   test_date: string
-  subjects: string[]
+  /** Stored as SubjectConfig[] in new tests; plain string[] in legacy tests. Use normaliseSubjects() from lib/subjects.ts */
+  subjects: SubjectConfig[] | string[]
   target_batches: string[]
+  /** Auto-computed sum of all subject max_marks */
   max_marks: number
   highest_score: number | null
   average_score: number | null
@@ -55,3 +66,4 @@ export interface Score {
   created_at: string
   updated_at: string
 }
+

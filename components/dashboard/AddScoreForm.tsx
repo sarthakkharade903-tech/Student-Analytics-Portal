@@ -4,6 +4,8 @@ import { useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { recalculateTestStats } from '@/lib/scoring'
+import { normaliseSubjects } from '@/lib/subjects'
+import type { SubjectConfig } from '@/lib/types'
 import {
   UserPlus,
   Loader2,
@@ -17,29 +19,24 @@ import {
 
 interface AddScoreFormProps {
   testId: string
-  subjects: string[]
+  subjects: SubjectConfig[] | string[]
   maxMarks: number
   coachingCenterId: string
 }
-
-interface ExistingScore {
-  id: string
-  student_id: string
-  total: number
-}
-
-
 
 // ── Input class ───────────────────────────────────────────────────────────────
 
 const inputCls =
   'w-full px-3 py-2 rounded-lg bg-[var(--input)] border border-[var(--border)] text-[var(--foreground)] placeholder:text-[var(--muted-foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--ring)] transition-all text-sm'
 
+const inputOverCls =
+  'w-full px-3 py-2 rounded-lg bg-red-500/10 border border-red-500/50 text-red-400 placeholder:text-[var(--muted-foreground)] focus:outline-none focus:ring-2 focus:ring-red-500 transition-all text-sm'
+
 // ─────────────────────────────────────────────────────────────────────────────
 
 export default function AddScoreForm({
   testId,
-  subjects,
+  subjects: rawSubjects,
   maxMarks,
   coachingCenterId,
 }: AddScoreFormProps) {
@@ -51,12 +48,21 @@ export default function AddScoreForm({
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
 
+  // Normalise subjects
+  const subjects: SubjectConfig[] = normaliseSubjects(rawSubjects)
+
   const resetForm = useCallback(() => {
     setRollNo('')
     setMarks({})
     setError(null)
     setSuccess(null)
   }, [])
+
+  // Live total preview
+  const liveTotal = subjects.reduce((acc, s) => {
+    const n = Number(marks[s.name] ?? 0)
+    return acc + (isNaN(n) ? 0 : n)
+  }, 0)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -73,18 +79,23 @@ export default function AddScoreForm({
 
     const subjectScores: Record<string, number> = {}
     let total = 0
+
     for (const s of subjects) {
-      const raw = (marks[s] ?? '').trim()
+      const raw = (marks[s.name] ?? '').trim()
       if (raw === '') {
-        setError(`Marks for ${s} are required.`)
+        setError(`Marks for ${s.name} are required.`)
         return
       }
       const num = Number(raw)
       if (isNaN(num) || num < 0) {
-        setError(`Marks for ${s} must be a non-negative number.`)
+        setError(`Marks for ${s.name} must be a non-negative number.`)
         return
       }
-      subjectScores[s] = num
+      if (s.max_marks > 0 && num > s.max_marks) {
+        setError(`Marks for ${s.name} (${num}) cannot exceed its max (${s.max_marks}).`)
+        return
+      }
+      subjectScores[s.name] = num
       total += num
     }
 
@@ -150,12 +161,9 @@ export default function AddScoreForm({
       return
     }
 
-    // ── Recalculate ranks + test aggregates (centralized) ────────────────────
     await recalculateTestStats(supabase, testId)
 
-    // ── Done ─────────────────────────────────────────────────────────────────
-
-    setSuccess(`Score saved for ${studentData.name} (${percentage}%)`)
+    setSuccess(`Score saved for ${studentData.name} — ${total}/${maxMarks} (${percentage}%)`)
     setLoading(false)
     resetForm()
     router.refresh()
@@ -223,50 +231,61 @@ export default function AddScoreForm({
               />
             </div>
 
-            {/* Subject marks — responsive grid */}
+            {/* Subject marks grid */}
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-              {subjects.map((s) => (
-                <div key={s} className="space-y-1.5">
-                  <label htmlFor={`manual-mark-${s}`} className="text-sm font-medium capitalize">
-                    {s} <span className="text-red-400">*</span>
-                  </label>
-                  <input
-                    id={`manual-mark-${s}`}
-                    type="number"
-                    required
-                    min={0}
-                    placeholder="0"
-                    value={marks[s] ?? ''}
-                    onChange={(e) => {
-                      setMarks((prev) => ({ ...prev, [s]: e.target.value }))
-                      setError(null)
-                      setSuccess(null)
-                    }}
-                    className={inputCls}
-                  />
-                </div>
-              ))}
+              {subjects.map((s) => {
+                const val = Number(marks[s.name] ?? 0)
+                const over = s.max_marks > 0 && val > s.max_marks && marks[s.name] !== ''
+                return (
+                  <div key={s.name} className="space-y-1.5">
+                    <label htmlFor={`manual-mark-${s.name}`} className="text-sm font-medium capitalize flex items-center justify-between">
+                      <span>{s.name} <span className="text-red-400">*</span></span>
+                      {s.max_marks > 0 && (
+                        <span className="text-[10px] text-[var(--muted-foreground)] font-normal">
+                          max {s.max_marks}
+                        </span>
+                      )}
+                    </label>
+                    <div className="relative">
+                      <input
+                        id={`manual-mark-${s.name}`}
+                        type="number"
+                        required
+                        min={0}
+                        max={s.max_marks > 0 ? s.max_marks : undefined}
+                        placeholder="0"
+                        value={marks[s.name] ?? ''}
+                        onChange={(e) => {
+                          setMarks((prev) => ({ ...prev, [s.name]: e.target.value }))
+                          setError(null)
+                          setSuccess(null)
+                        }}
+                        className={over ? inputOverCls : inputCls}
+                      />
+                      {s.max_marks > 0 && (
+                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-[var(--muted-foreground)] pointer-events-none">
+                          /{s.max_marks}
+                        </span>
+                      )}
+                    </div>
+                    {over && (
+                      <p className="text-[10px] text-red-400">Exceeds max ({s.max_marks})</p>
+                    )}
+                  </div>
+                )
+              })}
             </div>
 
             {/* Live total preview */}
             {subjects.length > 0 && (
-              <div className="flex items-center gap-2 text-xs text-[var(--muted-foreground)]">
+              <div className="flex items-center gap-2 px-3 py-2.5 rounded-lg bg-[oklch(0.62_0.22_265/0.06)] border border-[oklch(0.62_0.22_265/0.15)] text-xs text-[var(--muted-foreground)]">
                 <span>Total preview:</span>
-                <span className="font-semibold text-[var(--foreground)]">
-                  {subjects.reduce((acc, s) => {
-                    const n = Number(marks[s] ?? 0)
-                    return acc + (isNaN(n) ? 0 : n)
-                  }, 0)}
+                <span className={`font-bold text-sm ${liveTotal > maxMarks ? 'text-red-400' : 'text-[var(--foreground)]'}`}>
+                  {liveTotal}
                 </span>
                 <span>/ {maxMarks}</span>
-                <span className="ml-auto">
-                  {(() => {
-                    const t = subjects.reduce((acc, s) => {
-                      const n = Number(marks[s] ?? 0)
-                      return acc + (isNaN(n) ? 0 : n)
-                    }, 0)
-                    return `${((t / maxMarks) * 100).toFixed(1)}%`
-                  })()}
+                <span className="ml-auto font-medium">
+                  {maxMarks > 0 ? `${((liveTotal / maxMarks) * 100).toFixed(1)}%` : '—'}
                 </span>
               </div>
             )}
@@ -287,15 +306,9 @@ export default function AddScoreForm({
                 className="flex-1 py-2.5 px-4 bg-[var(--primary)] text-white text-sm font-semibold rounded-lg hover:opacity-90 disabled:opacity-60 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2 glow-primary"
               >
                 {loading ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    Saving…
-                  </>
+                  <><Loader2 className="w-4 h-4 animate-spin" /> Saving…</>
                 ) : (
-                  <>
-                    <UserPlus className="w-4 h-4" />
-                    Save Score
-                  </>
+                  <><UserPlus className="w-4 h-4" /> Save Score</>
                 )}
               </button>
             </div>

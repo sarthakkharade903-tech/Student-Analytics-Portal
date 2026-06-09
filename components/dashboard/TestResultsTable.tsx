@@ -5,6 +5,8 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { recalculateTestStats } from '@/lib/scoring'
+import { normaliseSubjects } from '@/lib/subjects'
+import type { SubjectConfig } from '@/lib/types'
 import {
   Upload,
   Hash,
@@ -29,7 +31,7 @@ export interface ScoreRecord {
 interface TestResultsTableProps {
   testId: string
   maxMarks: number
-  subjects: string[]
+  subjects: SubjectConfig[] | string[]
   initialScores: ScoreRecord[]
   uploadHref: string
 }
@@ -77,13 +79,11 @@ function RankBadge({ rank }: { rank: number }) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Main component
-// ─────────────────────────────────────────────────────────────────────────────
 
 export default function TestResultsTable({
   testId,
   maxMarks,
-  subjects,
+  subjects: rawSubjects,
   initialScores,
   uploadHref,
 }: TestResultsTableProps) {
@@ -94,22 +94,27 @@ export default function TestResultsTable({
   const [deleteError, setDeleteError] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
 
+  // Normalise subjects
+  const subjects: SubjectConfig[] = normaliseSubjects(rawSubjects)
+
   const hasResults = scores.length > 0
-  
-  const filteredScores = scores.filter(score => 
-    !searchQuery || 
-    (score.student?.roll_no?.toLowerCase().includes(searchQuery.toLowerCase()))
+
+  const filteredScores = scores.filter(
+    (score) =>
+      !searchQuery ||
+      score.student?.roll_no?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      score.student?.name?.toLowerCase().includes(searchQuery.toLowerCase())
   )
 
-  // Grid template: Rank | Roll | Name | ...subjects | Total | % | Delete
-  const colTemplate = `56px 80px 1fr repeat(${subjects.length}, 72px) 80px 90px 48px`
+  // Grid: Rank | Roll | Name | ...subjects | Total | % | Delete
+  const subjectCols = subjects.length > 0 ? `repeat(${subjects.length}, 80px)` : ''
+  const colTemplate = `56px 80px 1fr ${subjectCols} 80px 90px 48px`
 
   const handleDelete = async (score: ScoreRecord) => {
     setDeletingId(score.id)
     setDeleteError(null)
     const supabase = createClient()
 
-    // 1. Delete the score row
     const { error: delErr } = await supabase
       .from('scores')
       .delete()
@@ -122,15 +127,12 @@ export default function TestResultsTable({
       return
     }
 
-    // 2. Optimistic local update — remove row from UI
     const remaining = scores.filter((s) => s.id !== score.id)
     setScores(remaining)
     setDeletingId(null)
     setConfirmId(null)
 
-    // 3. Recalculate ranks + test aggregates (centralized)
     await recalculateTestStats(supabase, testId)
-
     router.refresh()
   }
 
@@ -142,7 +144,7 @@ export default function TestResultsTable({
           <p className="text-sm font-semibold">Results</p>
           <p className="text-xs text-[var(--muted-foreground)] mt-0.5">
             {hasResults
-              ? `${scores.length} student${scores.length !== 1 ? 's' : ''} appeared`
+              ? `${scores.length} student${scores.length !== 1 ? 's' : ''} recorded`
               : 'No results uploaded yet'}
           </p>
         </div>
@@ -152,10 +154,10 @@ export default function TestResultsTable({
               <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted-foreground)]" />
               <input
                 type="text"
-                placeholder="Search by Roll No..."
+                placeholder="Search name or roll…"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9 pr-4 py-1.5 rounded-lg bg-[oklch(0.62_0.22_265/0.1)] border border-[var(--border)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--ring)] transition-all placeholder:text-[var(--muted-foreground)] w-48"
+                className="pl-9 pr-4 py-1.5 rounded-lg bg-[oklch(0.62_0.22_265/0.1)] border border-[var(--border)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--ring)] transition-all placeholder:text-[var(--muted-foreground)] w-52"
               />
             </div>
             <span className="text-xs text-[var(--muted-foreground)] flex items-center gap-1 hidden md:flex">
@@ -166,7 +168,7 @@ export default function TestResultsTable({
         )}
       </div>
 
-      {/* Delete error banner */}
+      {/* Delete error */}
       {deleteError && (
         <div className="mx-5 mt-4 rounded-lg bg-red-500/10 border border-red-500/30 px-4 py-3 text-sm text-red-400 flex items-center gap-2">
           <AlertTriangle className="w-4 h-4 flex-shrink-0" />
@@ -182,7 +184,7 @@ export default function TestResultsTable({
           </div>
           <h3 className="font-semibold mb-2">No results yet</h3>
           <p className="text-sm text-[var(--muted-foreground)] max-w-xs mb-5">
-            Upload a CSV file with student marks to see results here.
+            Upload a CSV file or use the Batch Grader to add student marks.
           </p>
           <Link
             href={uploadHref}
@@ -203,7 +205,14 @@ export default function TestResultsTable({
             <span>Roll No.</span>
             <span>Name</span>
             {subjects.map((s) => (
-              <span key={s} className="text-center capitalize">{s}</span>
+              <span key={s.name} className="text-center capitalize">
+                {s.name}
+                {s.max_marks > 0 && (
+                  <span className="font-normal normal-case ml-0.5 text-[var(--muted-foreground)]">
+                    /{s.max_marks}
+                  </span>
+                )}
+              </span>
             ))}
             <span className="text-center">Total</span>
             <span className="text-center">%</span>
@@ -214,137 +223,152 @@ export default function TestResultsTable({
           <div className="divide-y divide-[var(--border)]">
             {filteredScores.length === 0 ? (
               <div className="py-8 text-center text-sm text-[var(--muted-foreground)]">
-                No students found matching "{searchQuery}"
+                No students found matching &quot;{searchQuery}&quot;
               </div>
             ) : (
               filteredScores.map((score, idx) => {
                 const isConfirming = confirmId === score.id
                 const isDeleting = deletingId === score.id
 
-              return (
-                <div key={score.id}>
-                  {/* Main row */}
-                  <div
-                    className={`grid gap-3 px-5 py-3.5 items-center text-sm transition-colors ${
-                      isConfirming
-                        ? 'bg-red-500/5'
-                        : idx % 2 !== 0
-                        ? 'bg-[oklch(0.10_0.01_240/0.3)] hover:bg-[oklch(0.62_0.22_265/0.03)]'
-                        : 'hover:bg-[oklch(0.62_0.22_265/0.03)]'
-                    }`}
-                    style={{ gridTemplateColumns: colTemplate }}
-                  >
-                    {/* Rank */}
-                    <div className="flex items-center">
-                      {score.is_absent ? (
-                        <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-red-500/10 text-red-400 text-xs font-semibold border border-red-500/20">
-                          —
-                        </span>
-                      ) : (
-                        <RankBadge rank={score.rank} />
-                      )}
-                    </div>
-
-                    {/* Roll No */}
-                    <span className="font-mono text-xs text-[var(--primary)] bg-[oklch(0.62_0.22_265/0.1)] px-2 py-0.5 rounded-md inline-block">
-                      {score.student?.roll_no ?? '—'}
-                    </span>
-
-                    {/* Name */}
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <div className="w-7 h-7 rounded-full bg-[oklch(0.62_0.22_265/0.15)] flex items-center justify-center flex-shrink-0">
-                        <span className="text-xs font-semibold text-[var(--primary)]">
-                          {score.student?.name.charAt(0).toUpperCase() ?? '?'}
-                        </span>
+                return (
+                  <div key={score.id}>
+                    {/* Main row */}
+                    <div
+                      className={`grid gap-3 px-5 py-3.5 items-center text-sm transition-colors ${
+                        isConfirming
+                          ? 'bg-red-500/5'
+                          : idx % 2 !== 0
+                          ? 'bg-[oklch(0.10_0.01_240/0.3)] hover:bg-[oklch(0.62_0.22_265/0.03)]'
+                          : 'hover:bg-[oklch(0.62_0.22_265/0.03)]'
+                      }`}
+                      style={{ gridTemplateColumns: colTemplate }}
+                    >
+                      {/* Rank */}
+                      <div className="flex items-center">
+                        {score.is_absent ? (
+                          <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-red-500/10 text-red-400 text-xs font-semibold border border-red-500/20">
+                            —
+                          </span>
+                        ) : (
+                          <RankBadge rank={score.rank} />
+                        )}
                       </div>
-                      <span className="font-medium truncate">{score.student?.name ?? 'Unknown'}</span>
-                    </div>
 
-                    {/* Subject scores */}
-                    {subjects.map((s) => (
-                      <span key={s} className="text-center text-[var(--muted-foreground)]">
-                        {score.is_absent ? '—' : (score.subject_scores?.[s] ?? '—')}
+                      {/* Roll No */}
+                      <span className="font-mono text-xs text-[var(--primary)] bg-[oklch(0.62_0.22_265/0.1)] px-2 py-0.5 rounded-md inline-block">
+                        {score.student?.roll_no ?? '—'}
                       </span>
-                    ))}
 
-                    {/* Total */}
-                    <span className="text-center font-semibold">
-                      {score.is_absent ? '—' : score.total}
-                    </span>
+                      {/* Name */}
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="w-7 h-7 rounded-full bg-[oklch(0.62_0.22_265/0.15)] flex items-center justify-center flex-shrink-0">
+                          <span className="text-xs font-semibold text-[var(--primary)]">
+                            {score.student?.name.charAt(0).toUpperCase() ?? '?'}
+                          </span>
+                        </div>
+                        <span className="font-medium truncate">{score.student?.name ?? 'Unknown'}</span>
+                      </div>
 
-                    {/* % */}
-                    <div className="flex justify-center">
-                      {score.is_absent ? (
-                        <span className="inline-flex items-center px-2 py-0.5 rounded-md border text-xs font-semibold text-red-400 bg-red-500/10 border-red-500/20">
-                          ABSENT
+                      {/* Per-subject scores */}
+                      {subjects.map((s) => (
+                        <span key={s.name} className="text-center text-[var(--muted-foreground)]">
+                          {score.is_absent
+                            ? '—'
+                            : score.subject_scores?.[s.name] != null
+                            ? score.subject_scores[s.name]
+                            : '—'}
                         </span>
-                      ) : (
-                        <PercentageBadge pct={score.percentage} />
-                      )}
+                      ))}
+
+                      {/* Total */}
+                      <span className="text-center font-semibold">
+                        {score.is_absent ? '—' : score.total}
+                      </span>
+
+                      {/* % */}
+                      <div className="flex justify-center">
+                        {score.is_absent ? (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-md border text-xs font-semibold text-red-400 bg-red-500/10 border-red-500/20">
+                            ABSENT
+                          </span>
+                        ) : (
+                          <PercentageBadge pct={score.percentage} />
+                        )}
+                      </div>
+
+                      {/* Delete button */}
+                      <div className="flex items-center justify-end">
+                        {isDeleting ? (
+                          <Loader2 className="w-4 h-4 animate-spin text-red-400" />
+                        ) : (
+                          <button
+                            id={`delete-score-${score.id}`}
+                            onClick={() => {
+                              setDeleteError(null)
+                              setConfirmId(isConfirming ? null : score.id)
+                            }}
+                            title="Delete this score"
+                            className={`p-1.5 rounded-lg transition-all duration-150 ${
+                              isConfirming
+                                ? 'bg-red-500/15 text-red-400'
+                                : 'text-[var(--muted-foreground)] hover:text-red-400 hover:bg-red-500/10'
+                            }`}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
+                      </div>
                     </div>
 
-                    {/* Delete button */}
-                    <div className="flex items-center justify-end">
-                      {isDeleting ? (
-                        <Loader2 className="w-4 h-4 animate-spin text-red-400" />
-                      ) : (
-                        <button
-                          id={`delete-score-${score.id}`}
-                          onClick={() => {
-                            setDeleteError(null)
-                            setConfirmId(isConfirming ? null : score.id)
-                          }}
-                          title="Delete this score"
-                          className={`p-1.5 rounded-lg transition-all duration-150 ${
-                            isConfirming
-                              ? 'bg-red-500/15 text-red-400'
-                              : 'text-[var(--muted-foreground)] hover:text-red-400 hover:bg-red-500/10'
-                          }`}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      )}
-                    </div>
+                    {/* Confirm strip */}
+                    {isConfirming && !isDeleting && (
+                      <div className="px-5 py-3 bg-red-500/5 border-t border-red-500/10 flex items-center justify-between gap-4">
+                        <div className="flex items-center gap-2 text-sm text-red-400">
+                          <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" />
+                          <span>
+                            Delete score for <strong>{score.student?.name ?? 'this student'}</strong>
+                            {score.student?.roll_no ? ` (Roll ${score.student.roll_no})` : ''}?
+                            Ranks will be recalculated.
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2 flex-shrink-0">
+                          <button
+                            onClick={() => setConfirmId(null)}
+                            className="px-3 py-1.5 text-xs font-medium border border-[var(--border)] rounded-lg hover:bg-[var(--secondary)] transition-all"
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            id={`confirm-delete-score-${score.id}`}
+                            onClick={() => handleDelete(score)}
+                            className="px-3 py-1.5 text-xs font-semibold bg-red-500 text-white rounded-lg hover:bg-red-600 transition-all"
+                          >
+                            Yes, Delete
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
-
-                  {/* Inline confirm strip */}
-                  {isConfirming && !isDeleting && (
-                    <div className="px-5 py-3 bg-red-500/5 border-t border-red-500/10 flex items-center justify-between gap-4">
-                      <div className="flex items-center gap-2 text-sm text-red-400">
-                        <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" />
-                        <span>
-                          Delete score for <strong>{score.student?.name ?? 'this student'}</strong>
-                          {score.student?.roll_no ? ` (Roll ${score.student.roll_no})` : ''}?
-                          Ranks will be recalculated.
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-2 flex-shrink-0">
-                        <button
-                          onClick={() => setConfirmId(null)}
-                          className="px-3 py-1.5 text-xs font-medium border border-[var(--border)] rounded-lg hover:bg-[var(--secondary)] transition-all"
-                        >
-                          Cancel
-                        </button>
-                        <button
-                          id={`confirm-delete-score-${score.id}`}
-                          onClick={() => handleDelete(score)}
-                          className="px-3 py-1.5 text-xs font-semibold bg-red-500 text-white rounded-lg hover:bg-red-600 transition-all"
-                        >
-                          Yes, Delete
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )
-            }))}
+                )
+              })
+            )}
           </div>
 
           {/* Footer */}
-          <div className="px-5 py-3 border-t border-[var(--border)] bg-[oklch(0.10_0.01_240/0.3)]">
+          <div className="px-5 py-3 border-t border-[var(--border)] bg-[oklch(0.10_0.01_240/0.3)] flex items-center gap-4 flex-wrap">
             <span className="text-xs text-[var(--muted-foreground)]">
               {scores.length} student{scores.length !== 1 ? 's' : ''} · Max marks: {maxMarks}
             </span>
+            {subjects.length > 0 && (
+              <span className="text-xs text-[var(--muted-foreground)] flex gap-2 flex-wrap">
+                {subjects.map((s) => (
+                  <span key={s.name} className="capitalize">
+                    {s.name}
+                    {s.max_marks > 0 && <span className="text-[var(--muted-foreground)]/60"> {s.max_marks}</span>}
+                  </span>
+                ))}
+              </span>
+            )}
           </div>
         </>
       )}

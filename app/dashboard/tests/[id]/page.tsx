@@ -15,6 +15,7 @@ import BatchGrader from '@/components/dashboard/BatchGrader'
 import TestResultsTable from '@/components/dashboard/TestResultsTable'
 import type { ScoreRecord } from '@/components/dashboard/TestResultsTable'
 import DeleteTestButton from '@/components/dashboard/DeleteTestButton'
+import { normaliseSubjects } from '@/lib/subjects'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -121,6 +122,9 @@ export default async function TestDetailsPage({ params }: { params: Promise<{ id
 
   if (!test) notFound()
 
+  // Normalise subjects (handles legacy string[] and new SubjectConfig[])
+  const subjects = normaliseSubjects(test.subjects)
+
   // Fetch scores joined with students
   const { data: rawScores } = await supabase
     .from('scores')
@@ -130,8 +134,6 @@ export default async function TestDetailsPage({ params }: { params: Promise<{ id
 
   const scores = (rawScores ?? []) as ScoreRow[]
 
-  // Supabase may return `student` as an array (many-to-one join)
-  // normalise to a single object
   type NormalisedScore = Omit<ScoreRow, 'student'> & {
     student: { id: string; name: string; roll_no: string } | null
   }
@@ -139,8 +141,6 @@ export default async function TestDetailsPage({ params }: { params: Promise<{ id
     ...s,
     student: Array.isArray(s.student) ? (s.student[0] ?? null) : s.student,
   }))
-  const subjects: string[] = test.subjects ?? []
-  const hasResults = normalisedScores.length > 0
 
   return (
     <div className="p-6 lg:p-8 max-w-6xl mx-auto">
@@ -171,14 +171,20 @@ export default async function TestDetailsPage({ params }: { params: Promise<{ id
                 Max Marks: <span className="text-[var(--foreground)] font-medium">{test.max_marks}</span>
               </span>
             </div>
-            {/* Subject pills */}
+
+            {/* Subject pills — now show name + marks */}
             <div className="flex flex-wrap gap-1.5 mt-2">
               {subjects.map((s) => (
                 <span
-                  key={s}
-                  className="inline-flex items-center px-2 py-0.5 rounded-md bg-[oklch(0.62_0.22_265/0.12)] text-[var(--primary)] text-xs font-medium capitalize"
+                  key={s.name}
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-[oklch(0.62_0.22_265/0.12)] text-[var(--primary)] text-xs font-medium capitalize"
                 >
-                  {s}
+                  {s.name}
+                  {s.max_marks > 0 && (
+                    <span className="text-[var(--primary)] opacity-60 font-normal">
+                      · {s.max_marks}
+                    </span>
+                  )}
                 </span>
               ))}
             </div>
@@ -228,7 +234,7 @@ export default async function TestDetailsPage({ params }: { params: Promise<{ id
         </div>
       </div>
 
-      {/* Results — client component with per-row delete */}
+      {/* Results table */}
       <TestResultsTable
         testId={id}
         maxMarks={test.max_marks}
@@ -237,7 +243,7 @@ export default async function TestDetailsPage({ params }: { params: Promise<{ id
         uploadHref={`/dashboard/tests/${id}/upload`}
       />
 
-      {/* Entry Methods */}
+      {/* Entry methods */}
       {coachingCenterId && (
         <div className="space-y-4">
           <BatchGrader
@@ -247,7 +253,6 @@ export default async function TestDetailsPage({ params }: { params: Promise<{ id
             targetBatches={test.target_batches ?? []}
             coachingCenterId={coachingCenterId}
           />
-
           <AddScoreForm
             testId={id}
             subjects={subjects}
@@ -259,4 +264,3 @@ export default async function TestDetailsPage({ params }: { params: Promise<{ id
     </div>
   )
 }
-
