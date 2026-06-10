@@ -10,6 +10,7 @@ import PerformanceChart from './PerformanceChart'
 import AttendanceChart from './AttendanceChart'
 import AttendanceCalendar from './AttendanceCalendar'
 import RecentTestsTable from './RecentTestsTable'
+import PerformanceSummary from './PerformanceSummary'
 import { normaliseSubjects } from '@/lib/subjects'
 
 export default async function ParentDashboard() {
@@ -173,9 +174,9 @@ export default async function ParentDashboard() {
       const percentile = calculatePercentile(subScore, subScores)
 
       const barColor =
-        percentage >= 75
+        percentage >= 60
           ? 'from-green-500 to-emerald-500'
-          : percentage >= 50
+          : percentage >= 40
           ? 'from-yellow-500 to-amber-500'
           : 'from-red-500 to-rose-500'
 
@@ -389,6 +390,9 @@ export default async function ParentDashboard() {
             </div>
           </div>
 
+          {/* AI PERFORMANCE SUMMARY */}
+          <PerformanceSummary studentId={studentId} />
+
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-2 space-y-6">
               {/* PERFORMANCE TREND */}
@@ -443,9 +447,9 @@ export default async function ParentDashboard() {
                     const subPercentile = calculatePercentile(score, subScores)
 
                     const barColor =
-                      perc >= 75
+                      perc >= 60
                         ? 'from-green-500 to-emerald-500'
-                        : perc >= 50
+                        : perc >= 40
                         ? 'from-yellow-500 to-amber-500'
                         : 'from-red-500 to-rose-500'
 
