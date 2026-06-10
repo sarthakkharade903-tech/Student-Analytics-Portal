@@ -1,5 +1,7 @@
 'use client'
 
+import React from 'react'
+
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
@@ -13,11 +15,19 @@ import {
   LayoutDashboard,
 } from 'lucide-react'
 
-const navItems = [
+type NavItem = {
+  href: string
+  label: string
+  icon: React.ForwardRefExoticComponent<React.PropsWithoutRef<React.SVGProps<SVGSVGElement>> & { title?: string; titleId?: string } & React.RefAttributes<SVGSVGElement>>
+  active: boolean
+  soon?: boolean
+}
+
+const navItems: NavItem[] = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, active: true },
   { href: '/dashboard/students', label: 'Students', icon: Users, active: true },
   { href: '/dashboard/tests', label: 'Tests', icon: ClipboardList, active: true },
-  { href: '#', label: 'Attendance', icon: CalendarCheck, active: false, soon: true },
+  { href: '/dashboard/attendance', label: 'Attendance', icon: CalendarCheck, active: true },
   { href: '/dashboard/settings', label: 'Settings', icon: Settings, active: true },
 ]
 

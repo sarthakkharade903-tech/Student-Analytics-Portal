@@ -67,3 +67,11 @@ export interface Score {
   updated_at: string
 }
 
+export interface Attendance {
+  id: string
+  coaching_center_id: string
+  student_id: string
+  date: string
+  is_present: boolean
+  created_at: string
+}

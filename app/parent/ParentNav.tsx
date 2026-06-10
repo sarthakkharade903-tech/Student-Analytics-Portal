@@ -56,7 +56,7 @@ export default function ParentNav({ studentId }: { studentId: string | null }) {
         <div className="flex items-center gap-4">
           <button
             onClick={() => router.back()}
-            className="p-2 -ml-2 rounded-lg text-white/70 hover:text-white hover:bg-white/5 transition-all hidden sm:block"
+            className="p-2 -ml-2 rounded-lg text-white/70 hover:text-white hover:bg-white/5 transition-all"
             title="Go Back"
           >
             <ArrowLeft className="w-5 h-5" />

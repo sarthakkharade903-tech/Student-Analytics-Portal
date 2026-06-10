@@ -7,6 +7,9 @@ import {
   Calendar, Award, Target, BookOpen, AlertTriangle, Activity
 } from 'lucide-react'
 import PerformanceChart from './PerformanceChart'
+import AttendanceChart from './AttendanceChart'
+import AttendanceCalendar from './AttendanceCalendar'
+import RecentTestsTable from './RecentTestsTable'
 import { normaliseSubjects } from '@/lib/subjects'
 
 export default async function ParentDashboard() {
@@ -66,16 +69,60 @@ export default async function ParentDashboard() {
     return dateA - dateB
   })
 
-  // Attendance logic
-  const totalTests = validScores.length
-  const absentTests = validScores.filter(s => s.is_absent).length
-  const presentTests = totalTests - absentTests
-  const attendancePercentage = totalTests > 0 ? Math.round((presentTests / totalTests) * 100) : 100
-  const attendanceColor = attendancePercentage >= 90 
-    ? { hoverBorder: 'hover:border-emerald-500/50', iconBg: 'bg-emerald-500/10', iconText: 'text-emerald-400', iconGroupBg: 'group-hover:bg-emerald-500' }
-    : attendancePercentage >= 75
-    ? { hoverBorder: 'hover:border-amber-500/50', iconBg: 'bg-amber-500/10', iconText: 'text-amber-400', iconGroupBg: 'group-hover:bg-amber-500' }
-    : { hoverBorder: 'hover:border-orange-500/50', iconBg: 'bg-orange-500/10', iconText: 'text-orange-400', iconGroupBg: 'group-hover:bg-orange-500' }
+  // Daily Attendance logic
+  const { data: attendanceData } = await supabase
+    .from('attendance')
+    .select('date, is_present')
+    .eq('student_id', studentId)
+    .order('date', { ascending: true })
+
+  const attendanceRecords = attendanceData || []
+  const totalDays = attendanceRecords.length
+  const presentDays = attendanceRecords.filter(r => r.is_present).length
+  const absentDays = totalDays - presentDays
+  const dailyAttendancePercentage = totalDays > 0 ? Math.round((presentDays / totalDays) * 100) : 100
+
+  const monthlyAttMap = new Map<string, { total: number, present: number }>()
+  attendanceRecords.forEach(r => {
+    const d = new Date(r.date)
+    const month = d.toLocaleString('default', { month: 'short' })
+    const ex = monthlyAttMap.get(month) || { total: 0, present: 0 }
+    ex.total++
+    if (r.is_present) ex.present++
+    monthlyAttMap.set(month, ex)
+  })
+  const attendanceChartData = Array.from(monthlyAttMap.entries()).map(([month, stats]) => ({
+    month,
+    percentage: Math.round((stats.present / stats.total) * 100)
+  }))
+
+  let attStatus = 'No Data'
+  let attColor = 'text-white/50'
+  let attBadge = 'bg-white/10 border-white/20'
+  let circleColor = 'text-white/50'
+
+  if (totalDays > 0) {
+    if (dailyAttendancePercentage >= 75) {
+      attStatus = dailyAttendancePercentage >= 90 ? 'Excellent Attendance' : 'Good Attendance'
+      attColor = 'text-green-400'
+      attBadge = 'bg-green-500/20 border-green-500/30'
+      circleColor = 'text-green-400'
+    } else if (dailyAttendancePercentage >= 50) {
+      attStatus = 'Needs Attention'
+      attColor = 'text-yellow-400'
+      attBadge = 'bg-yellow-500/20 border-yellow-500/30'
+      circleColor = 'text-yellow-400'
+    } else {
+      attStatus = 'Critical Attendance'
+      attColor = 'text-red-400'
+      attBadge = 'bg-red-500/20 border-red-500/30'
+      circleColor = 'text-red-400'
+    }
+  }
+
+  const radius = 28
+  const circumference = 2 * Math.PI * radius
+  const strokeDashoffset = circumference - (dailyAttendancePercentage / 100) * circumference
 
   // Latest test logic
   const latestScore = validScores[validScores.length - 1]
@@ -109,6 +156,53 @@ export default async function ParentDashboard() {
     ? calculatePercentile(latestScore.total, totalScores) 
     : 0
 
+  // Map and enhance scores for RecentTestsTable
+  const enhancedScores = [...validScores].reverse().map((score) => {
+    // Normalise subjects
+    const testSubjects = score.tests?.subjects
+      ? normaliseSubjects(score.tests.subjects)
+      : []
+
+    const subjects = testSubjects.map((sub) => {
+      const subScore = score.subject_scores?.[sub.name] ?? 0
+      const subMax = sub.max_marks > 0 ? sub.max_marks : (score.tests?.max_marks ? (score.tests.max_marks / testSubjects.length) : 0)
+      const percentage = subMax > 0 ? Math.min(100, Math.round((subScore / subMax) * 100)) : 0
+      
+      const testScoresForThisTest = allTestScores.filter(s => s.test_id === score.test_id)
+      const subScores = testScoresForThisTest.map(s => s.subject_scores?.[sub.name] ?? 0)
+      const percentile = calculatePercentile(subScore, subScores)
+
+      const barColor =
+        percentage >= 75
+          ? 'from-green-500 to-emerald-500'
+          : percentage >= 50
+          ? 'from-yellow-500 to-amber-500'
+          : 'from-red-500 to-rose-500'
+
+      return {
+        name: sub.name,
+        score: subScore,
+        max_marks: subMax,
+        percentage,
+        percentile,
+        barColor
+      }
+    })
+
+    return {
+      id: score.id,
+      test_name: score.tests?.test_name || 'Test',
+      test_type: score.tests?.test_type || 'Test',
+      test_date: score.tests?.test_date || score.created_at || '',
+      total: score.total || 0,
+      max_marks: score.tests?.max_marks || 0,
+      is_absent: score.is_absent || false,
+      rank: score.rank,
+      total_percentile: score.is_absent ? 0 : calculatePercentile(score.total, getTestScores(score.test_id)),
+      subjects
+    }
+  })
+
   // Performance Status Engine
   let status = 'No Data'
   let statusColor = 'text-gray-400'
@@ -119,7 +213,7 @@ export default async function ParentDashboard() {
       status = 'Absent'
       statusColor = 'text-gray-500'
       StatusIcon = AlertCircle
-    } else if (attendancePercentage < 75) {
+    } else if (dailyAttendancePercentage < 75) {
       status = 'Needs Consistency'
       statusColor = 'text-amber-400'
       StatusIcon = AlertCircle
@@ -162,7 +256,7 @@ export default async function ParentDashboard() {
   return (
     <div className="space-y-8 pb-12">
       
-      {/* ── HEADER ────────────────────────────────────────────────────────── */}
+      {/* HEADER */}
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div className="flex items-center gap-4">
           <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center text-white text-xl font-bold shadow-lg shadow-blue-500/20">
@@ -195,14 +289,14 @@ export default async function ParentDashboard() {
         )}
       </div>
 
-      {/* ── ALERTS ────────────────────────────────────────────────────────── */}
-      {absentTests > 0 && (
-        <div className="bg-amber-500/10 border border-amber-500/20 rounded-2xl p-4 flex items-start gap-3">
-          <AlertCircle className="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5" />
+      {/* ALERTS */}
+      {dailyAttendancePercentage < 75 && totalDays > 0 && (
+        <div className="bg-red-500/10 border border-red-500/20 rounded-2xl p-4 flex items-start gap-3">
+          <AlertTriangle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
           <div>
-            <h3 className="text-sm font-semibold text-amber-400">Missed Test Notice</h3>
-            <p className="text-sm text-amber-400/80 mt-1">
-              The student missed {absentTests} recent test{absentTests > 1 ? 's' : ''}. Consistent test-taking is key to improving rank.
+            <h3 className="text-sm font-semibold text-red-400">⚠ Attendance Alert</h3>
+            <p className="text-sm text-red-400/80 mt-1">
+              Your attendance is currently {dailyAttendancePercentage}%. Regular attendance improves performance.
             </p>
           </div>
         </div>
@@ -218,7 +312,7 @@ export default async function ParentDashboard() {
         </div>
       ) : (
         <>
-          {/* ── SUMMARY CARDS ────────────────────────────────────────────────── */}
+          {/* SUMMARY CARDS */}
           <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
             <div className="bg-gradient-to-br from-white/[0.05] to-white/[0.01] border border-white/10 rounded-2xl p-5 hover:border-blue-500/50 transition-colors group">
               <div className="flex items-center gap-3 mb-3">
@@ -271,32 +365,62 @@ export default async function ParentDashboard() {
               </div>
             </div>
 
-            <div className={`bg-gradient-to-br from-white/[0.05] to-white/[0.01] border border-white/10 rounded-2xl p-5 transition-colors group ${attendanceColor.hoverBorder}`}>
-              <div className="flex items-center gap-3 mb-3">
-                <div className={`p-2 rounded-lg transition-colors ${attendanceColor.iconBg} ${attendanceColor.iconText} ${attendanceColor.iconGroupBg} group-hover:text-white`}>
-                  <Calendar className="w-4 h-4" />
+            <div className={`bg-gradient-to-br from-white/[0.05] to-white/[0.01] border border-white/10 rounded-2xl p-5 transition-colors flex items-center justify-between`}>
+              <div>
+                <div className="flex items-center gap-3 mb-3">
+                  <div className={`p-2 rounded-lg bg-white/5`}>
+                    <Calendar className="w-4 h-4 text-white/70" />
+                  </div>
+                  <h3 className="text-xs font-semibold text-white/60 uppercase tracking-wider">Attendance</h3>
                 </div>
-                <h3 className="text-xs font-semibold text-white/60 uppercase tracking-wider">Test Attendance</h3>
+                <div className="flex items-baseline gap-1">
+                  <span className={`text-sm font-semibold px-2 py-0.5 rounded border ${attBadge} ${attColor}`}>
+                    {attStatus}
+                  </span>
+                </div>
               </div>
-              <div className="flex items-baseline gap-1">
-                <span className="text-2xl font-bold">{attendancePercentage}</span>
-                <span className="text-sm text-white/40">%</span>
+              <div className="relative w-16 h-16 flex items-center justify-center">
+                <svg className="transform -rotate-90 w-16 h-16">
+                  <circle cx="32" cy="32" r="28" stroke="currentColor" strokeWidth="6" fill="transparent" className="text-white/10" />
+                  <circle cx="32" cy="32" r="28" stroke="currentColor" strokeWidth="6" fill="transparent" strokeDasharray={circumference} strokeDashoffset={strokeDashoffset} className={`transition-all duration-1000 ease-out ${circleColor}`} />
+                </svg>
+                <span className="absolute text-sm font-bold">{dailyAttendancePercentage}%</span>
               </div>
             </div>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* ── PERFORMANCE TREND ─────────────────────────────────────────── */}
-            <div className="lg:col-span-2 bg-white/[0.02] border border-white/10 rounded-3xl p-6 relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/5 rounded-full blur-[80px]" />
-              <h2 className="text-lg font-bold mb-6 relative z-10">Performance Trend</h2>
-              <div className="h-[300px] w-full relative z-10">
-                <PerformanceChart data={chartData} />
+            <div className="lg:col-span-2 space-y-6">
+              {/* PERFORMANCE TREND */}
+              <div className="bg-white/[0.02] border border-white/10 rounded-3xl p-6 relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/5 rounded-full blur-[80px]" />
+                <h2 className="text-lg font-bold mb-6 relative z-10">Performance Trend</h2>
+                <div className="h-[300px] w-full relative z-10">
+                  <PerformanceChart data={chartData} />
+                </div>
+              </div>
+
+            {/* DAILY ATTENDANCE SUMMARY */}
+            <div className="bg-white/[0.02] border border-white/10 rounded-3xl p-6 flex flex-col items-center">
+              <h2 className="text-lg font-bold mb-4 w-full text-left">Attendance Calendar</h2>
+              <AttendanceCalendar records={attendanceRecords} />
+              <div className="w-full grid grid-cols-2 gap-4 mt-6">
+                <div className="bg-white/5 border border-white/10 rounded-xl p-3 text-center">
+                  <div className="text-2xl font-bold text-green-400">{presentDays}</div>
+                  <div className="text-xs text-white/50 uppercase tracking-wider mt-1">Present</div>
+                </div>
+                <div className="bg-white/5 border border-white/10 rounded-xl p-3 text-center">
+                  <div className="text-2xl font-bold text-red-400">{absentDays}</div>
+                  <div className="text-xs text-white/50 uppercase tracking-wider mt-1">Absent</div>
+                </div>
               </div>
             </div>
 
-            {/* ── SUBJECT BREAKDOWN ─────────────────────────────────────────── */}
-            <div className="bg-white/[0.02] border border-white/10 rounded-3xl p-6">
+            </div>
+
+            <div className="lg:col-span-1">
+              {/* SUBJECT BREAKDOWN */}
+              <div className="bg-white/[0.02] border border-white/10 rounded-3xl p-6">
               <h2 className="text-lg font-bold mb-1">Subject Breakdown</h2>
               <p className="text-xs text-white/40 mb-5">Latest test performance</p>
               {latestScore.is_absent ? (
@@ -356,61 +480,18 @@ export default async function ParentDashboard() {
                 </div>
               )}
             </div>
+            </div>
           </div>
 
-          {/* ── RECENT TEST HISTORY ──────────────────────────────────────────── */}
-          <div className="bg-white/[0.02] border border-white/10 rounded-3xl overflow-hidden">
-            <div className="px-6 py-5 border-b border-white/5 flex items-center justify-between">
-              <h2 className="text-lg font-bold">Recent Tests</h2>
+          <div className="mt-6">
+            {/* RECENT TEST HISTORY */}
+            <div className="bg-white/[0.02] border border-white/10 rounded-3xl overflow-hidden">
+              <div className="px-6 py-5 border-b border-white/5 flex items-center justify-between">
+                <h2 className="text-lg font-bold">Recent Tests</h2>
+              </div>
+              <RecentTestsTable scores={enhancedScores} />
             </div>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm text-left">
-                <thead className="text-xs text-white/50 uppercase bg-white/[0.02] border-b border-white/5">
-                  <tr>
-                    <th className="px-6 py-4 font-semibold">Test Name</th>
-                    <th className="px-6 py-4 font-semibold">Date</th>
-                    <th className="px-6 py-4 font-semibold text-center">Score</th>
-                    <th className="px-6 py-4 font-semibold text-center">PR</th>
-                    <th className="px-6 py-4 font-semibold text-center">Rank</th>
-                    <th className="px-6 py-4 font-semibold text-right">Status</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-white/5">
-                  {[...validScores].reverse().map((score) => (
-                    <tr key={score.id} className="hover:bg-white/[0.02] transition-colors">
-                      <td className="px-6 py-4">
-                        <p className="font-medium text-white/90">{score.tests?.test_name}</p>
-                        <p className="text-[10px] text-white/40 mt-0.5 uppercase tracking-wider">{score.tests?.test_type || 'Test'}</p>
-                      </td>
-                      <td className="px-6 py-4 text-white/60 whitespace-nowrap">
-                        {score.tests?.test_date ? new Date(score.tests.test_date).toLocaleDateString() : '-'}
-                      </td>
-                      <td className="px-6 py-4 text-center font-medium">
-                        {score.is_absent ? '-' : `${score.total} / ${score.tests?.max_marks}`}
-                      </td>
-                      <td className="px-6 py-4 text-center">
-                        {score.is_absent ? '-' : `${calculatePercentile(score.total, getTestScores(score.test_id))} PR`}
-                      </td>
-                      <td className="px-6 py-4 text-center">
-                        {score.is_absent || !score.rank ? '-' : `#${score.rank}`}
-                      </td>
-                      <td className="px-6 py-4 text-right">
-                        {score.is_absent ? (
-                          <span className="inline-flex items-center px-2 py-1 rounded bg-red-500/10 text-red-400 text-xs font-semibold">
-                            Absent
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center px-2 py-1 rounded bg-green-500/10 text-green-400 text-xs font-semibold">
-                            Present
-                          </span>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
+        </div>
         </>
       )}
     </div>
