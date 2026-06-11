@@ -80,7 +80,7 @@ export default function AttendanceClient({ coachingCenterId }: { coachingCenterI
 
   // Fetch attendance when date or batch changes
   useEffect(() => {
-    if (!selectedBatch) return
+    if (!selectedBatch || !selectedDate) return
 
     const fetchDailyAttendance = async () => {
       const batchStudentIds = currentBatchStudents.map(s => s.id)
@@ -430,7 +430,8 @@ export default function AttendanceClient({ coachingCenterId }: { coachingCenterI
             type="date"
             value={selectedDate}
             onChange={e => setSelectedDate(e.target.value)}
-            className="flex-1 md:w-40 px-3 py-2 bg-black/20 border border-[var(--border)] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
+            onClick={e => (e.target as any).showPicker?.()}
+            className="flex-1 md:w-40 px-3 py-2 bg-black/20 border border-[var(--border)] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)] cursor-pointer"
           />
         </div>
       </div>

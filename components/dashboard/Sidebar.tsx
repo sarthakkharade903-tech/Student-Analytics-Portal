@@ -13,7 +13,8 @@ import {
   Settings,
   LogOut,
   LayoutDashboard,
-  BookOpen
+  BookOpen,
+  TrendingUp,
 } from 'lucide-react'
 
 type NavItem = {
@@ -30,6 +31,7 @@ const navItems: NavItem[] = [
   { href: '/dashboard/tests', label: 'Tests', icon: ClipboardList, active: true },
   { href: '/dashboard/attendance', label: 'Attendance', icon: CalendarCheck, active: true },
   { href: '/dashboard/resources', label: 'Resources', icon: BookOpen, active: true },
+  { href: '/dashboard/analytics', label: 'Analytics', icon: TrendingUp, active: true },
   { href: '/dashboard/settings', label: 'Settings', icon: Settings, active: true },
 ]
 
