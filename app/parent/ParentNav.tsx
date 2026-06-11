@@ -2,13 +2,15 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { useRouter, usePathname } from 'next/navigation'
 import { BarChart3, Bell, LogOut, Loader2, AlertCircle, ArrowLeft } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 
 export default function ParentNav({ studentId }: { studentId: string | null }) {
   const router = useRouter()
+  const pathname = usePathname()
   const [absences, setAbsences] = useState<any[]>([])
+  const [unreadResourcesCount, setUnreadResourcesCount] = useState(0)
   const [showNotifications, setShowNotifications] = useState(false)
   const [loggingOut, setLoggingOut] = useState(false)
 
@@ -34,7 +36,38 @@ export default function ParentNav({ studentId }: { studentId: string | null }) {
       }
     }
 
+    const fetchUnreadResources = async () => {
+      const supabase = createClient()
+      const { data: student } = await supabase.from('students').select('batch, coaching_center_id').eq('id', studentId).single()
+      if (!student) return
+
+      const sevenDaysAgo = new Date()
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
+      
+      const { data: recentRes } = await supabase
+        .from('resources')
+        .select('id')
+        .eq('coaching_center_id', student.coaching_center_id)
+        .gte('created_at', sevenDaysAgo.toISOString())
+        .or(`target_batches.cs.{"${student.batch}"},target_batches.cs.{"All Batches"}`)
+        
+      if (!recentRes || recentRes.length === 0) return
+
+      const recentIds = recentRes.map((r: { id: string }) => r.id)
+
+      const { data: viewedRes } = await supabase
+        .from('resource_views')
+        .select('resource_id')
+        .eq('student_id', studentId)
+        .in('resource_id', recentIds)
+
+      const viewedIds = new Set(viewedRes?.map((v: { resource_id: string }) => v.resource_id) || [])
+      const unread = recentIds.filter((id: string) => !viewedIds.has(id))
+      setUnreadResourcesCount(unread.length)
+    }
+
     fetchAbsences()
+    fetchUnreadResources()
   }, [studentId])
 
   const handleLogout = async () => {
@@ -115,7 +148,7 @@ export default function ParentNav({ studentId }: { studentId: string | null }) {
                             {absence.tests?.test_name}
                           </p>
                           <p className="text-[10px] text-white/40 mt-1">
-                            {absence.tests?.test_date ? new Date(absence.tests.test_date).toLocaleDateString() : 'Date unknown'}
+                            {absence.tests?.test_date ? new Date(absence.tests.test_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Date unknown'}
                           </p>
                         </div>
                       </div>
@@ -143,6 +176,37 @@ export default function ParentNav({ studentId }: { studentId: string | null }) {
           </button>
         </div>
 
+      </div>
+
+      {/* Tabs */}
+      <div className="max-w-5xl mx-auto px-4 lg:px-8 border-t border-white/5 flex gap-6 overflow-x-auto no-scrollbar">
+        {[
+          { label: 'Dashboard', path: '/parent' },
+          { label: 'Resources', path: '/parent/resources' }
+        ].map((tab) => {
+          const isActive = tab.path === '/parent' 
+            ? pathname === '/parent'
+            : pathname.startsWith(tab.path)
+
+          return (
+            <Link
+              key={tab.label}
+              href={tab.path}
+              className={`py-3 text-sm font-medium whitespace-nowrap border-b-2 transition-colors flex items-center gap-2 ${
+                isActive 
+                  ? 'border-[var(--primary)] text-[var(--primary)]' 
+                  : 'border-transparent text-white/60 hover:text-white/90'
+              }`}
+            >
+              {tab.label}
+              {tab.label === 'Resources' && unreadResourcesCount > 0 && (
+                <span className="px-1.5 py-0.5 rounded-full bg-[var(--primary)] text-white text-[10px] font-bold">
+                  {unreadResourcesCount}
+                </span>
+              )}
+            </Link>
+          )
+        })}
       </div>
     </nav>
   )

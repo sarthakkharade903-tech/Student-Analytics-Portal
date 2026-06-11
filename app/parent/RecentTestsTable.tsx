@@ -60,7 +60,7 @@ export default function RecentTestsTable({ scores }: { scores: EnhancedScore[] }
                   </div>
                 </td>
                 <td className="px-6 py-4 text-white/60 whitespace-nowrap">
-                  {score.test_date ? new Date(score.test_date).toLocaleDateString() : '-'}
+                  {score.test_date ? new Date(score.test_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '-'}
                 </td>
                 <td className="px-6 py-4 text-center font-medium">
                   {score.is_absent ? '-' : `${score.total} / ${score.max_marks}`}

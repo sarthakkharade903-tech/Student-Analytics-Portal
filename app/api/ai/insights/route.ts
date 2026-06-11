@@ -1,15 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
-import Groq from 'groq-sdk'
 
 // Cache is valid for 24 hours
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000
-
-function getGroq() {
-  const key = process.env.GROQ_API_KEY
-  if (!key) throw new Error('GROQ_API_KEY is not set in environment variables')
-  return new Groq({ apiKey: key })
-}
 
 function normaliseSubjectsLocal(raw: unknown): Array<{ name: string; max_marks: number }> {
   if (!Array.isArray(raw)) return []
@@ -171,13 +164,21 @@ ${testLines.length > 0 ? testLines.join('\n') : 'No test results available yet.'
   // --- 6. Call Groq ---
   let summary = ''
   try {
-    const groq = getGroq()
-    const completion = await groq.chat.completions.create({
-      model: 'llama-3.3-70b-versatile',
-      messages: [
-        {
-          role: 'system',
-          content: `You are a warm, encouraging teacher writing a quick Performance Summary for a parent in India. The parent wants to know how their child is doing — keep it honest but always supportive and motivating.
+    const key = process.env.GROQ_API_KEY
+    if (!key) throw new Error('GROQ_API_KEY is not set in environment variables')
+
+    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${key}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        model: 'llama-3.3-70b-versatile',
+        messages: [
+          {
+            role: 'system',
+            content: `You are a warm, encouraging teacher writing a quick Performance Summary for a parent in India. The parent wants to know how their child is doing — keep it honest but always supportive and motivating.
 
 Write 2 to 3 natural, flowing sentences. Rules:
 - Always write in third person using the student's name (never "you" or "your").
@@ -187,17 +188,24 @@ Write 2 to 3 natural, flowing sentences. Rules:
 - Mention attendance naturally in the last sentence.
 - End with one warm, motivating line specific to the student's situation — not a generic platitude.
 - Write like a real teacher — natural, warm, conversational. No bullet points, no markdown, no jargon.`,
-        },
-        {
-          role: 'user',
-          content: `Student data:\n\n${dataContext}\n\nWrite the Performance Summary now.`,
-        },
-      ],
-      temperature: 0.75,
-      max_tokens: 220,
+          },
+          {
+            role: 'user',
+            content: `Student data:\n\n${dataContext}\n\nWrite the Performance Summary now.`,
+          },
+        ],
+        temperature: 0.75,
+        max_tokens: 220,
+      })
     })
 
-    summary = completion.choices[0]?.message?.content?.trim() || ''
+    if (!response.ok) {
+      const errorText = await response.text()
+      throw new Error(`Groq API returned ${response.status}: ${errorText}`)
+    }
+
+    const completion = await response.json()
+    summary = completion.choices?.[0]?.message?.content?.trim() || ''
   } catch (err: any) {
     console.error('[AI Insights] Groq API error:', err?.message || err)
     return NextResponse.json(

@@ -278,13 +278,25 @@ export default async function ParentDashboard() {
 
         {/* Status Badge */}
         {latestScore && (
-          <div className={`flex items-center gap-2 px-4 py-2 rounded-xl bg-white/[0.03] border border-white/10 backdrop-blur-md`}>
-            <div className={`w-8 h-8 rounded-lg flex items-center justify-center bg-white/5`}>
-              <StatusIcon className={`w-4 h-4 ${statusColor}`} />
+          <div className={`flex items-center gap-3 px-5 py-3 rounded-2xl backdrop-blur-md border shadow-lg transition-all duration-300 ${
+            statusColor === 'text-green-400' ? 'bg-green-500/10 border-green-500/25 shadow-green-500/10' :
+            statusColor === 'text-red-400' ? 'bg-red-500/10 border-red-500/25 shadow-red-500/10' :
+            statusColor === 'text-amber-400' ? 'bg-amber-500/10 border-amber-500/25 shadow-amber-500/10' :
+            statusColor === 'text-blue-400' ? 'bg-blue-500/10 border-blue-500/25 shadow-blue-500/10' :
+            'bg-white/[0.05] border-white/10'
+          }`}>
+            <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+              statusColor === 'text-green-400' ? 'bg-green-500/20' :
+              statusColor === 'text-red-400' ? 'bg-red-500/20' :
+              statusColor === 'text-amber-400' ? 'bg-amber-500/20' :
+              statusColor === 'text-blue-400' ? 'bg-blue-500/20' :
+              'bg-white/10'
+            }`}>
+              <StatusIcon className={`w-5 h-5 ${statusColor}`} />
             </div>
             <div>
-              <p className="text-[10px] uppercase tracking-wider font-semibold text-white/50">Current Status</p>
-              <p className={`text-sm font-semibold ${statusColor}`}>{status}</p>
+              <p className="text-[10px] uppercase tracking-[0.15em] font-bold text-white/40">Current Status</p>
+              <p className={`text-sm font-bold ${statusColor}`}>{status}</p>
             </div>
           </div>
         )}
@@ -315,67 +327,77 @@ export default async function ParentDashboard() {
         <>
           {/* SUMMARY CARDS */}
           <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
-            <div className="bg-gradient-to-br from-white/[0.05] to-white/[0.01] border border-white/10 rounded-2xl p-5 hover:border-blue-500/50 transition-colors group">
+            {/* Latest Score */}
+            <div className="bg-gradient-to-br from-blue-950/80 via-[#0c1425] to-blue-900/20 border border-blue-500/20 rounded-2xl p-5 hover:border-blue-400/50 hover:shadow-lg hover:shadow-blue-500/10 transition-all duration-300 group">
               <div className="flex items-center gap-3 mb-3">
-                <div className="p-2 rounded-lg bg-blue-500/10 text-blue-400 group-hover:bg-blue-500 group-hover:text-white transition-colors">
+                <div className="p-2 rounded-lg bg-blue-500/15 text-blue-400 group-hover:bg-blue-500 group-hover:text-white transition-colors">
                   <Target className="w-4 h-4" />
                 </div>
-                <h3 className="text-xs font-semibold text-white/60 uppercase tracking-wider">Latest Score</h3>
+                <h3 className="text-xs font-semibold text-blue-300/60 uppercase tracking-wider">Latest Score</h3>
               </div>
               <div className="flex items-baseline gap-1">
-                <span className="text-2xl font-bold">{latestScore.is_absent ? '0' : latestScore.total}</span>
-                <span className="text-sm text-white/40">/ {latestScore.tests?.max_marks || '-'}</span>
+                <span className="text-2xl font-bold text-blue-50">{latestScore.is_absent ? '0' : latestScore.total}</span>
+                <span className="text-sm text-blue-300/40">/ {latestScore.tests?.max_marks || '-'}</span>
               </div>
             </div>
 
-            <div className="bg-gradient-to-br from-white/[0.05] to-white/[0.01] border border-white/10 rounded-2xl p-5 hover:border-indigo-500/50 transition-colors group">
+            {/* Last Attendance (replaces Percentage) */}
+            <div className="bg-gradient-to-br from-teal-950/80 via-[#0c1a1a] to-teal-900/20 border border-teal-500/20 rounded-2xl p-5 hover:border-teal-400/50 hover:shadow-lg hover:shadow-teal-500/10 transition-all duration-300 group">
               <div className="flex items-center gap-3 mb-3">
-                <div className="p-2 rounded-lg bg-indigo-500/10 text-indigo-400 group-hover:bg-indigo-500 group-hover:text-white transition-colors">
-                  <TrendingUp className="w-4 h-4" />
+                <div className="p-2 rounded-lg bg-teal-500/15 text-teal-400 group-hover:bg-teal-500 group-hover:text-white transition-colors">
+                  <Calendar className="w-4 h-4" />
                 </div>
-                <h3 className="text-xs font-semibold text-white/60 uppercase tracking-wider">Percentage</h3>
+                <h3 className="text-xs font-semibold text-teal-300/60 uppercase tracking-wider">Last Attendance</h3>
               </div>
-              <div className="flex items-baseline gap-1">
-                <span className="text-2xl font-bold">{latestScore.is_absent ? '0' : latestScore.percentage}</span>
-                <span className="text-sm text-white/40">%</span>
+              <div className="flex items-baseline gap-1 mb-2">
+                <span className="text-2xl font-bold text-teal-50">{dailyAttendancePercentage}</span>
+                <span className="text-sm text-teal-300/40">%</span>
+              </div>
+              <div className="flex items-center gap-2 text-[10px] font-semibold">
+                <span className="px-1.5 py-0.5 rounded bg-green-500/20 text-green-400 border border-green-500/20">{presentDays}P</span>
+                <span className="px-1.5 py-0.5 rounded bg-red-500/20 text-red-400 border border-red-500/20">{absentDays}A</span>
+                <span className="text-teal-300/30">/ {totalDays}D</span>
               </div>
             </div>
 
-            <div className="bg-gradient-to-br from-white/[0.05] to-white/[0.01] border border-white/10 rounded-2xl p-5 hover:border-purple-500/50 transition-colors group">
+            {/* Latest Rank */}
+            <div className="bg-gradient-to-br from-purple-950/80 via-[#140c25] to-purple-900/20 border border-purple-500/20 rounded-2xl p-5 hover:border-purple-400/50 hover:shadow-lg hover:shadow-purple-500/10 transition-all duration-300 group">
               <div className="flex items-center gap-3 mb-3">
-                <div className="p-2 rounded-lg bg-purple-500/10 text-purple-400 group-hover:bg-purple-500 group-hover:text-white transition-colors">
+                <div className="p-2 rounded-lg bg-purple-500/15 text-purple-400 group-hover:bg-purple-500 group-hover:text-white transition-colors">
                   <Award className="w-4 h-4" />
                 </div>
-                <h3 className="text-xs font-semibold text-white/60 uppercase tracking-wider">Latest Rank</h3>
+                <h3 className="text-xs font-semibold text-purple-300/60 uppercase tracking-wider">Latest Rank</h3>
               </div>
               <div className="flex items-baseline gap-1">
-                <span className="text-2xl font-bold">{latestScore.rank || '-'}</span>
+                <span className="text-2xl font-bold text-purple-50">{latestScore.rank || '-'}</span>
               </div>
             </div>
 
-            <div className="bg-gradient-to-br from-white/[0.05] to-white/[0.01] border border-white/10 rounded-2xl p-5 hover:border-pink-500/50 transition-colors group">
+            {/* Total Percentile */}
+            <div className="bg-gradient-to-br from-pink-950/80 via-[#1a0c18] to-pink-900/20 border border-pink-500/20 rounded-2xl p-5 hover:border-pink-400/50 hover:shadow-lg hover:shadow-pink-500/10 transition-all duration-300 group">
               <div className="flex items-center gap-3 mb-3">
-                <div className="p-2 rounded-lg bg-pink-500/10 text-pink-400 group-hover:bg-pink-500 group-hover:text-white transition-colors">
+                <div className="p-2 rounded-lg bg-pink-500/15 text-pink-400 group-hover:bg-pink-500 group-hover:text-white transition-colors">
                   <Activity className="w-4 h-4" />
                 </div>
-                <h3 className="text-xs font-semibold text-white/60 uppercase tracking-wider">Total Percentile</h3>
+                <h3 className="text-xs font-semibold text-pink-300/60 uppercase tracking-wider">Total Percentile</h3>
               </div>
               <div className="flex items-baseline gap-1">
-                <span className="text-2xl font-bold">{latestScore.is_absent ? '0' : totalPercentile}</span>
-                <span className="text-sm text-white/40">PR</span>
+                <span className="text-2xl font-bold text-pink-50">{latestScore.is_absent ? '0' : totalPercentile}</span>
+                <span className="text-sm text-pink-300/40">PR</span>
               </div>
             </div>
 
-            <div className={`bg-gradient-to-br from-white/[0.05] to-white/[0.01] border border-white/10 rounded-2xl p-5 transition-colors flex items-center justify-between`}>
+            {/* Attendance Ring */}
+            <div className="bg-gradient-to-br from-emerald-950/80 via-[#0c1a14] to-emerald-900/20 border border-emerald-500/20 rounded-2xl p-5 hover:border-emerald-400/50 hover:shadow-lg hover:shadow-emerald-500/10 transition-all duration-300 flex items-center justify-between">
               <div>
                 <div className="flex items-center gap-3 mb-3">
-                  <div className={`p-2 rounded-lg bg-white/5`}>
-                    <Calendar className="w-4 h-4 text-white/70" />
+                  <div className="p-2 rounded-lg bg-emerald-500/15">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-400" />
                   </div>
-                  <h3 className="text-xs font-semibold text-white/60 uppercase tracking-wider">Attendance</h3>
+                  <h3 className="text-xs font-semibold text-emerald-300/60 uppercase tracking-wider">Status</h3>
                 </div>
                 <div className="flex items-baseline gap-1">
-                  <span className={`text-sm font-semibold px-2 py-0.5 rounded border ${attBadge} ${attColor}`}>
+                  <span className={`text-xs font-bold px-2 py-1 rounded-lg border ${attBadge} ${attColor}`}>
                     {attStatus}
                   </span>
                 </div>
