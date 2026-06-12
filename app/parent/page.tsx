@@ -11,6 +11,7 @@ import AttendanceChart from './AttendanceChart'
 import AttendanceCalendar from './AttendanceCalendar'
 import RecentTestsTable from './RecentTestsTable'
 import PerformanceSummary from './PerformanceSummary'
+import SubjectPerformance from './SubjectPerformance'
 import { normaliseSubjects } from '@/lib/subjects'
 
 export default async function ParentDashboard() {
@@ -98,26 +99,26 @@ export default async function ParentDashboard() {
   }))
 
   let attStatus = 'No Data'
-  let attColor = 'text-white/50'
-  let attBadge = 'bg-white/10 border-white/20'
-  let circleColor = 'text-white/50'
+  let attColor = 'text-gray-500'
+  let attBadge = 'bg-gray-100 border-gray-300'
+  let circleColor = 'text-gray-500'
 
   if (totalDays > 0) {
     if (dailyAttendancePercentage >= 75) {
       attStatus = dailyAttendancePercentage >= 90 ? 'Excellent Attendance' : 'Good Attendance'
-      attColor = 'text-green-400'
-      attBadge = 'bg-green-500/20 border-green-500/30'
-      circleColor = 'text-green-400'
+      attColor = 'text-green-600'
+      attBadge = 'bg-green-50 border-green-200'
+      circleColor = 'text-green-500'
     } else if (dailyAttendancePercentage >= 50) {
       attStatus = 'Needs Attention'
-      attColor = 'text-yellow-400'
-      attBadge = 'bg-yellow-500/20 border-yellow-500/30'
-      circleColor = 'text-yellow-400'
+      attColor = 'text-amber-600'
+      attBadge = 'bg-amber-50 border-amber-200'
+      circleColor = 'text-amber-500'
     } else {
       attStatus = 'Critical Attendance'
-      attColor = 'text-red-400'
-      attBadge = 'bg-red-500/20 border-red-500/30'
-      circleColor = 'text-red-400'
+      attColor = 'text-red-600'
+      attBadge = 'bg-red-50 border-red-200'
+      circleColor = 'text-red-500'
     }
   }
 
@@ -216,25 +217,25 @@ export default async function ParentDashboard() {
       StatusIcon = AlertCircle
     } else if (dailyAttendancePercentage < 75) {
       status = 'Needs Consistency'
-      statusColor = 'text-amber-400'
+      statusColor = 'text-amber-500'
       StatusIcon = AlertCircle
     } else if (previousScore && !previousScore.is_absent) {
       if (latestScore.percentage > previousScore.percentage) {
         status = 'Improving'
-        statusColor = 'text-green-400'
+        statusColor = 'text-green-500'
         StatusIcon = TrendingUp
       } else if (latestScore.percentage < previousScore.percentage) {
         status = 'Needs Attention'
-        statusColor = 'text-red-400'
+        statusColor = 'text-red-500'
         StatusIcon = TrendingDown
       } else {
         status = 'Consistent'
-        statusColor = 'text-blue-400'
+        statusColor = 'text-blue-500'
         StatusIcon = CheckCircle2
       }
     } else {
       status = 'Good Start'
-      statusColor = 'text-green-400'
+      statusColor = 'text-green-500'
       StatusIcon = TrendingUp
     }
   }
@@ -264,12 +265,12 @@ export default async function ParentDashboard() {
             {initials}
           </div>
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">{student.name}</h1>
+            <h1 className="text-2xl font-bold tracking-tight text-gray-900">{student.name}</h1>
             <div className="flex flex-wrap items-center gap-2 mt-1">
-              <span className="px-2 py-0.5 rounded bg-white/5 border border-white/10 text-xs text-white/70 font-medium">
+              <span className="px-2 py-0.5 rounded bg-gray-100 border border-gray-200 text-xs text-gray-600 font-medium">
                 Roll No: {student.roll_no}
               </span>
-              <span className="px-2 py-0.5 rounded bg-white/5 border border-white/10 text-xs text-white/70 font-medium">
+              <span className="px-2 py-0.5 rounded bg-gray-100 border border-gray-200 text-xs text-gray-600 font-medium">
                 Batch: {student.batch}
               </span>
             </div>
@@ -278,24 +279,24 @@ export default async function ParentDashboard() {
 
         {/* Status Badge */}
         {latestScore && (
-          <div className={`flex items-center gap-3 px-5 py-3 rounded-2xl backdrop-blur-md border shadow-lg transition-all duration-300 ${
-            statusColor === 'text-green-400' ? 'bg-green-500/10 border-green-500/25 shadow-green-500/10' :
-            statusColor === 'text-red-400' ? 'bg-red-500/10 border-red-500/25 shadow-red-500/10' :
-            statusColor === 'text-amber-400' ? 'bg-amber-500/10 border-amber-500/25 shadow-amber-500/10' :
-            statusColor === 'text-blue-400' ? 'bg-blue-500/10 border-blue-500/25 shadow-blue-500/10' :
-            'bg-white/[0.05] border-white/10'
+          <div className={`flex items-center gap-3 px-5 py-3 rounded-2xl backdrop-blur-md border shadow-sm transition-all duration-300 ${
+            statusColor === 'text-green-500' ? 'bg-green-50 border-green-200' :
+            statusColor === 'text-red-500' ? 'bg-red-50 border-red-200' :
+            statusColor === 'text-amber-500' ? 'bg-amber-50 border-amber-200' :
+            statusColor === 'text-blue-500' ? 'bg-blue-50 border-blue-200' :
+            'bg-gray-50 border-gray-200'
           }`}>
             <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
-              statusColor === 'text-green-400' ? 'bg-green-500/20' :
-              statusColor === 'text-red-400' ? 'bg-red-500/20' :
-              statusColor === 'text-amber-400' ? 'bg-amber-500/20' :
-              statusColor === 'text-blue-400' ? 'bg-blue-500/20' :
-              'bg-white/10'
+              statusColor === 'text-green-500' ? 'bg-green-100' :
+              statusColor === 'text-red-500' ? 'bg-red-100' :
+              statusColor === 'text-amber-500' ? 'bg-amber-100' :
+              statusColor === 'text-blue-500' ? 'bg-blue-100' :
+              'bg-gray-100'
             }`}>
               <StatusIcon className={`w-5 h-5 ${statusColor}`} />
             </div>
             <div>
-              <p className="text-[10px] uppercase tracking-[0.15em] font-bold text-white/40">Current Status</p>
+              <p className="text-[10px] uppercase tracking-[0.15em] font-bold text-gray-500">Current Status</p>
               <p className={`text-sm font-bold ${statusColor}`}>{status}</p>
             </div>
           </div>
@@ -304,11 +305,11 @@ export default async function ParentDashboard() {
 
       {/* ALERTS */}
       {dailyAttendancePercentage < 75 && totalDays > 0 && (
-        <div className="bg-red-500/10 border border-red-500/20 rounded-2xl p-4 flex items-start gap-3">
-          <AlertTriangle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
+        <div className="bg-red-50 border border-red-200 rounded-2xl p-4 flex items-start gap-3">
+          <AlertTriangle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
           <div>
-            <h3 className="text-sm font-semibold text-red-400">⚠ Attendance Alert</h3>
-            <p className="text-sm text-red-400/80 mt-1">
+            <h3 className="text-sm font-semibold text-red-700">⚠ Attendance Alert</h3>
+            <p className="text-sm text-red-600/90 mt-1">
               Your attendance is currently {dailyAttendancePercentage}%. Regular attendance improves performance.
             </p>
           </div>
@@ -316,85 +317,85 @@ export default async function ParentDashboard() {
       )}
 
       {!latestScore ? (
-        <div className="glass-card rounded-2xl p-12 text-center border border-white/10 bg-white/[0.02]">
-          <div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center mx-auto mb-4">
-            <BookOpen className="w-8 h-8 text-white/40" />
+        <div className="glass-card rounded-2xl p-12 text-center border border-gray-200 bg-white/80 shadow-sm">
+          <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-4">
+            <BookOpen className="w-8 h-8 text-gray-400" />
           </div>
-          <h2 className="text-xl font-semibold mb-2">No test results available yet.</h2>
-          <p className="text-white/50 text-sm">When the institute uploads test scores, they will appear here.</p>
+          <h2 className="text-xl font-semibold mb-2 text-gray-900">No test results available yet.</h2>
+          <p className="text-gray-500 text-sm">When the institute uploads test scores, they will appear here.</p>
         </div>
       ) : (
         <>
           {/* SUMMARY CARDS */}
           <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
             {/* Latest Score */}
-            <div className="bg-gradient-to-br from-blue-950/80 via-[#0c1425] to-blue-900/20 border border-blue-500/20 rounded-2xl p-5 hover:border-blue-400/50 hover:shadow-lg hover:shadow-blue-500/10 transition-all duration-300 group">
+            <div className="bg-white border border-gray-200 rounded-2xl p-5 hover:border-blue-400 hover:shadow-md transition-all duration-300 group shadow-sm">
               <div className="flex items-center gap-3 mb-3">
-                <div className="p-2 rounded-lg bg-blue-500/15 text-blue-400 group-hover:bg-blue-500 group-hover:text-white transition-colors">
+                <div className="p-2 rounded-lg bg-blue-50 text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-colors">
                   <Target className="w-4 h-4" />
                 </div>
-                <h3 className="text-xs font-semibold text-blue-300/60 uppercase tracking-wider">Latest Score</h3>
+                <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Latest Score</h3>
               </div>
               <div className="flex items-baseline gap-1">
-                <span className="text-2xl font-bold text-blue-50">{latestScore.is_absent ? '0' : latestScore.total}</span>
-                <span className="text-sm text-blue-300/40">/ {latestScore.tests?.max_marks || '-'}</span>
+                <span className="text-2xl font-bold text-gray-900">{latestScore.is_absent ? '0' : latestScore.total}</span>
+                <span className="text-sm text-gray-500">/ {latestScore.tests?.max_marks || '-'}</span>
               </div>
             </div>
 
             {/* Last Attendance (replaces Percentage) */}
-            <div className="bg-gradient-to-br from-teal-950/80 via-[#0c1a1a] to-teal-900/20 border border-teal-500/20 rounded-2xl p-5 hover:border-teal-400/50 hover:shadow-lg hover:shadow-teal-500/10 transition-all duration-300 group">
+            <div className="bg-white border border-gray-200 rounded-2xl p-5 hover:border-teal-400 hover:shadow-md transition-all duration-300 group shadow-sm">
               <div className="flex items-center gap-3 mb-3">
-                <div className="p-2 rounded-lg bg-teal-500/15 text-teal-400 group-hover:bg-teal-500 group-hover:text-white transition-colors">
+                <div className="p-2 rounded-lg bg-teal-50 text-teal-600 group-hover:bg-teal-600 group-hover:text-white transition-colors">
                   <Calendar className="w-4 h-4" />
                 </div>
-                <h3 className="text-xs font-semibold text-teal-300/60 uppercase tracking-wider">Last Attendance</h3>
+                <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Last Attendance</h3>
               </div>
               <div className="flex items-baseline gap-1 mb-2">
-                <span className="text-2xl font-bold text-teal-50">{dailyAttendancePercentage}</span>
-                <span className="text-sm text-teal-300/40">%</span>
+                <span className="text-2xl font-bold text-gray-900">{dailyAttendancePercentage}</span>
+                <span className="text-sm text-gray-500">%</span>
               </div>
               <div className="flex items-center gap-2 text-[10px] font-semibold">
-                <span className="px-1.5 py-0.5 rounded bg-green-500/20 text-green-400 border border-green-500/20">{presentDays}P</span>
-                <span className="px-1.5 py-0.5 rounded bg-red-500/20 text-red-400 border border-red-500/20">{absentDays}A</span>
-                <span className="text-teal-300/30">/ {totalDays}D</span>
+                <span className="px-1.5 py-0.5 rounded bg-green-50 text-green-600 border border-green-200">{presentDays}P</span>
+                <span className="px-1.5 py-0.5 rounded bg-red-50 text-red-600 border border-red-200">{absentDays}A</span>
+                <span className="text-gray-400">/ {totalDays}D</span>
               </div>
             </div>
 
             {/* Latest Rank */}
-            <div className="bg-gradient-to-br from-purple-950/80 via-[#140c25] to-purple-900/20 border border-purple-500/20 rounded-2xl p-5 hover:border-purple-400/50 hover:shadow-lg hover:shadow-purple-500/10 transition-all duration-300 group">
+            <div className="bg-white border border-gray-200 rounded-2xl p-5 hover:border-purple-400 hover:shadow-md transition-all duration-300 group shadow-sm">
               <div className="flex items-center gap-3 mb-3">
-                <div className="p-2 rounded-lg bg-purple-500/15 text-purple-400 group-hover:bg-purple-500 group-hover:text-white transition-colors">
+                <div className="p-2 rounded-lg bg-purple-50 text-purple-600 group-hover:bg-purple-600 group-hover:text-white transition-colors">
                   <Award className="w-4 h-4" />
                 </div>
-                <h3 className="text-xs font-semibold text-purple-300/60 uppercase tracking-wider">Latest Rank</h3>
+                <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Latest Rank</h3>
               </div>
               <div className="flex items-baseline gap-1">
-                <span className="text-2xl font-bold text-purple-50">{latestScore.rank || '-'}</span>
+                <span className="text-2xl font-bold text-gray-900">{latestScore.rank || '-'}</span>
               </div>
             </div>
 
             {/* Total Percentile */}
-            <div className="bg-gradient-to-br from-pink-950/80 via-[#1a0c18] to-pink-900/20 border border-pink-500/20 rounded-2xl p-5 hover:border-pink-400/50 hover:shadow-lg hover:shadow-pink-500/10 transition-all duration-300 group">
+            <div className="bg-white border border-gray-200 rounded-2xl p-5 hover:border-pink-400 hover:shadow-md transition-all duration-300 group shadow-sm">
               <div className="flex items-center gap-3 mb-3">
-                <div className="p-2 rounded-lg bg-pink-500/15 text-pink-400 group-hover:bg-pink-500 group-hover:text-white transition-colors">
+                <div className="p-2 rounded-lg bg-pink-50 text-pink-600 group-hover:bg-pink-600 group-hover:text-white transition-colors">
                   <Activity className="w-4 h-4" />
                 </div>
-                <h3 className="text-xs font-semibold text-pink-300/60 uppercase tracking-wider">Total Percentile</h3>
+                <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Total Percentile</h3>
               </div>
               <div className="flex items-baseline gap-1">
-                <span className="text-2xl font-bold text-pink-50">{latestScore.is_absent ? '0' : totalPercentile}</span>
-                <span className="text-sm text-pink-300/40">PR</span>
+                <span className="text-2xl font-bold text-gray-900">{latestScore.is_absent ? '0' : totalPercentile}</span>
+                <span className="text-sm text-gray-500">PR</span>
               </div>
             </div>
 
             {/* Attendance Ring */}
-            <div className="bg-gradient-to-br from-emerald-950/80 via-[#0c1a14] to-emerald-900/20 border border-emerald-500/20 rounded-2xl p-5 hover:border-emerald-400/50 hover:shadow-lg hover:shadow-emerald-500/10 transition-all duration-300 flex items-center justify-between">
+            <div className="bg-white border border-gray-200 rounded-2xl p-5 hover:border-emerald-400 hover:shadow-md transition-all duration-300 flex items-center justify-between shadow-sm">
               <div>
                 <div className="flex items-center gap-3 mb-3">
-                  <div className="p-2 rounded-lg bg-emerald-500/15">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                  <div className="p-2 rounded-lg bg-emerald-50">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600" />
                   </div>
-                  <h3 className="text-xs font-semibold text-emerald-300/60 uppercase tracking-wider">Status</h3>
+                  <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</h3>
                 </div>
                 <div className="flex items-baseline gap-1">
                   <span className={`text-xs font-bold px-2 py-1 rounded-lg border ${attBadge} ${attColor}`}>
@@ -404,10 +405,10 @@ export default async function ParentDashboard() {
               </div>
               <div className="relative w-16 h-16 flex items-center justify-center">
                 <svg className="transform -rotate-90 w-16 h-16">
-                  <circle cx="32" cy="32" r="28" stroke="currentColor" strokeWidth="6" fill="transparent" className="text-white/10" />
+                  <circle cx="32" cy="32" r="28" stroke="currentColor" strokeWidth="6" fill="transparent" className="text-gray-100" />
                   <circle cx="32" cy="32" r="28" stroke="currentColor" strokeWidth="6" fill="transparent" strokeDasharray={circumference} strokeDashoffset={strokeDashoffset} className={`transition-all duration-1000 ease-out ${circleColor}`} />
                 </svg>
-                <span className="absolute text-sm font-bold">{dailyAttendancePercentage}%</span>
+                <span className="absolute text-sm font-bold text-gray-900">{dailyAttendancePercentage}%</span>
               </div>
             </div>
           </div>
@@ -415,29 +416,32 @@ export default async function ParentDashboard() {
           {/* AI PERFORMANCE SUMMARY */}
           <PerformanceSummary studentId={studentId} />
 
+          {/* SUBJECT PERFORMANCE WIDGET */}
+          <SubjectPerformance scores={validScores} />
+
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-2 space-y-6">
               {/* PERFORMANCE TREND */}
-              <div className="bg-white/[0.02] border border-white/10 rounded-3xl p-6 relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/5 rounded-full blur-[80px]" />
-                <h2 className="text-lg font-bold mb-6 relative z-10">Performance Trend</h2>
+              <div className="bg-white/80 border border-gray-200 rounded-3xl p-6 relative overflow-hidden shadow-sm">
+                <div className="absolute top-0 right-0 w-64 h-64 bg-blue-50 rounded-full blur-[80px]" />
+                <h2 className="text-lg font-bold mb-6 relative z-10 text-gray-900">Performance Trend</h2>
                 <div className="h-[300px] w-full relative z-10">
                   <PerformanceChart data={chartData} />
                 </div>
               </div>
 
             {/* DAILY ATTENDANCE SUMMARY */}
-            <div className="bg-white/[0.02] border border-white/10 rounded-3xl p-6 flex flex-col items-center">
-              <h2 className="text-lg font-bold mb-4 w-full text-left">Attendance Calendar</h2>
+            <div className="bg-white/80 border border-gray-200 rounded-3xl p-6 flex flex-col items-center shadow-sm">
+              <h2 className="text-lg font-bold mb-4 w-full text-left text-gray-900">Attendance Calendar</h2>
               <AttendanceCalendar records={attendanceRecords} />
               <div className="w-full grid grid-cols-2 gap-4 mt-6">
-                <div className="bg-white/5 border border-white/10 rounded-xl p-3 text-center">
-                  <div className="text-2xl font-bold text-green-400">{presentDays}</div>
-                  <div className="text-xs text-white/50 uppercase tracking-wider mt-1">Present</div>
+                <div className="bg-gray-50 border border-gray-200 rounded-xl p-3 text-center">
+                  <div className="text-2xl font-bold text-green-600">{presentDays}</div>
+                  <div className="text-xs text-gray-500 uppercase tracking-wider mt-1">Present</div>
                 </div>
-                <div className="bg-white/5 border border-white/10 rounded-xl p-3 text-center">
-                  <div className="text-2xl font-bold text-red-400">{absentDays}</div>
-                  <div className="text-xs text-white/50 uppercase tracking-wider mt-1">Absent</div>
+                <div className="bg-gray-50 border border-gray-200 rounded-xl p-3 text-center">
+                  <div className="text-2xl font-bold text-red-600">{absentDays}</div>
+                  <div className="text-xs text-gray-500 uppercase tracking-wider mt-1">Absent</div>
                 </div>
               </div>
             </div>
@@ -446,15 +450,15 @@ export default async function ParentDashboard() {
 
             <div className="lg:col-span-1">
               {/* SUBJECT BREAKDOWN */}
-              <div className="bg-white/[0.02] border border-white/10 rounded-3xl p-6">
-              <h2 className="text-lg font-bold mb-1">Subject Breakdown</h2>
-              <p className="text-xs text-white/40 mb-5">Latest test performance</p>
+              <div className="bg-white/80 border border-gray-200 rounded-3xl p-6 shadow-sm">
+              <h2 className="text-lg font-bold mb-1 text-gray-900">Subject Breakdown</h2>
+              <p className="text-xs text-gray-500 mb-5">Latest test performance</p>
               {latestScore.is_absent ? (
-                <div className="h-40 flex items-center justify-center text-sm text-white/40 italic">
+                <div className="h-40 flex items-center justify-center text-sm text-gray-500 italic">
                   Absent for latest test
                 </div>
               ) : latestSubjects.length === 0 ? (
-                <div className="h-40 flex items-center justify-center text-sm text-white/40 italic">
+                <div className="h-40 flex items-center justify-center text-sm text-gray-500 italic">
                   No subject data available
                 </div>
               ) : (
@@ -478,23 +482,23 @@ export default async function ParentDashboard() {
                     return (
                       <div key={sub.name}>
                         <div className="flex justify-between items-end mb-2">
-                          <span className="text-sm font-medium capitalize text-white/90">{sub.name}</span>
+                          <span className="text-sm font-medium capitalize text-gray-900">{sub.name}</span>
                           <div className="text-right flex items-center justify-end gap-2">
-                            <span className="text-xs font-bold text-white/70">
+                            <span className="text-xs font-bold text-gray-700">
                               {score}
                               {sub.max_marks > 0 && (
-                                <span className="text-white/30 font-normal"> / {sub.max_marks}</span>
+                                <span className="text-gray-400 font-normal"> / {sub.max_marks}</span>
                               )}
                             </span>
-                            <span className="text-[10px] text-white/40">({perc}%)</span>
+                            <span className="text-[10px] text-gray-500">({perc}%)</span>
                             {!latestScore.is_absent && (
-                              <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-400">
+                              <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-blue-50 text-blue-600">
                                 {subPercentile} PR
                               </span>
                             )}
                           </div>
                         </div>
-                        <div className="w-full h-2.5 bg-white/5 rounded-full overflow-hidden">
+                        <div className="w-full h-2.5 bg-gray-200 rounded-full overflow-hidden">
                           <div
                             className={`h-full bg-gradient-to-r ${barColor} rounded-full transition-all duration-1000 ease-out`}
                             style={{ width: `${perc}%` }}
@@ -511,9 +515,9 @@ export default async function ParentDashboard() {
 
           <div className="mt-6">
             {/* RECENT TEST HISTORY */}
-            <div className="bg-white/[0.02] border border-white/10 rounded-3xl overflow-hidden">
-              <div className="px-6 py-5 border-b border-white/5 flex items-center justify-between">
-                <h2 className="text-lg font-bold">Recent Tests</h2>
+            <div className="bg-white/80 border border-gray-200 rounded-3xl overflow-hidden shadow-sm">
+              <div className="px-6 py-5 border-b border-gray-200 flex items-center justify-between">
+                <h2 className="text-lg font-bold text-gray-900">Recent Tests</h2>
               </div>
               <RecentTestsTable scores={enhancedScores} />
             </div>

@@ -3,93 +3,160 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter, usePathname } from 'next/navigation'
-import { BarChart3, Bell, LogOut, Loader2, AlertCircle, ArrowLeft } from 'lucide-react'
+import { BarChart3, Bell, LogOut, Loader2, AlertCircle, ArrowLeft, BookOpen, AlertTriangle, Trophy } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 
 export default function ParentNav({ studentId }: { studentId: string | null }) {
   const router = useRouter()
   const pathname = usePathname()
-  const [absences, setAbsences] = useState<any[]>([])
-  const [unreadResourcesCount, setUnreadResourcesCount] = useState(0)
+  
+  const [notifications, setNotifications] = useState<any[]>([])
   const [showNotifications, setShowNotifications] = useState(false)
   const [loggingOut, setLoggingOut] = useState(false)
 
   useEffect(() => {
     if (!studentId) return
 
-    const fetchAbsences = async () => {
+    const fetchNotifications = async () => {
       const supabase = createClient()
+      const newNotifications = []
+
+      // Fetch student info
+      const { data: student } = await supabase
+        .from('students')
+        .select('batch, coaching_center_id')
+        .eq('id', studentId)
+        .single()
       
-      const { data } = await supabase
-        .from('scores')
-        .select(`
-          id,
-          is_absent,
-          tests ( id, test_name, test_date, test_type, target_batches )
-        `)
-        .eq('student_id', studentId)
-        .eq('is_absent', true)
-        .order('created_at', { ascending: false })
-
-      if (data) {
-        setAbsences(data)
-      }
-    }
-
-    const fetchUnreadResources = async () => {
-      const supabase = createClient()
-      const { data: student } = await supabase.from('students').select('batch, coaching_center_id').eq('id', studentId).single()
       if (!student) return
 
       const sevenDaysAgo = new Date()
       sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
-      
+      const sevenDaysStr = sevenDaysAgo.toISOString()
+
+      // 1. Absences
+      const { data: absences } = await supabase
+        .from('scores')
+        .select('id, is_absent, created_at, tests(test_name, test_type)')
+        .eq('student_id', studentId)
+        .eq('is_absent', true)
+        .gte('created_at', sevenDaysStr)
+        .order('created_at', { ascending: false })
+
+      if (absences) {
+        absences.forEach(abs => {
+          newNotifications.push({
+            id: `abs_${abs.id}`,
+            type: 'absence',
+            title: `Absent in ${abs.tests?.test_type || 'Test'}`,
+            desc: abs.tests?.test_name || 'Unknown test',
+            date: abs.created_at,
+            icon: <AlertCircle className="w-4 h-4 text-red-400" />,
+            bgColor: 'bg-red-500/10'
+          })
+        })
+      }
+
+      // 2. New Resources
       const { data: recentRes } = await supabase
         .from('resources')
-        .select('id')
+        .select('id, title, resource_type, created_at')
         .eq('coaching_center_id', student.coaching_center_id)
-        .gte('created_at', sevenDaysAgo.toISOString())
+        .gte('created_at', sevenDaysStr)
         .or(`target_batches.cs.{"${student.batch}"},target_batches.cs.{"All Batches"}`)
-        
-      if (!recentRes || recentRes.length === 0) return
+        .order('created_at', { ascending: false })
+        .limit(5)
 
-      const recentIds = recentRes.map((r: { id: string }) => r.id)
+      if (recentRes) {
+        recentRes.forEach(res => {
+          newNotifications.push({
+            id: `res_${res.id}`,
+            type: 'resource',
+            title: `New ${res.resource_type} Uploaded`,
+            desc: res.title,
+            date: res.created_at,
+            icon: <BookOpen className="w-4 h-4 text-blue-400" />,
+            bgColor: 'bg-blue-500/10'
+          })
+        })
+      }
 
-      const { data: viewedRes } = await supabase
-        .from('resource_views')
-        .select('resource_id')
+      // 3. New Results Published
+      const { data: recentResults } = await supabase
+        .from('scores')
+        .select('id, total, created_at, tests(test_name, max_marks)')
         .eq('student_id', studentId)
-        .in('resource_id', recentIds)
+        .eq('is_absent', false)
+        .gte('created_at', sevenDaysStr)
+        .order('created_at', { ascending: false })
+        .limit(3)
 
-      const viewedIds = new Set(viewedRes?.map((v: { resource_id: string }) => v.resource_id) || [])
-      const unread = recentIds.filter((id: string) => !viewedIds.has(id))
-      setUnreadResourcesCount(unread.length)
+      if (recentResults) {
+        recentResults.forEach(res => {
+          newNotifications.push({
+            id: `result_${res.id}`,
+            type: 'result',
+            title: 'New Result Published',
+            desc: `${res.tests?.test_name}: ${res.total}/${res.tests?.max_marks}`,
+            date: res.created_at,
+            icon: <Trophy className="w-4 h-4 text-green-400" />,
+            bgColor: 'bg-green-500/10'
+          })
+        })
+      }
+
+      // 4. Attendance Drop below 80% (last 30 days)
+      const thirtyDaysAgo = new Date()
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
+      const { data: attData } = await supabase
+        .from('attendance')
+        .select('is_present')
+        .eq('student_id', studentId)
+        .gte('date', thirtyDaysAgo.toISOString())
+
+      if (attData && attData.length > 5) {
+        const presentCount = attData.filter(d => d.is_present).length
+        const totalCount = attData.length
+        const pct = (presentCount / totalCount) * 100
+        
+        if (pct < 80) {
+          newNotifications.push({
+            id: `att_drop`,
+            type: 'attendance',
+            title: 'Attendance Alert',
+            desc: `Attendance has dropped to ${Math.round(pct)}%`,
+            date: new Date().toISOString(),
+            icon: <AlertTriangle className="w-4 h-4 text-orange-400" />,
+            bgColor: 'bg-orange-500/10'
+          })
+        }
+      }
+
+      // Sort by date descending
+      newNotifications.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+      setNotifications(newNotifications)
     }
 
-    fetchAbsences()
-    fetchUnreadResources()
+    fetchNotifications()
   }, [studentId])
 
   const handleLogout = async () => {
     setLoggingOut(true)
-    try {
-      await fetch('/api/parent/logout', { method: 'POST' })
-      router.replace('/parent/login')
-    } catch (e) {
-      console.error(e)
-      setLoggingOut(false)
-    }
+    const supabase = createClient()
+    await supabase.auth.signOut()
+    document.cookie = 'parent_token=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT'
+    router.push('/parent/login')
   }
 
   return (
-    <nav className="sticky top-0 z-50 bg-[#030712]/80 backdrop-blur-xl border-b border-white/10">
+    <nav className="bg-white/80 backdrop-blur-xl border-b border-gray-200 sticky top-0 z-50">
       <div className="max-w-5xl mx-auto px-4 lg:px-8 h-16 flex items-center justify-between">
         
-        {/* Back Button & Logo */}
+        {/* Logo & Back */}
         <div className="flex items-center gap-4">
           <button
             onClick={() => router.back()}
-            className="p-2 -ml-2 rounded-lg text-white/70 hover:text-white hover:bg-white/5 transition-all"
+            className="p-2 -ml-2 rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition-all"
             title="Go Back"
           >
             <ArrowLeft className="w-5 h-5" />
@@ -99,7 +166,7 @@ export default function ParentNav({ studentId }: { studentId: string | null }) {
             <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-500/20 group-hover:shadow-blue-500/40 transition-all">
               <BarChart3 className="w-4 h-4 text-white" />
             </div>
-            <span className="font-semibold tracking-tight text-white/90 group-hover:text-white transition-colors">
+            <span className="font-semibold tracking-tight text-gray-900 group-hover:text-black transition-colors">
               Student Portal
             </span>
           </Link>
@@ -112,64 +179,83 @@ export default function ParentNav({ studentId }: { studentId: string | null }) {
           <div className="relative">
             <button
               onClick={() => setShowNotifications(!showNotifications)}
-              className="relative p-2 rounded-lg text-white/70 hover:text-white hover:bg-white/5 transition-all"
+              className="relative p-2 rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition-all focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
             >
               <Bell className="w-5 h-5" />
-              {absences.length > 0 && (
-                <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+              {notifications.length > 0 && (
+                <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse border-2 border-white" />
               )}
             </button>
 
             {/* Dropdown */}
             {showNotifications && (
-              <div className="absolute right-0 mt-2 w-80 bg-[#0a0f1c] border border-white/10 rounded-2xl shadow-2xl overflow-hidden z-50 animate-in fade-in slide-in-from-top-2">
-                <div className="px-4 py-3 border-b border-white/5 bg-white/[0.02]">
-                  <h3 className="font-semibold text-sm flex items-center justify-between">
-                    Notifications
-                    {absences.length > 0 && (
-                      <span className="px-2 py-0.5 rounded-full bg-red-500/20 text-red-400 text-[10px] font-bold">
-                        {absences.length} New
-                      </span>
-                    )}
-                  </h3>
-                </div>
-                <div className="max-h-80 overflow-y-auto">
-                  {absences.length > 0 ? (
-                    absences.map((absence) => (
-                      <div key={absence.id} className="px-4 py-3 border-b border-white/5 hover:bg-white/[0.02] transition-colors flex gap-3">
-                        <div className="w-8 h-8 rounded-full bg-red-500/10 flex items-center justify-center flex-shrink-0 mt-0.5">
-                          <AlertCircle className="w-4 h-4 text-red-400" />
+              <>
+                <div 
+                  className="fixed inset-0 z-40"
+                  onClick={() => setShowNotifications(false)}
+                />
+                <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-white/80 border border-gray-200 rounded-2xl shadow-2xl overflow-hidden z-50 animate-in fade-in slide-in-from-top-2">
+                  <div className="px-4 py-3 border-b border-gray-200 bg-black/5">
+                    <h3 className="font-semibold text-sm flex items-center justify-between">
+                      Notifications
+                      {notifications.length > 0 && (
+                        <span className="px-2 py-0.5 rounded-full bg-[var(--primary)]/20 text-[var(--primary)] text-[10px] font-bold">
+                          {notifications.length} New
+                        </span>
+                      )}
+                    </h3>
+                  </div>
+                  <div className="max-h-80 overflow-y-auto no-scrollbar">
+                    {notifications.length > 0 ? (
+                      notifications.map((notif) => (
+                        <div key={notif.id} className="px-4 py-3 border-b border-gray-200 hover:bg-black/5 transition-colors flex gap-3">
+                          <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${notif.bgColor}`}>
+                            {notif.icon}
+                          </div>
+                          <div>
+                            <p className="text-sm font-bold text-gray-900 leading-tight">
+                              {notif.title}
+                            </p>
+                            <p className="text-xs text-[var(--muted-foreground)] mt-0.5 leading-snug">
+                              {notif.desc}
+                            </p>
+                            <p className="text-[10px] text-gray-500 mt-1.5 font-medium">
+                              {new Date(notif.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                            </p>
+                          </div>
                         </div>
-                        <div>
-                          <p className="text-sm font-medium text-white/90">
-                            Absent for {absence.tests?.test_type || 'Test'}
-                          </p>
-                          <p className="text-xs text-white/50 mt-1 line-clamp-1">
-                            {absence.tests?.test_name}
-                          </p>
-                          <p className="text-[10px] text-white/40 mt-1">
-                            {absence.tests?.test_date ? new Date(absence.tests.test_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Date unknown'}
-                          </p>
+                      ))
+                    ) : (
+                      <div className="px-4 py-12 text-center flex flex-col items-center justify-center gap-2">
+                        <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center">
+                          <Bell className="w-6 h-6 text-gray-500" />
                         </div>
+                        <p className="text-sm text-gray-500 mt-2 font-medium">You're all caught up!</p>
                       </div>
-                    ))
-                  ) : (
-                    <div className="px-4 py-8 text-center text-sm text-white/50">
-                      You're all caught up!
+                    )}
+                  </div>
+                  {notifications.length > 0 && (
+                    <div className="px-4 py-2 bg-gray-100 border-t border-gray-200 text-center">
+                      <button 
+                        onClick={() => setNotifications([])}
+                        className="text-[10px] font-semibold text-[var(--muted-foreground)] hover:text-gray-900 uppercase tracking-wider"
+                      >
+                        Clear All
+                      </button>
                     </div>
                   )}
                 </div>
-              </div>
+              </>
             )}
           </div>
 
-          <div className="w-px h-5 bg-white/10" />
+          <div className="w-px h-5 bg-gray-300" />
 
           {/* Logout */}
           <button
             onClick={handleLogout}
             disabled={loggingOut}
-            className="flex items-center gap-2 p-2 rounded-lg text-white/70 hover:text-white hover:bg-red-500/10 hover:text-red-400 transition-all text-sm font-medium disabled:opacity-50"
+            className="flex items-center gap-2 p-2 rounded-lg text-gray-600 hover:text-gray-900 hover:bg-red-500/10 hover:text-red-600 transition-all text-sm font-medium disabled:opacity-50"
           >
             {loggingOut ? <Loader2 className="w-4 h-4 animate-spin" /> : <LogOut className="w-4 h-4" />}
             <span className="hidden sm:inline">Logout</span>
@@ -179,7 +265,7 @@ export default function ParentNav({ studentId }: { studentId: string | null }) {
       </div>
 
       {/* Tabs */}
-      <div className="max-w-5xl mx-auto px-4 lg:px-8 border-t border-white/5 flex gap-6 overflow-x-auto no-scrollbar">
+      <div className="max-w-5xl mx-auto px-4 lg:px-8 border-t border-gray-200 flex gap-6 overflow-x-auto no-scrollbar">
         {[
           { label: 'Dashboard', path: '/parent' },
           { label: 'Resources', path: '/parent/resources' }
@@ -195,15 +281,10 @@ export default function ParentNav({ studentId }: { studentId: string | null }) {
               className={`py-3 text-sm font-medium whitespace-nowrap border-b-2 transition-colors flex items-center gap-2 ${
                 isActive 
                   ? 'border-[var(--primary)] text-[var(--primary)]' 
-                  : 'border-transparent text-white/60 hover:text-white/90'
+                  : 'border-transparent text-gray-500 hover:text-gray-900'
               }`}
             >
               {tab.label}
-              {tab.label === 'Resources' && unreadResourcesCount > 0 && (
-                <span className="px-1.5 py-0.5 rounded-full bg-[var(--primary)] text-white text-[10px] font-bold">
-                  {unreadResourcesCount}
-                </span>
-              )}
             </Link>
           )
         })}

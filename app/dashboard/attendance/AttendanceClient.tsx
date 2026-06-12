@@ -338,7 +338,13 @@ export default function AttendanceClient({ coachingCenterId }: { coachingCenterI
       })
     })
 
-    const sortedDates = Object.keys(grouped).sort((a, b) => new Date(b).getTime() - new Date(a).getTime())
+    // Filter to only include past dates and today
+    const today = new Date()
+    today.setHours(23, 59, 59, 999)
+    
+    const sortedDates = Object.keys(grouped)
+      .filter(date => new Date(date) <= today)
+      .sort((a, b) => new Date(b).getTime() - new Date(a).getTime())
     const sortedGrouped: Record<string, Record<string, any[]>> = {}
     
     sortedDates.forEach(date => {
@@ -419,16 +425,17 @@ export default function AttendanceClient({ coachingCenterId }: { coachingCenterI
           <select
             value={selectedBatch}
             onChange={e => setSelectedBatch(e.target.value)}
-            className="flex-1 md:w-40 px-3 py-2 bg-[#0a0f1c] border border-white/10 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none"
-            style={{ backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 0.75rem center', backgroundSize: '1em' }}
+            className="flex-1 md:w-40 px-3 py-2 bg-white/50 border border-[var(--border)] rounded-lg text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[var(--primary)] appearance-none"
+            style={{ backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='gray' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 0.75rem center', backgroundSize: '1em' }}
           >
             {batches.map(b => (
-              <option key={b} value={b} className="bg-[#0a0f1c] text-white">{b === 'All' ? 'All Batches' : `Batch: ${b}`}</option>
+              <option key={b} value={b} className="bg-white text-gray-900">{b === 'All' ? 'All Batches' : `Batch: ${b}`}</option>
             ))}
           </select>
           <input
             type="date"
             value={selectedDate}
+            max={todayStr}
             onChange={e => setSelectedDate(e.target.value)}
             onClick={e => (e.target as any).showPicker?.()}
             className="flex-1 md:w-40 px-3 py-2 bg-black/20 border border-[var(--border)] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)] cursor-pointer"
@@ -441,7 +448,7 @@ export default function AttendanceClient({ coachingCenterId }: { coachingCenterI
         <button
           onClick={() => setActiveTab('daily')}
           className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-            activeTab === 'daily' ? 'bg-[var(--primary)] text-white shadow-lg' : 'text-[var(--muted-foreground)] hover:text-white hover:bg-white/5'
+            activeTab === 'daily' ? 'bg-[var(--primary)] text-white shadow-lg' : 'text-[var(--muted-foreground)] hover:text-gray-900 hover:bg-black/5'
           }`}
         >
           <CheckCircle2 className="w-4 h-4" /> Daily Entry
@@ -449,7 +456,7 @@ export default function AttendanceClient({ coachingCenterId }: { coachingCenterI
         <button
           onClick={() => setActiveTab('history')}
           className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-            activeTab === 'history' ? 'bg-[var(--primary)] text-white shadow-lg' : 'text-[var(--muted-foreground)] hover:text-white hover:bg-white/5'
+            activeTab === 'history' ? 'bg-[var(--primary)] text-white shadow-lg' : 'text-[var(--muted-foreground)] hover:text-gray-900 hover:bg-black/5'
           }`}
         >
           <History className="w-4 h-4" /> History
@@ -457,7 +464,7 @@ export default function AttendanceClient({ coachingCenterId }: { coachingCenterI
         <button
           onClick={() => setActiveTab('analytics')}
           className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-            activeTab === 'analytics' ? 'bg-[var(--primary)] text-white shadow-lg' : 'text-[var(--muted-foreground)] hover:text-white hover:bg-white/5'
+            activeTab === 'analytics' ? 'bg-[var(--primary)] text-white shadow-lg' : 'text-[var(--muted-foreground)] hover:text-gray-900 hover:bg-black/5'
           }`}
         >
           <BarChart className="w-4 h-4" /> Analytics
@@ -501,12 +508,12 @@ export default function AttendanceClient({ coachingCenterId }: { coachingCenterI
                     value={quickAbsents}
                     onChange={e => setQuickAbsents(e.target.value)}
                     placeholder="e.g. 102, 105, 112"
-                    className="w-full h-24 bg-black/20 border border-[var(--border)] rounded-xl p-3 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)] font-mono resize-none mb-3"
+                    className="w-full h-24 bg-white/50 border border-[var(--border)] rounded-xl p-3 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)] font-mono resize-none mb-3 text-gray-900"
                   />
                   <button
                     onClick={handleQuickAbsentSubmit}
                     disabled={saving}
-                    className="w-full py-2.5 bg-white text-black font-semibold rounded-xl text-sm hover:bg-white/90 transition-all flex items-center justify-center gap-2"
+                    className="w-full py-2.5 bg-gray-900 text-white font-semibold rounded-xl text-sm hover:bg-gray-800 transition-all flex items-center justify-center gap-2"
                   >
                     {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
                     Submit & Save
@@ -523,7 +530,7 @@ export default function AttendanceClient({ coachingCenterId }: { coachingCenterI
                     Format: <code>roll_no, is_present</code> (e.g. <code>101, true</code>).
                   </p>
                   
-                  <label className="flex flex-col items-center justify-center w-full h-24 border-2 border-dashed border-[var(--border)] rounded-xl hover:bg-white/5 transition-all cursor-pointer mb-3">
+                  <label className="flex flex-col items-center justify-center w-full h-24 border-2 border-dashed border-[var(--border)] rounded-xl hover:bg-black/5 transition-all cursor-pointer mb-3">
                     <div className="flex flex-col items-center justify-center pt-5 pb-6">
                       <Upload className="w-6 h-6 text-[var(--muted-foreground)] mb-2" />
                       <p className="text-xs text-[var(--muted-foreground)]">Click to upload CSV</p>
@@ -546,7 +553,7 @@ export default function AttendanceClient({ coachingCenterId }: { coachingCenterI
 
               {/* Right Column: Manual Sheet */}
               <div className="xl:col-span-2 glass-card rounded-2xl border border-[var(--border)] overflow-hidden flex flex-col h-[calc(100vh-200px)] min-h-[500px]">
-                <div className="px-5 py-4 border-b border-[var(--border)] flex items-center justify-between bg-black/10">
+                <div className="px-5 py-4 border-b border-[var(--border)] flex items-center justify-between bg-black/5">
                   <div className="flex items-center gap-2">
                     <LayoutGrid className="w-4 h-4 text-[var(--muted-foreground)]" />
                     <h2 className="font-semibold text-sm">Manual Sheet ({currentBatchStudents.length} Students)</h2>
@@ -578,7 +585,7 @@ export default function AttendanceClient({ coachingCenterId }: { coachingCenterI
                         const isPresent = attendance[student.id] ?? true
 
                         return (
-                          <div key={student.id} className="flex items-center justify-between px-5 py-3 hover:bg-white/[0.02] transition-colors">
+                          <div key={student.id} className="flex items-center justify-between px-5 py-3 hover:bg-black/[0.02] transition-colors">
                             <div className="flex items-center gap-4">
                               <span className="w-12 text-xs font-mono text-[var(--muted-foreground)]">{student.roll_no}</span>
                               <span className="text-sm font-medium">{student.name}</span>
@@ -587,7 +594,7 @@ export default function AttendanceClient({ coachingCenterId }: { coachingCenterI
                               <button
                                 onClick={() => handleManualToggle(student.id, true)}
                                 className={`px-3 py-1 rounded-md text-xs font-semibold transition-all ${
-                                  isPresent ? 'bg-green-500 text-white shadow-sm' : 'text-[var(--muted-foreground)] hover:text-white'
+                                  isPresent ? 'bg-green-500 text-white shadow-sm' : 'text-[var(--muted-foreground)] hover:text-gray-900'
                                 }`}
                               >
                                 P
@@ -595,7 +602,7 @@ export default function AttendanceClient({ coachingCenterId }: { coachingCenterI
                               <button
                                 onClick={() => handleManualToggle(student.id, false)}
                                 className={`px-3 py-1 rounded-md text-xs font-semibold transition-all ${
-                                  !isPresent ? 'bg-red-500 text-white shadow-sm' : 'text-[var(--muted-foreground)] hover:text-white'
+                                  !isPresent ? 'bg-red-500 text-white shadow-sm' : 'text-[var(--muted-foreground)] hover:text-gray-900'
                                 }`}
                               >
                                 A
@@ -623,9 +630,17 @@ export default function AttendanceClient({ coachingCenterId }: { coachingCenterI
                   <div key={date} className="glass-card rounded-2xl border border-[var(--border)] overflow-hidden">
                     <button
                       onClick={() => setExpandedDate(expandedDate === date ? null : date)}
-                      className="w-full px-5 py-4 flex items-center justify-between bg-black/10 hover:bg-black/20 transition-colors"
+                      className="w-full px-5 py-4 flex items-center justify-between bg-black/5 hover:bg-black/10 transition-colors"
                     >
-                      <h2 className="font-semibold text-sm">Date: {new Date(date).toLocaleDateString()}</h2>
+                      <div className="flex items-center gap-3">
+                        <h2 className="font-semibold text-sm">Date: {new Date(date + 'T12:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}</h2>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); setActiveTab('daily'); setSelectedDate(date); }}
+                          className="px-2.5 py-1 rounded-lg bg-[var(--primary)]/10 text-[var(--primary)] text-xs font-medium hover:bg-[var(--primary)]/20 transition-colors"
+                        >
+                          Edit
+                        </button>
+                      </div>
                       {expandedDate === date ? <ChevronDown className="w-5 h-5 text-[var(--muted-foreground)]" /> : <ChevronRight className="w-5 h-5 text-[var(--muted-foreground)]" />}
                     </button>
                     
@@ -635,17 +650,17 @@ export default function AttendanceClient({ coachingCenterId }: { coachingCenterI
                           <div key={batch} className="bg-black/5">
                             <button
                               onClick={() => setExpandedBatch(expandedBatch === batch ? null : batch)}
-                              className="w-full px-6 py-3 flex items-center justify-between hover:bg-white/[0.02] transition-colors"
+                              className="w-full px-6 py-3 flex items-center justify-between hover:bg-black/[0.02] transition-colors"
                             >
                               <h3 className="text-sm font-medium text-[var(--muted-foreground)]">Batch: {batch}</h3>
                               {expandedBatch === batch ? <ChevronDown className="w-4 h-4 text-[var(--muted-foreground)]" /> : <ChevronRight className="w-4 h-4 text-[var(--muted-foreground)]" />}
                             </button>
                             
                             {expandedBatch === batch && (
-                              <div className="bg-[#030712]/50 p-4 border-t border-[var(--border)]">
+                              <div className="bg-black/[0.02] p-4 border-t border-[var(--border)]">
                                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                                   {groupedHistory[date][batch].sort((a, b) => a.student.roll_no.localeCompare(b.student.roll_no)).map(record => (
-                                    <div key={record.student.id} className="flex items-center justify-between bg-black/20 border border-[var(--border)] p-3 rounded-xl">
+                                    <div key={record.student.id} className="flex items-center justify-between bg-white/50 border border-[var(--border)] p-3 rounded-xl">
                                       <div>
                                         <div className="text-xs font-mono text-[var(--muted-foreground)]">{record.student.roll_no}</div>
                                         <div className="text-sm font-medium">{record.student.name}</div>
@@ -708,8 +723,8 @@ export default function AttendanceClient({ coachingCenterId }: { coachingCenterI
                         tickFormatter={(val) => `${val}%`}
                       />
                       <Tooltip 
-                        contentStyle={{ backgroundColor: '#0a0f1c', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px' }}
-                        itemStyle={{ color: '#fff' }}
+                        contentStyle={{ backgroundColor: '#ffffff', border: '1px solid rgba(0,0,0,0.1)', borderRadius: '12px' }}
+                        itemStyle={{ color: '#000' }}
                         labelFormatter={(val) => new Date(val as string).toLocaleDateString()}
                       />
                       <Line 
@@ -729,12 +744,12 @@ export default function AttendanceClient({ coachingCenterId }: { coachingCenterI
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {/* Top 10 */}
                 <div className="glass-card rounded-2xl border border-[var(--border)] overflow-hidden">
-                  <div className="px-5 py-4 border-b border-[var(--border)] bg-black/10">
-                    <h3 className="font-bold text-green-400 flex items-center gap-2"><CheckCircle2 className="w-4 h-4" /> Top 10 Highest Attendance</h3>
+                  <div className="px-5 py-4 border-b border-[var(--border)] bg-black/5">
+                    <h3 className="font-bold text-green-600 flex items-center gap-2"><CheckCircle2 className="w-4 h-4" /> Top 10 Highest Attendance</h3>
                   </div>
                   <div className="divide-y divide-[var(--border)] max-h-80 overflow-y-auto">
                     {historyStats.slice(0, 10).map((stat, idx) => (
-                      <div key={stat.id} className="flex items-center justify-between p-4 hover:bg-white/[0.02] transition-colors">
+                      <div key={stat.id} className="flex items-center justify-between p-4 hover:bg-black/[0.02] transition-colors">
                         <div className="flex items-center gap-3">
                           <span className="text-xs font-bold text-[var(--muted-foreground)] w-4">{idx + 1}.</span>
                           <div>
@@ -742,7 +757,7 @@ export default function AttendanceClient({ coachingCenterId }: { coachingCenterI
                             <p className="text-xs font-mono text-[var(--muted-foreground)]">{stat.roll_no}</p>
                           </div>
                         </div>
-                        <span className="text-sm font-bold text-green-400">{stat.percentage.toFixed(1)}%</span>
+                        <span className="text-sm font-bold text-green-600">{stat.percentage.toFixed(1)}%</span>
                       </div>
                     ))}
                     {historyStats.length === 0 && <div className="p-6 text-center text-sm text-[var(--muted-foreground)]">No data</div>}
@@ -751,12 +766,12 @@ export default function AttendanceClient({ coachingCenterId }: { coachingCenterI
 
                 {/* Bottom 10 */}
                 <div className="glass-card rounded-2xl border border-[var(--border)] overflow-hidden">
-                  <div className="px-5 py-4 border-b border-[var(--border)] bg-black/10">
-                    <h3 className="font-bold text-red-400 flex items-center gap-2"><AlertTriangle className="w-4 h-4" /> Needs Attention (Bottom 10)</h3>
+                  <div className="px-5 py-4 border-b border-[var(--border)] bg-black/5">
+                    <h3 className="font-bold text-red-600 flex items-center gap-2"><AlertTriangle className="w-4 h-4" /> Needs Attention (Bottom 10)</h3>
                   </div>
                   <div className="divide-y divide-[var(--border)] max-h-80 overflow-y-auto">
                     {[...historyStats].reverse().slice(0, 10).map((stat, idx) => (
-                      <div key={stat.id} className="flex items-center justify-between p-4 hover:bg-white/[0.02] transition-colors">
+                      <div key={stat.id} className="flex items-center justify-between p-4 hover:bg-black/[0.02] transition-colors">
                         <div className="flex items-center gap-3">
                           <span className="text-xs font-bold text-[var(--muted-foreground)] w-4">{idx + 1}.</span>
                           <div>
@@ -764,7 +779,7 @@ export default function AttendanceClient({ coachingCenterId }: { coachingCenterI
                             <p className="text-xs font-mono text-[var(--muted-foreground)]">{stat.roll_no}</p>
                           </div>
                         </div>
-                        <span className="text-sm font-bold text-red-400">{stat.percentage.toFixed(1)}%</span>
+                        <span className="text-sm font-bold text-red-600">{stat.percentage.toFixed(1)}%</span>
                       </div>
                     ))}
                     {historyStats.length === 0 && <div className="p-6 text-center text-sm text-[var(--muted-foreground)]">No data</div>}

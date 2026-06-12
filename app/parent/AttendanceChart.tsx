@@ -13,8 +13,8 @@ import {
 export default function AttendanceChart({ data }: { data: { month: string; percentage: number }[] }) {
   if (!data || data.length === 0) {
     return (
-      <div className="h-64 flex items-center justify-center border border-white/5 bg-white/[0.02] rounded-2xl">
-        <p className="text-white/40 text-sm">No attendance data available yet.</p>
+      <div className="h-64 flex items-center justify-center border border-gray-200 bg-gray-50 rounded-2xl">
+        <p className="text-gray-400 text-sm">No attendance data available yet.</p>
       </div>
     )
   }
@@ -29,16 +29,16 @@ export default function AttendanceChart({ data }: { data: { month: string; perce
               <stop offset="95%" stopColor="#818cf8" stopOpacity={0} />
             </linearGradient>
           </defs>
-          <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+          <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.05)" vertical={false} />
           <XAxis 
             dataKey="month" 
-            stroke="rgba(255,255,255,0.3)" 
+            stroke="rgba(0,0,0,0.3)" 
             fontSize={12} 
             tickLine={false} 
             axisLine={false} 
           />
           <YAxis 
-            stroke="rgba(255,255,255,0.3)" 
+            stroke="rgba(0,0,0,0.3)" 
             fontSize={12} 
             tickLine={false} 
             axisLine={false} 
@@ -47,11 +47,11 @@ export default function AttendanceChart({ data }: { data: { month: string; perce
           />
           <Tooltip
             contentStyle={{
-              backgroundColor: '#0f172a',
-              border: '1px solid rgba(255,255,255,0.1)',
+              backgroundColor: '#ffffff',
+              border: '1px solid rgba(0,0,0,0.1)',
               borderRadius: '12px',
-              color: '#fff',
-              boxShadow: '0 10px 15px -3px rgba(0,0,0,0.5)'
+              color: '#111827',
+              boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)'
             }}
             itemStyle={{ color: '#818cf8', fontWeight: 'bold' }}
           />

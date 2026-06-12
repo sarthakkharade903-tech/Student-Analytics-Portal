@@ -4,72 +4,52 @@
 @custom-variant dark (&:is(.dark *));
 
 /* ============================================================
-   Premium Dark Theme — Parent Analytics Portal
+   Light & Vibrant Theme — Student Analytics Portal
    ============================================================ */
-:root {
-  --background: oklch(0.08 0.01 240);
-  --foreground: oklch(0.97 0.005 240);
-  --card: oklch(0.12 0.012 240);
-  --card-foreground: oklch(0.97 0.005 240);
-  --popover: oklch(0.12 0.012 240);
-  --popover-foreground: oklch(0.97 0.005 240);
-  --primary: oklch(0.62 0.22 265);
-  --primary-foreground: oklch(0.98 0.005 240);
-  --secondary: oklch(0.18 0.015 240);
-  --secondary-foreground: oklch(0.85 0.01 240);
-  --muted: oklch(0.18 0.015 240);
-  --muted-foreground: oklch(0.55 0.012 240);
-  --accent: oklch(0.20 0.02 265);
-  --accent-foreground: oklch(0.85 0.01 240);
-  --destructive: oklch(0.58 0.22 25);
-  --border: oklch(0.22 0.015 240);
-  --input: oklch(0.20 0.015 240);
-  --ring: oklch(0.62 0.22 265);
-  --radius: 0.625rem;
+:root, .dark {
+  --background: oklch(0.98 0.01 240);
+  --foreground: oklch(0.15 0.02 240);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.15 0.02 240);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.15 0.02 240);
+  
+  --primary: oklch(0.60 0.22 260); /* Vibrant Purple/Indigo */
+  --primary-foreground: oklch(0.98 0 0);
+  
+  --secondary: oklch(0.95 0.02 240);
+  --secondary-foreground: oklch(0.20 0.02 240);
+  
+  --muted: oklch(0.95 0.02 240);
+  --muted-foreground: oklch(0.40 0.02 240);
+  
+  --accent: oklch(0.95 0.02 260);
+  --accent-foreground: oklch(0.20 0.02 260);
+  
+  --destructive: oklch(0.60 0.22 25);
+  --destructive-foreground: oklch(0.98 0 0);
+  
+  --border: oklch(0.90 0.02 240);
+  --input: oklch(0.90 0.02 240);
+  --ring: oklch(0.60 0.22 260);
+  
+  --radius: 1rem;
+  
   --chart-1: oklch(0.62 0.22 265);
   --chart-2: oklch(0.65 0.18 300);
   --chart-3: oklch(0.70 0.15 180);
   --chart-4: oklch(0.72 0.18 90);
   --chart-5: oklch(0.68 0.20 30);
-  /* Sidebar */
-  --sidebar: oklch(0.10 0.012 240);
-  --sidebar-foreground: oklch(0.85 0.01 240);
-  --sidebar-primary: oklch(0.62 0.22 265);
-  --sidebar-primary-foreground: oklch(0.98 0.005 240);
-  --sidebar-accent: oklch(0.18 0.015 240);
-  --sidebar-accent-foreground: oklch(0.85 0.01 240);
-  --sidebar-border: oklch(0.20 0.015 240);
-  --sidebar-ring: oklch(0.62 0.22 265);
-}
-
-/* Dark mode — same as root since this is a dark-first app */
-.dark {
-  --background: oklch(0.08 0.01 240);
-  --foreground: oklch(0.97 0.005 240);
-  --card: oklch(0.12 0.012 240);
-  --card-foreground: oklch(0.97 0.005 240);
-  --popover: oklch(0.12 0.012 240);
-  --popover-foreground: oklch(0.97 0.005 240);
-  --primary: oklch(0.62 0.22 265);
-  --primary-foreground: oklch(0.98 0.005 240);
-  --secondary: oklch(0.18 0.015 240);
-  --secondary-foreground: oklch(0.85 0.01 240);
-  --muted: oklch(0.18 0.015 240);
-  --muted-foreground: oklch(0.55 0.012 240);
-  --accent: oklch(0.20 0.02 265);
-  --accent-foreground: oklch(0.85 0.01 240);
-  --destructive: oklch(0.58 0.22 25);
-  --border: oklch(0.22 0.015 240);
-  --input: oklch(0.20 0.015 240);
-  --ring: oklch(0.62 0.22 265);
-  --sidebar: oklch(0.10 0.012 240);
-  --sidebar-foreground: oklch(0.85 0.01 240);
-  --sidebar-primary: oklch(0.62 0.22 265);
-  --sidebar-primary-foreground: oklch(0.98 0.005 240);
-  --sidebar-accent: oklch(0.18 0.015 240);
-  --sidebar-accent-foreground: oklch(0.85 0.01 240);
-  --sidebar-border: oklch(0.20 0.015 240);
-  --sidebar-ring: oklch(0.62 0.22 265);
+  
+  /* Sidebar - Light */
+  --sidebar: oklch(0.98 0.01 240);
+  --sidebar-foreground: oklch(0.20 0.02 240);
+  --sidebar-primary: oklch(0.60 0.22 260);
+  --sidebar-primary-foreground: oklch(0.98 0 0);
+  --sidebar-accent: oklch(0.95 0.02 240);
+  --sidebar-accent-foreground: oklch(0.20 0.02 240);
+  --sidebar-border: oklch(0.90 0.02 240);
+  --sidebar-ring: oklch(0.60 0.22 260);
 }
 
 @theme inline {
@@ -92,6 +72,7 @@
   --color-input: var(--input);
   --color-border: var(--border);
   --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
   --color-accent-foreground: var(--accent-foreground);
   --color-accent: var(--accent);
   --color-muted-foreground: var(--muted-foreground);
@@ -125,7 +106,16 @@
     @apply font-sans;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply text-foreground;
+    background-color: var(--background);
+    /* Vibrant, multicolored light background */
+    background-image: 
+      radial-gradient(at 0% 0%, rgba(139, 92, 246, 0.15) 0px, transparent 50%),
+      radial-gradient(at 100% 0%, rgba(59, 130, 246, 0.15) 0px, transparent 50%),
+      radial-gradient(at 100% 100%, rgba(236, 72, 153, 0.15) 0px, transparent 50%),
+      radial-gradient(at 0% 100%, rgba(16, 185, 129, 0.15) 0px, transparent 50%);
+    background-attachment: fixed;
+    background-size: cover;
     font-synthesis: none;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
@@ -137,17 +127,17 @@
    ============================================================ */
 
 /* Custom scrollbar */
-::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb {
-  background: oklch(0.28 0.015 240);
-  border-radius: 3px;
+  background: rgba(0,0,0,0.1);
+  border-radius: 6px;
 }
-::-webkit-scrollbar-thumb:hover { background: oklch(0.38 0.015 240); }
+::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,0.2); }
 
 /* Gradient text */
 .gradient-text {
-  background: linear-gradient(135deg, oklch(0.72 0.22 265), oklch(0.75 0.18 300));
+  background: linear-gradient(135deg, oklch(0.60 0.22 260), oklch(0.65 0.18 300));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -155,20 +145,22 @@
 
 /* Glow */
 .glow-primary {
-  box-shadow: 0 0 40px oklch(0.62 0.22 265 / 0.25);
+  box-shadow: 0 0 30px rgba(139, 92, 246, 0.3);
 }
 
-/* Glass card */
+/* Glass card for light theme */
 .glass-card {
-  background: oklch(0.12 0.012 240 / 0.85);
-  backdrop-filter: blur(12px);
-  border: 1px solid oklch(0.25 0.015 240);
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.05);
 }
 
-/* Grid dot/line pattern */
+/* Grid dot/line pattern - subtle for light theme */
 .grid-pattern {
   background-image:
-    linear-gradient(oklch(0.22 0.015 240 / 0.4) 1px, transparent 1px),
-    linear-gradient(90deg, oklch(0.22 0.015 240 / 0.4) 1px, transparent 1px);
-  background-size: 60px 60px;
+    linear-gradient(rgba(0,0,0,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,0,0,0.03) 1px, transparent 1px);
+  background-size: 40px 40px;
 }
