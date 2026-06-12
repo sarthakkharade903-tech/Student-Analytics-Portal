@@ -628,9 +628,9 @@ export default function AttendanceClient({ coachingCenterId }: { coachingCenterI
               ) : (
                 Object.keys(groupedHistory).map(date => (
                   <div key={date} className="glass-card rounded-2xl border border-[var(--border)] overflow-hidden">
-                    <button
+                    <div
                       onClick={() => setExpandedDate(expandedDate === date ? null : date)}
-                      className="w-full px-5 py-4 flex items-center justify-between bg-black/5 hover:bg-black/10 transition-colors"
+                      className="w-full px-5 py-4 flex items-center justify-between bg-black/5 hover:bg-black/10 transition-colors cursor-pointer"
                     >
                       <div className="flex items-center gap-3">
                         <h2 className="font-semibold text-sm">Date: {new Date(date + 'T12:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}</h2>
@@ -642,7 +642,7 @@ export default function AttendanceClient({ coachingCenterId }: { coachingCenterI
                         </button>
                       </div>
                       {expandedDate === date ? <ChevronDown className="w-5 h-5 text-[var(--muted-foreground)]" /> : <ChevronRight className="w-5 h-5 text-[var(--muted-foreground)]" />}
-                    </button>
+                    </div>
                     
                     {expandedDate === date && (
                       <div className="divide-y divide-[var(--border)] border-t border-[var(--border)]">

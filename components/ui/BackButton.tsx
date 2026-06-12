@@ -9,10 +9,10 @@ export default function BackButton({ className = '' }: { className?: string }) {
   return (
     <button
       onClick={() => router.back()}
-      className={`flex items-center justify-center w-10 h-10 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 transition-colors ${className}`}
+      className={`flex items-center justify-center w-10 h-10 rounded-full bg-white hover:bg-gray-100 border border-gray-200 text-gray-700 transition-colors shadow-sm ${className}`}
       aria-label="Go back"
     >
-      <ArrowLeft className="w-5 h-5 text-white/80" />
+      <ArrowLeft className="w-5 h-5 text-current" />
     </button>
   )
 }

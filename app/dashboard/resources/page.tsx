@@ -43,7 +43,7 @@ export default async function ResourcesPage() {
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight text-white">Resource Management</h1>
+        <h1 className="text-2xl font-bold tracking-tight text-gray-900">Resource Management</h1>
         <p className="text-[var(--muted-foreground)] text-sm mt-1">Upload and manage study materials for students.</p>
       </div>
       <ResourcesClient coachingCenterId={coachingCenterId} batches={batches} />

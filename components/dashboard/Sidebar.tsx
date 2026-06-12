@@ -55,8 +55,8 @@ export default function Sidebar() {
           <BarChart3 className="w-4.5 h-4.5 text-white w-[18px] h-[18px]" />
         </div>
         <span className="font-semibold text-sm leading-tight">
-          Parent Analytics<br />
-          <span className="text-[var(--muted-foreground)] font-normal text-xs">Portal</span>
+          Coaching Analytics<br />
+          <span className="text-[9px] font-bold tracking-widest text-[var(--primary)] uppercase bg-[var(--primary)]/10 px-1.5 py-0.5 rounded-sm">Portal</span>
         </span>
       </div>
 

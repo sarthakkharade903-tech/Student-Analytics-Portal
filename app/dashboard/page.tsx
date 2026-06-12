@@ -40,6 +40,20 @@ export default async function DashboardPage() {
         .eq('coaching_center_id', userProfile.coaching_center_id)
     : { count: 0 }
 
+  // Fetch overall attendance to calculate rate
+  const { data: attendanceData } = userProfile?.coaching_center_id
+    ? await supabase
+        .from('attendance')
+        .select('is_present')
+        .eq('coaching_center_id', userProfile.coaching_center_id)
+    : { data: [] }
+  
+  let attendanceRate = '--'
+  if (attendanceData && attendanceData.length > 0) {
+    const presentCount = attendanceData.filter(a => a.is_present).length
+    attendanceRate = Math.round((presentCount / attendanceData.length) * 100) + '%'
+  }
+
   const displayName = userProfile?.name ?? user?.email ?? 'there'
   const centerName = coachingCenter?.name ?? 'your institute'
 
@@ -109,16 +123,16 @@ export default async function DashboardPage() {
         />
         <StatCard
           title="Active Parents"
-          value={0}
+          value="--"
           icon={MessageCircle}
-          description="Invite parents to join"
+          description="Coming soon"
           color="green"
         />
         <StatCard
           title="Attendance Rate"
-          value="--"
+          value={attendanceRate}
           icon={CalendarCheck}
-          description="Track attendance to see data"
+          description="Average across all batches"
           color="orange"
         />
       </section>
@@ -127,7 +141,7 @@ export default async function DashboardPage() {
       <div className="glass-card rounded-2xl p-8 mb-8 relative overflow-hidden">
         <div className="absolute top-0 right-0 w-64 h-64 bg-[oklch(0.62_0.22_265/0.08)] rounded-full blur-3xl pointer-events-none" />
         <div className="relative">
-          <h2 className="text-xl font-semibold mb-2">Welcome to Parent Analytics Portal</h2>
+          <h2 className="text-xl font-semibold mb-2">Welcome to Coaching Analytics Portal</h2>
           <p className="text-[var(--muted-foreground)] text-sm max-w-2xl leading-relaxed">
             Your account is ready. Start by adding your students, then upload test results to
             unlock powerful analytics and automated parent communication.
