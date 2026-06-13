@@ -44,7 +44,7 @@ export default async function StudentResourcesPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold tracking-tight text-white">Learning Hub</h1>
-        <p className="text-[var(--muted-foreground)] text-sm mt-1">Access all your study materials, assignments, and mock tests here.</p>
+        <p className="text-slate-400 text-sm mt-1">Access all your study materials, assignments, and mock tests here.</p>
       </div>
       <StudentResourcesClient 
         studentId={student.id} 

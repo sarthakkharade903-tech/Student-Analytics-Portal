@@ -84,7 +84,7 @@ export default function StudentResourcesClient({ coachingCenterId, studentBatch 
   const importantResources = displayResources.filter(r => r.is_important && !r.is_featured)
 
   const ResourceCard = ({ resource }: { resource: Resource }) => (
-    <div className="glass-card rounded-2xl p-5 flex flex-col hover:border-[var(--primary)]/40 transition-all group relative overflow-hidden bg-gradient-to-br hover:from-[var(--primary)]/5 hover:to-transparent">
+    <div className="bg-[#1a2540] border border-slate-800 rounded-2xl p-5 flex flex-col hover:border-[var(--primary)]/40 transition-all group relative overflow-hidden bg-gradient-to-br hover:from-[var(--primary)]/10 hover:to-transparent">
       {resource.is_featured ? (
         <div className="absolute top-0 right-0 w-20 h-20 overflow-hidden z-10 pointer-events-none">
           <div className="absolute top-4 -right-8 w-32 bg-orange-500/90 text-white text-[10px] font-bold py-1 text-center rotate-45 transform shadow-lg">FEATURED</div>
@@ -100,22 +100,22 @@ export default function StudentResourcesClient({ coachingCenterId, studentBatch 
           {getIcon(resource.resource_type)}
         </div>
         <div>
-          <h3 className="font-semibold text-[15px] leading-tight text-gray-900 group-hover:text-[var(--primary)] transition-colors line-clamp-2" title={resource.title}>
+          <h3 className="font-semibold text-[15px] leading-tight text-white group-hover:text-[var(--primary)] transition-colors line-clamp-2" title={resource.title}>
             {resource.title}
           </h3>
           <div className="flex items-center gap-2 mt-1.5 flex-wrap">
             <span className="text-[10px] font-medium uppercase tracking-wider text-[var(--primary)] bg-[var(--primary)]/10 px-2 py-0.5 rounded-md">{resource.subject}</span>
-            <span className="text-[10px] text-[var(--muted-foreground)]">{resource.resource_type}</span>
+            <span className="text-[10px] text-slate-400">{resource.resource_type}</span>
           </div>
         </div>
       </div>
 
       {resource.description && (
-        <p className="text-sm text-[var(--muted-foreground)] mb-4 line-clamp-2">{resource.description}</p>
+        <p className="text-sm text-slate-400 mb-4 line-clamp-2">{resource.description}</p>
       )}
 
-      <div className="mt-auto pt-4 border-t border-gray-200 flex items-center justify-between gap-3">
-        <div className="flex items-center gap-1.5 text-xs text-[var(--muted-foreground)] bg-black/5 px-2 py-1 rounded-md">
+      <div className="mt-auto pt-4 border-t border-slate-800 flex items-center justify-between gap-3">
+        <div className="flex items-center gap-1.5 text-xs text-slate-400 bg-slate-800 px-2 py-1 rounded-md">
           <Clock className="w-3.5 h-3.5" />
           {formatUploadDate(resource.created_at)}
         </div>
@@ -136,7 +136,7 @@ export default function StudentResourcesClient({ coachingCenterId, studentBatch 
     return (
       <div className="py-20 flex flex-col items-center justify-center gap-3">
         <Loader2 className="w-8 h-8 animate-spin text-[var(--primary)]" />
-        <p className="text-sm text-[var(--muted-foreground)]">Loading your learning hub...</p>
+        <p className="text-sm text-slate-400">Loading your learning hub...</p>
       </div>
     )
   }
@@ -145,40 +145,40 @@ export default function StudentResourcesClient({ coachingCenterId, studentBatch 
     <div className="space-y-8 pb-12">
 
       {/* Search and Filters */}
-      <div className="glass-card p-4 rounded-2xl flex flex-col md:flex-row gap-4 items-center justify-between sticky top-[72px] z-40 backdrop-blur-xl bg-white/60">
+      <div className="p-4 rounded-2xl flex flex-col md:flex-row gap-4 items-center justify-between sticky top-[72px] z-40 backdrop-blur-xl bg-[#0f1729]/80 border border-slate-800 shadow-sm">
         <div className="flex w-full gap-3 flex-wrap md:flex-nowrap">
           <select value={selectedType} onChange={(e) => setSelectedType(e.target.value)}
-            className="px-3 py-2 bg-white/50 border border-[var(--border)] rounded-xl text-sm focus:outline-none focus:border-[var(--primary)] text-gray-900 appearance-none flex-1 min-w-[120px]">
-            {RESOURCE_TYPES.map(t => <option key={t} value={t} className="bg-white">{t === 'All' ? 'All Types' : t}</option>)}
+            className="px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-sm focus:outline-none focus:border-[var(--primary)] text-white appearance-none flex-1 min-w-[120px]">
+            {RESOURCE_TYPES.map(t => <option key={t} value={t} className="bg-slate-800">{t === 'All' ? 'All Types' : t}</option>)}
           </select>
 
           <select value={selectedSubject} onChange={(e) => setSelectedSubject(e.target.value)}
-            className="px-3 py-2 bg-white/50 border border-[var(--border)] rounded-xl text-sm focus:outline-none focus:border-[var(--primary)] text-gray-900 appearance-none flex-1 min-w-[120px]">
-            <option value="All" className="bg-white">All Subjects</option>
-            {SUBJECTS.map(s => <option key={s} value={s} className="bg-white">{s}</option>)}
+            className="px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-sm focus:outline-none focus:border-[var(--primary)] text-white appearance-none flex-1 min-w-[120px]">
+            <option value="All" className="bg-slate-800">All Subjects</option>
+            {SUBJECTS.map(s => <option key={s} value={s} className="bg-slate-800">{s}</option>)}
           </select>
 
           <div className="relative flex-1 w-full">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--muted-foreground)]" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
             <input type="text" placeholder="Search resources..." value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
-              className="w-full pl-9 pr-4 py-2 bg-white/50 border border-[var(--border)] rounded-xl text-sm focus:outline-none focus:border-[var(--primary)] text-gray-900" />
+              className="w-full pl-9 pr-4 py-2 bg-slate-800 border border-slate-700 rounded-xl text-sm focus:outline-none focus:border-[var(--primary)] text-white" />
           </div>
         </div>
       </div>
 
       {displayResources.length === 0 ? (
-        <div className="py-24 text-center glass-card rounded-3xl">
+        <div className="py-24 text-center bg-[#1a2540] border border-slate-800 rounded-3xl">
           <BookOpen className="w-16 h-16 text-[var(--primary)] mx-auto mb-4 opacity-50" />
-          <h3 className="text-xl font-bold text-gray-900 mb-2">No resources found</h3>
-          <p className="text-[var(--muted-foreground)] max-w-sm mx-auto">
+          <h3 className="text-xl font-bold text-white mb-2">No resources found</h3>
+          <p className="text-slate-400 max-w-sm mx-auto">
             {isFiltering
               ? "No resources match your filters. Try adjusting them."
               : "No study materials are available for your batch yet. Check back soon!"}
           </p>
           {isFiltering && (
             <button onClick={() => { setSearchTerm(''); setSelectedSubject('All'); setSelectedType('All'); }}
-              className="mt-6 px-4 py-2 bg-black/5 hover:bg-black/10 text-gray-900 rounded-lg transition-colors text-sm">
+              className="mt-6 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-lg transition-colors text-sm">
               Clear Filters
             </button>
           )}
@@ -188,7 +188,7 @@ export default function StudentResourcesClient({ coachingCenterId, studentBatch 
           {/* Featured Resources */}
           {featuredResources.length > 0 && !isFiltering && (
             <section>
-              <h2 className="text-xl font-bold mb-5 flex items-center gap-2 text-gray-900">
+              <h2 className="text-xl font-bold mb-5 flex items-center gap-2 text-white">
                 <span className="text-2xl">🔥</span> Resource of the Week
               </h2>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
@@ -200,7 +200,7 @@ export default function StudentResourcesClient({ coachingCenterId, studentBatch 
           {/* Important Resources */}
           {importantResources.length > 0 && !isFiltering && (
             <section>
-              <h2 className="text-lg font-bold mb-5 flex items-center gap-2 text-gray-900">
+              <h2 className="text-lg font-bold mb-5 flex items-center gap-2 text-white">
                 <span className="w-2 h-6 rounded-full bg-red-500 shrink-0"></span> Important Materials
               </h2>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
@@ -212,7 +212,7 @@ export default function StudentResourcesClient({ coachingCenterId, studentBatch 
           {/* Filtered Results or Subject-Wise */}
           {isFiltering ? (
             <section>
-              <h2 className="text-lg font-bold mb-5 text-gray-900">Search Results ({displayResources.length})</h2>
+              <h2 className="text-lg font-bold mb-5 text-white">Search Results ({displayResources.length})</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
                 {displayResources.map(r => <ResourceCard key={r.id} resource={r} />)}
               </div>
@@ -223,8 +223,8 @@ export default function StudentResourcesClient({ coachingCenterId, studentBatch 
               if (subjResources.length === 0) return null
               return (
                 <section key={subj}>
-                  <h2 className="text-lg font-bold mb-5 flex items-center gap-2 text-gray-900">
-                    <span className="w-2 h-6 rounded-full bg-[var(--border)] shrink-0"></span> {subj}
+                  <h2 className="text-lg font-bold mb-5 flex items-center gap-2 text-white">
+                    <span className="w-2 h-6 rounded-full bg-slate-700 shrink-0"></span> {subj}
                   </h2>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
                     {subjResources.map(r => <ResourceCard key={r.id} resource={r} />)}

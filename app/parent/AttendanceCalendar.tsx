@@ -24,13 +24,13 @@ export default function AttendanceCalendar({ records }: { records: { date: strin
     const dateStr = `${currentMonth.getFullYear()}-${String(currentMonth.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
     const isPresent = recordMap.get(dateStr)
     
-    let bgColor = 'bg-gray-100 hover:bg-gray-200 text-gray-400'
-    if (isPresent === true) bgColor = 'bg-green-100 text-green-700 font-bold border border-green-200'
-    if (isPresent === false) bgColor = 'bg-red-100 text-red-700 font-bold border border-red-200'
+    let bgColor = 'bg-slate-800 hover:bg-slate-700 text-slate-500'
+    if (isPresent === true) bgColor = 'bg-green-500/20 text-green-400 font-bold border border-green-500/30'
+    if (isPresent === false) bgColor = 'bg-red-500/20 text-red-400 font-bold border border-red-500/30'
 
     const isToday = dateStr === today.toISOString().split('T')[0]
     if (isToday && isPresent === undefined) {
-      bgColor = 'bg-blue-100 text-blue-700 border border-blue-200'
+      bgColor = 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
     }
 
     days.push(
@@ -49,18 +49,18 @@ export default function AttendanceCalendar({ records }: { records: { date: strin
   return (
     <div className="w-full max-w-[280px] mx-auto">
       <div className="flex items-center justify-between mb-4">
-        <button onClick={prevMonth} className="p-1 rounded-md hover:bg-gray-100 text-gray-500 hover:text-gray-900 transition-colors">
+        <button onClick={prevMonth} className="p-1 rounded-md hover:bg-slate-800 text-slate-400 hover:text-white transition-colors">
           <ChevronLeft className="w-4 h-4" />
         </button>
-        <span className="text-sm font-semibold text-gray-900">
+        <span className="text-sm font-semibold text-white">
           {monthNames[currentMonth.getMonth()]} {currentMonth.getFullYear()}
         </span>
-        <button onClick={nextMonth} className="p-1 rounded-md hover:bg-gray-100 text-gray-500 hover:text-gray-900 transition-colors">
+        <button onClick={nextMonth} className="p-1 rounded-md hover:bg-slate-800 text-slate-400 hover:text-white transition-colors">
           <ChevronRight className="w-4 h-4" />
         </button>
       </div>
 
-      <div className="grid grid-cols-7 gap-1 mb-2 text-center text-[10px] font-semibold tracking-wider text-gray-400 uppercase">
+      <div className="grid grid-cols-7 gap-1 mb-2 text-center text-[10px] font-semibold tracking-wider text-slate-500 uppercase">
         <div>Su</div><div>Mo</div><div>Tu</div><div>We</div><div>Th</div><div>Fr</div><div>Sa</div>
       </div>
       
@@ -68,9 +68,9 @@ export default function AttendanceCalendar({ records }: { records: { date: strin
         {days}
       </div>
       
-      <div className="flex items-center justify-center gap-4 mt-6 text-[10px] text-gray-500 font-medium uppercase tracking-wider">
-        <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-full bg-green-200 border border-green-300" /> Present</div>
-        <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-full bg-red-200 border border-red-300" /> Absent</div>
+      <div className="flex items-center justify-center gap-4 mt-6 text-[10px] text-slate-400 font-medium uppercase tracking-wider">
+        <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-full bg-green-500/20 border border-green-500/30" /> Present</div>
+        <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-full bg-red-500/20 border border-red-500/30" /> Absent</div>
       </div>
     </div>
   )

@@ -1,17 +1,24 @@
 'use client'
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
 import { LogOut, Loader2 } from 'lucide-react'
+import { useState } from 'react'
 
 export default function PortalLogoutButton() {
-  const router = useRouter()
   const [loading, setLoading] = useState(false)
 
   const handleLogout = async () => {
     setLoading(true)
-    await fetch('/api/portal/logout', { method: 'POST' })
-    router.push('/portal')
+    try {
+      // Set a 3-second timeout so it never hangs forever
+      const controller = new AbortController()
+      const timeout = setTimeout(() => controller.abort(), 3000)
+      await fetch('/api/portal/logout', { method: 'POST', signal: controller.signal })
+      clearTimeout(timeout)
+    } catch {
+      // Ignore errors — we redirect regardless
+    } finally {
+      window.location.href = '/portal'
+    }
   }
 
   return (

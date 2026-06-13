@@ -142,21 +142,23 @@ export default function ParentNav({ studentId }: { studentId: string | null }) {
 
   const handleLogout = async () => {
     setLoggingOut(true)
-    const supabase = createClient()
-    await supabase.auth.signOut()
-    document.cookie = 'parent_token=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT'
-    router.push('/parent/login')
+    try {
+      await fetch('/api/parent/logout', { method: 'POST' })
+    } catch {
+      // ignore errors, redirect anyway
+    }
+    window.location.href = '/parent/login'
   }
 
   return (
-    <nav className="bg-white/80 backdrop-blur-xl border-b border-gray-200 sticky top-0 z-50">
+    <nav className="bg-[#0f1729]/80 backdrop-blur-xl border-b border-slate-800 sticky top-0 z-50">
       <div className="max-w-5xl mx-auto px-4 lg:px-8 h-16 flex items-center justify-between">
         
         {/* Logo & Back */}
         <div className="flex items-center gap-4">
           <button
             onClick={() => router.back()}
-            className="p-2 -ml-2 rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition-all"
+            className="p-2 -ml-2 rounded-lg text-slate-400 hover:text-white hover:bg-[#1a2540] transition-all"
             title="Go Back"
           >
             <ArrowLeft className="w-5 h-5" />
@@ -166,7 +168,7 @@ export default function ParentNav({ studentId }: { studentId: string | null }) {
             <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-500/20 group-hover:shadow-blue-500/40 transition-all">
               <BarChart3 className="w-4 h-4 text-white" />
             </div>
-            <span className="font-semibold tracking-tight text-gray-900 group-hover:text-black transition-colors">
+            <span className="font-semibold tracking-tight text-white transition-colors">
               Student Portal
             </span>
           </Link>
@@ -179,7 +181,7 @@ export default function ParentNav({ studentId }: { studentId: string | null }) {
           <div className="relative">
             <button
               onClick={() => setShowNotifications(!showNotifications)}
-              className="relative p-2 rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition-all focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
+              className="relative p-2 rounded-lg text-slate-400 hover:text-white hover:bg-[#1a2540] transition-all focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
             >
               <Bell className="w-5 h-5" />
               {notifications.length > 0 && (
@@ -194,8 +196,8 @@ export default function ParentNav({ studentId }: { studentId: string | null }) {
                   className="fixed inset-0 z-40"
                   onClick={() => setShowNotifications(false)}
                 />
-                <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-white/80 border border-gray-200 rounded-2xl shadow-2xl overflow-hidden z-50 animate-in fade-in slide-in-from-top-2">
-                  <div className="px-4 py-3 border-b border-gray-200 bg-black/5">
+                <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-[#0f1729]/95 backdrop-blur-xl border border-slate-800 rounded-2xl shadow-2xl overflow-hidden z-50 animate-in fade-in slide-in-from-top-2">
+                  <div className="px-4 py-3 border-b border-slate-800 bg-slate-800/50">
                     <h3 className="font-semibold text-sm flex items-center justify-between">
                       Notifications
                       {notifications.length > 0 && (
@@ -208,18 +210,18 @@ export default function ParentNav({ studentId }: { studentId: string | null }) {
                   <div className="max-h-80 overflow-y-auto no-scrollbar">
                     {notifications.length > 0 ? (
                       notifications.map((notif) => (
-                        <div key={notif.id} className="px-4 py-3 border-b border-gray-200 hover:bg-black/5 transition-colors flex gap-3">
+                        <div key={notif.id} className="px-4 py-3 border-b border-slate-800 hover:bg-slate-800/50 transition-colors flex gap-3">
                           <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${notif.bgColor}`}>
                             {notif.icon}
                           </div>
                           <div>
-                            <p className="text-sm font-bold text-gray-900 leading-tight">
+                            <p className="text-sm font-bold text-white leading-tight">
                               {notif.title}
                             </p>
                             <p className="text-xs text-[var(--muted-foreground)] mt-0.5 leading-snug">
                               {notif.desc}
                             </p>
-                            <p className="text-[10px] text-gray-500 mt-1.5 font-medium">
+                            <p className="text-[10px] text-slate-400 mt-1.5 font-medium">
                               {new Date(notif.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
                             </p>
                           </div>
@@ -227,18 +229,18 @@ export default function ParentNav({ studentId }: { studentId: string | null }) {
                       ))
                     ) : (
                       <div className="px-4 py-12 text-center flex flex-col items-center justify-center gap-2">
-                        <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center">
-                          <Bell className="w-6 h-6 text-gray-500" />
+                        <div className="w-12 h-12 rounded-full bg-[#1a2540] flex items-center justify-center">
+                          <Bell className="w-6 h-6 text-slate-400" />
                         </div>
-                        <p className="text-sm text-gray-500 mt-2 font-medium">You're all caught up!</p>
+                        <p className="text-sm text-slate-400 mt-2 font-medium">You're all caught up!</p>
                       </div>
                     )}
                   </div>
                   {notifications.length > 0 && (
-                    <div className="px-4 py-2 bg-gray-100 border-t border-gray-200 text-center">
+                    <div className="px-4 py-2 bg-slate-800/30 border-t border-slate-800 text-center">
                       <button 
                         onClick={() => setNotifications([])}
-                        className="text-[10px] font-semibold text-[var(--muted-foreground)] hover:text-gray-900 uppercase tracking-wider"
+                        className="text-[10px] font-semibold text-slate-400 hover:text-white uppercase tracking-wider"
                       >
                         Clear All
                       </button>
@@ -249,13 +251,13 @@ export default function ParentNav({ studentId }: { studentId: string | null }) {
             )}
           </div>
 
-          <div className="w-px h-5 bg-gray-300" />
+          <div className="w-px h-5 bg-slate-800" />
 
           {/* Logout */}
           <button
             onClick={handleLogout}
             disabled={loggingOut}
-            className="flex items-center gap-2 p-2 rounded-lg text-gray-600 hover:text-gray-900 hover:bg-red-500/10 hover:text-red-600 transition-all text-sm font-medium disabled:opacity-50"
+            className="flex items-center gap-2 p-2 rounded-lg text-slate-400 hover:text-white hover:bg-red-500/10 hover:text-red-400 transition-all text-sm font-medium disabled:opacity-50"
           >
             {loggingOut ? <Loader2 className="w-4 h-4 animate-spin" /> : <LogOut className="w-4 h-4" />}
             <span className="hidden sm:inline">Logout</span>
@@ -265,7 +267,7 @@ export default function ParentNav({ studentId }: { studentId: string | null }) {
       </div>
 
       {/* Tabs */}
-      <div className="max-w-5xl mx-auto px-4 lg:px-8 border-t border-gray-200 flex gap-6 overflow-x-auto no-scrollbar">
+      <div className="max-w-5xl mx-auto px-4 lg:px-8 border-t border-slate-800 flex gap-6 overflow-x-auto no-scrollbar">
         {[
           { label: 'Dashboard', path: '/parent' },
           { label: 'Resources', path: '/parent/resources' }
@@ -281,7 +283,7 @@ export default function ParentNav({ studentId }: { studentId: string | null }) {
               className={`py-3 text-sm font-medium whitespace-nowrap border-b-2 transition-colors flex items-center gap-2 ${
                 isActive 
                   ? 'border-[var(--primary)] text-[var(--primary)]' 
-                  : 'border-transparent text-gray-500 hover:text-gray-900'
+                  : 'border-transparent text-slate-400 hover:text-white'
               }`}
             >
               {tab.label}
