@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { SUBJECT_PRESETS, totalMaxMarks } from '@/lib/subjects'
@@ -18,8 +18,6 @@ import {
 } from 'lucide-react'
 
 // ── Constants ─────────────────────────────────────────────────────────────────
-
-const BATCH_PRESETS = ['JEE', 'NEET', 'CET A', 'CET B']
 
 const TEST_TYPES = [
   'Weekly Test',
@@ -52,18 +50,26 @@ function TotalBadge({ total }: { total: number }) {
 
 // ─────────────────────────────────────────────────────────────────────────────
 
-export default function CreateTestPage() {
+import { Suspense } from 'react'
+
+function CreateTestForm() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const std = searchParams.get('std') ?? '11th'
+  const defaultStandard = std === '12th' ? '12th' : '11th'
+  
   const [coachingCenterId, setCoachingCenterId] = useState<string | null>(null)
 
   // ── Form state ────────────────────────────────────────────────────────────
   const [testName, setTestName] = useState('')
   const [testDate, setTestDate] = useState('')
   const [testType, setTestType] = useState('Weekly Test')
+  const [standard, setStandard] = useState(defaultStandard)
   const [subjects, setSubjects] = useState<SubjectConfig[]>([])
   const [subjectInput, setSubjectInput] = useState('')
   const [targetBatches, setTargetBatches] = useState<string[]>([])
   const [batchInput, setBatchInput] = useState('')
+  const [availableBatches, setAvailableBatches] = useState<string[]>([])
   const [loading, setLoading] = useState(false)
   const [success, setSuccess] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -85,6 +91,26 @@ export default function CreateTestPage() {
     }
     load()
   }, [])
+
+  // Fetch available batches for the selected standard
+  useEffect(() => {
+    const fetchBatches = async () => {
+      if (!coachingCenterId) return
+      const supabase = createClient()
+      const { data } = await supabase
+        .from('students')
+        .select('batch')
+        .eq('coaching_center_id', coachingCenterId)
+        .eq('standard', standard)
+      
+      const batchSet = new Set<string>()
+      data?.forEach((s: any) => {
+        if (s.batch) batchSet.add(s.batch)
+      })
+      setAvailableBatches(Array.from(batchSet).sort())
+    }
+    fetchBatches()
+  }, [coachingCenterId, standard])
 
   // ── Subject helpers ───────────────────────────────────────────────────────
 
@@ -184,6 +210,7 @@ export default function CreateTestPage() {
       test_name: testName.trim(),
       test_type: testType,
       test_date: testDate,
+      standard,
       subjects,          // stored as SubjectConfig[]
       target_batches: targetBatches,
       max_marks: computedTotal,
@@ -197,7 +224,7 @@ export default function CreateTestPage() {
 
     setSuccess(true)
     setTimeout(() => {
-      router.push('/dashboard/tests')
+      router.push(`/dashboard/tests?std=${standard}`)
       router.refresh()
     }, 1200)
   }
@@ -208,7 +235,7 @@ export default function CreateTestPage() {
     <div className="p-6 lg:p-8 max-w-2xl mx-auto">
       {/* Back link */}
       <Link
-        href="/dashboard/tests"
+        href={`/dashboard/tests?std=${standard}`}
         className="inline-flex items-center gap-1.5 text-sm text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition-colors mb-8"
       >
         <ArrowLeft className="w-4 h-4" />
@@ -221,9 +248,9 @@ export default function CreateTestPage() {
           <ClipboardList className="w-5 h-5 text-[var(--primary)]" />
         </div>
         <div>
-          <h1 className="text-2xl font-bold">Create Test</h1>
+          <h1 className="text-2xl font-bold">Create Test — {standard}</h1>
           <p className="text-sm text-[var(--muted-foreground)] mt-0.5">
-            Set up a new test before uploading student marks.
+            Set up a new <strong>{standard} standard</strong> test before uploading student marks.
           </p>
         </div>
       </div>
@@ -277,20 +304,39 @@ export default function CreateTestPage() {
               </div>
             </div>
 
-            {/* Test Date */}
-            <div className="space-y-1.5">
-              <label htmlFor="test-date" className="text-sm font-medium">
-                Test Date <span className="text-red-400">*</span>
-              </label>
-              <input
-                id="test-date"
-                type="date"
-                required
-                value={testDate}
-                onChange={(e) => { setTestDate(e.target.value); setError(null) }}
-                className={inputCls}
-                style={{ colorScheme: 'dark' }}
-              />
+            {/* Test Date and Standard */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <label htmlFor="test-date" className="text-sm font-medium">
+                  Test Date <span className="text-red-400">*</span>
+                </label>
+                <input
+                  id="test-date"
+                  type="date"
+                  required
+                  value={testDate}
+                  onChange={(e) => { setTestDate(e.target.value); setError(null) }}
+                  className={inputCls}
+                  style={{ colorScheme: 'dark' }}
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label htmlFor="standard" className="text-sm font-medium">
+                  Class Standard <span className="text-red-400">*</span>
+                </label>
+                <select
+                  id="standard"
+                  required
+                  value={standard}
+                  onChange={(e) => setStandard(e.target.value)}
+                  className={inputCls}
+                  style={{ colorScheme: 'dark' }}
+                >
+                  <option value="11th">11th Standard</option>
+                  <option value="12th">12th Standard</option>
+                </select>
+              </div>
             </div>
 
             {/* ── SUBJECTS SECTION ─────────────────────────────────────────── */}
@@ -431,7 +477,7 @@ export default function CreateTestPage() {
               {/* Quick batch presets */}
               <div className="flex flex-wrap gap-2 mb-2">
                 <span className="text-xs text-[var(--muted-foreground)] self-center mr-1">Quick select:</span>
-                {BATCH_PRESETS.map((b) => (
+                {availableBatches.length > 0 ? availableBatches.map((b) => (
                   <button
                     key={b}
                     type="button"
@@ -440,7 +486,9 @@ export default function CreateTestPage() {
                   >
                     {b}
                   </button>
-                ))}
+                )) : (
+                  <span className="text-xs text-[var(--muted-foreground)] italic self-center">No batches found for {standard}</span>
+                )}
               </div>
 
               {/* Batch tag input area */}
@@ -486,7 +534,7 @@ export default function CreateTestPage() {
             {/* Actions */}
             <div className="flex gap-3 pt-2">
               <Link
-                href="/dashboard/tests"
+                href={`/dashboard/tests?std=${standard}`}
                 className="flex-1 py-2.5 px-4 border border-[var(--border)] text-sm font-medium rounded-lg hover:bg-[var(--secondary)] transition-all text-center"
               >
                 Cancel
@@ -514,5 +562,13 @@ export default function CreateTestPage() {
         )}
       </div>
     </div>
+  )
+}
+
+export default function CreateTestPage() {
+  return (
+    <Suspense fallback={<div className="p-8 text-center text-[var(--muted-foreground)]">Loading…</div>}>
+      <CreateTestForm />
+    </Suspense>
   )
 }

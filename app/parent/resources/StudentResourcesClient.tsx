@@ -20,7 +20,7 @@ interface Resource {
 const SUBJECTS = ['Physics', 'Chemistry', 'Maths', 'Biology', 'General']
 const RESOURCE_TYPES = ['All', 'PDF', 'YouTube Video', 'Google Drive Link', 'Assignment', 'PYQ', 'Mock Test']
 
-export default function StudentResourcesClient({ coachingCenterId, studentBatch }: { studentId: string, coachingCenterId: string, studentBatch: string }) {
+export default function StudentResourcesClient({ coachingCenterId, studentBatch, studentStandard }: { studentId: string, coachingCenterId: string, studentBatch: string, studentStandard: string }) {
   const supabase = useMemo(() => createClient(), [])
   const [resources, setResources] = useState<Resource[]>([])
   const [loading, setLoading] = useState(true)
@@ -36,6 +36,7 @@ export default function StudentResourcesClient({ coachingCenterId, studentBatch 
         .from('resources')
         .select('*')
         .eq('coaching_center_id', coachingCenterId)
+        .eq('standard', studentStandard)
         .or(`target_batches.cs.{"${studentBatch}"},target_batches.cs.{"All Batches"}`)
         .order('created_at', { ascending: false })
         .range(0, 100)
@@ -44,7 +45,7 @@ export default function StudentResourcesClient({ coachingCenterId, studentBatch 
       setLoading(false)
     }
     fetchResources()
-  }, [coachingCenterId, studentBatch, supabase])
+  }, [coachingCenterId, studentBatch, studentStandard, supabase])
 
   const getIcon = (type: string) => {
     switch (type) {

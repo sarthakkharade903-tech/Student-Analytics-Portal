@@ -115,7 +115,7 @@ export default function SubjectPerformance({ scores }: { scores: any[] }) {
               <Tooltip
                 contentStyle={{ backgroundColor: '#0f1729', borderRadius: '12px', border: '1px solid #1e293b', color: '#fff' }}
                 itemStyle={{ color: '#fff', fontWeight: 'bold' }}
-                formatter={(value: number) => [`${value}%`, 'Average']}
+                formatter={(value: any) => [`${value}%`, 'Average']}
               />
               <Legend verticalAlign="bottom" height={36} iconType="circle" wrapperStyle={{ fontSize: '12px' }} />
             </PieChart>

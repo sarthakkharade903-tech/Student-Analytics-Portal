@@ -11,6 +11,7 @@ export default function ParentLogin() {
   const [error, setError] = useState<string | null>(null)
   
   const [formData, setFormData] = useState({
+    standard: '11th',
     roll_no: '',
     parent_phone: ''
   })
@@ -115,6 +116,21 @@ export default function ParentLogin() {
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-5">
+            <div className="space-y-1.5">
+              <label htmlFor="standard" className="text-sm font-semibold text-slate-700">
+                Class Standard
+              </label>
+              <select
+                id="standard"
+                value={formData.standard}
+                onChange={(e) => setFormData(prev => ({ ...prev, standard: e.target.value }))}
+                className="w-full px-4 py-3 rounded-xl bg-white border border-slate-200 text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#5b21b6]/20 focus:border-[#5b21b6] transition-all text-sm shadow-sm"
+              >
+                <option value="11th">11th Standard</option>
+                <option value="12th">12th Standard</option>
+              </select>
+            </div>
+
             <div className="space-y-1.5">
               <label htmlFor="roll_no" className="text-sm font-semibold text-slate-700">
                 Student Roll Number

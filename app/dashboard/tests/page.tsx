@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { ClipboardList, Plus, Trophy, Users, TrendingUp, Calendar } from 'lucide-react'
 import type { Test, SubjectConfig } from '@/lib/types'
@@ -28,15 +29,23 @@ function formatDate(dateStr: string) {
   })
 }
 
-export default async function TestsPage() {
+export default async function TestsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ std?: string }>
+}) {
+  const { std: stdParam } = await searchParams
+  const standard = stdParam === '12th' ? '12th' : '11th'
+
   const supabase = await createClient()
 
   const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/login')
 
   const { data: userProfile } = await supabase
     .from('users')
     .select('coaching_center_id')
-    .eq('id', user!.id)
+    .eq('id', user.id)
     .single()
 
   const { data: tests, error } = userProfile?.coaching_center_id
@@ -44,6 +53,7 @@ export default async function TestsPage() {
         .from('tests')
         .select('*')
         .eq('coaching_center_id', userProfile.coaching_center_id)
+        .eq('standard', standard)
         .order('test_date', { ascending: false })
     : { data: [] as Test[], error: null }
 
@@ -56,15 +66,15 @@ export default async function TestsPage() {
             <ClipboardList className="w-5 h-5 text-[var(--primary)]" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold">Tests</h1>
+            <h1 className="text-2xl font-bold">Tests — {standard}</h1>
             <p className="text-sm text-[var(--muted-foreground)] mt-0.5">
-              Create tests and upload student marks.
+              Manage {standard} standard tests and upload student marks.
             </p>
           </div>
         </div>
         <Link
           id="create-test-btn"
-          href="/dashboard/tests/new"
+          href={`/dashboard/tests/new?std=${standard}`}
           className="inline-flex items-center gap-2 px-4 py-2.5 bg-[var(--primary)] text-white text-sm font-semibold rounded-lg hover:opacity-90 transition-all glow-primary whitespace-nowrap"
         >
           <Plus className="w-4 h-4" />
@@ -90,7 +100,7 @@ export default async function TestsPage() {
             Create your first test and upload a CSV file with student marks to get started.
           </p>
           <Link
-            href="/dashboard/tests/new"
+            href={`/dashboard/tests/new?std=${standard}`}
             className="inline-flex items-center gap-2 px-5 py-2.5 bg-[var(--primary)] text-white text-sm font-semibold rounded-lg hover:opacity-90 transition-all glow-primary"
           >
             <Plus className="w-4 h-4" />
@@ -105,7 +115,7 @@ export default async function TestsPage() {
           {(tests as Test[]).map((test) => (
             <Link
               key={test.id}
-              href={`/dashboard/tests/${test.id}`}
+              href={`/dashboard/tests/${test.id}?std=${standard}`}
               className="glass-card rounded-2xl p-5 group hover:border-[oklch(0.62_0.22_265/0.4)] transition-all duration-200 block"
             >
               {/* Test name + date */}

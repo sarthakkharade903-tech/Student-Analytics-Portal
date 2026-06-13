@@ -146,7 +146,7 @@ export default async function TestDetailsPage({ params }: { params: Promise<{ id
     <div className="p-6 lg:p-8 max-w-6xl mx-auto">
       {/* Back link */}
       <Link
-        href="/dashboard/tests"
+        href={`/dashboard/tests?std=${test.standard || '11th'}`}
         className="inline-flex items-center gap-1.5 text-sm text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition-colors mb-8"
       >
         <ArrowLeft className="w-4 h-4" />
@@ -169,6 +169,10 @@ export default async function TestDetailsPage({ params }: { params: Promise<{ id
               <span className="text-[var(--border)]">·</span>
               <span className="text-sm text-[var(--muted-foreground)]">
                 Max Marks: <span className="text-[var(--foreground)] font-medium">{test.max_marks}</span>
+              </span>
+              <span className="text-[var(--border)]">·</span>
+              <span className="text-sm text-[var(--muted-foreground)]">
+                Standard: <span className="text-[var(--foreground)] font-medium">{test.standard || '11th'}</span>
               </span>
             </div>
 
@@ -196,7 +200,7 @@ export default async function TestDetailsPage({ params }: { params: Promise<{ id
           <DeleteTestButton testId={id} testName={test.test_name} />
           <Link
             id="upload-results-btn"
-            href={`/dashboard/tests/${id}/upload`}
+            href={`/dashboard/tests/${id}/upload?std=${test.standard || '11th'}`}
             className="inline-flex items-center gap-2 px-4 py-2.5 bg-[var(--primary)] text-white text-sm font-semibold rounded-lg hover:opacity-90 transition-all glow-primary flex-shrink-0"
           >
             <Upload className="w-4 h-4" />
@@ -240,7 +244,7 @@ export default async function TestDetailsPage({ params }: { params: Promise<{ id
         maxMarks={test.max_marks}
         subjects={subjects}
         initialScores={normalisedScores as ScoreRecord[]}
-        uploadHref={`/dashboard/tests/${id}/upload`}
+        uploadHref={`/dashboard/tests/${id}/upload?std=${test.standard || '11th'}`}
       />
 
       {/* Entry methods */}
@@ -252,6 +256,7 @@ export default async function TestDetailsPage({ params }: { params: Promise<{ id
             maxMarks={test.max_marks}
             targetBatches={test.target_batches ?? []}
             coachingCenterId={coachingCenterId}
+            standard={test.standard}
           />
           <AddScoreForm
             testId={id}

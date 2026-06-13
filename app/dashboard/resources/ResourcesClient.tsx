@@ -20,7 +20,7 @@ interface Resource {
 const RESOURCE_TYPES = ['PDF', 'YouTube Video', 'Google Drive Link', 'Assignment', 'PYQ', 'Mock Test']
 const SUBJECTS = ['Physics', 'Chemistry', 'Maths', 'Biology', 'General']
 
-export default function ResourcesClient({ coachingCenterId, batches }: { coachingCenterId: string, batches: string[] }) {
+export default function ResourcesClient({ coachingCenterId, batches, standard }: { coachingCenterId: string, batches: string[], standard: string }) {
   const supabase = useMemo(() => createClient(), [])
   const [resources, setResources] = useState<Resource[]>([])
   const [loading, setLoading] = useState(true)
@@ -47,6 +47,7 @@ export default function ResourcesClient({ coachingCenterId, batches }: { coachin
       .from('resources')
       .select('*')
       .eq('coaching_center_id', coachingCenterId)
+      .eq('standard', standard)
       .order('created_at', { ascending: false })
     if (data) setResources(data)
     setLoading(false)
@@ -55,7 +56,7 @@ export default function ResourcesClient({ coachingCenterId, batches }: { coachin
   useEffect(() => {
     fetchResources()
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [coachingCenterId])
+  }, [coachingCenterId, standard])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -65,7 +66,8 @@ export default function ResourcesClient({ coachingCenterId, batches }: { coachin
     const newResource = {
       coaching_center_id: coachingCenterId, title, resource_type: resourceType, subject,
       target_batches: targetBatch === 'All' ? ['All Batches'] : [targetBatch],
-      external_link: externalLink, description, is_important: isImportant, is_featured: isFeatured
+      external_link: externalLink, description, is_important: isImportant, is_featured: isFeatured,
+      standard
     }
     const { error: insertError } = await supabase.from('resources').insert([newResource])
     if (insertError) {

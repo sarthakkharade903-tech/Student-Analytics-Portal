@@ -49,7 +49,8 @@ export default async function StudentResourcesPage() {
       <StudentResourcesClient 
         studentId={student.id} 
         coachingCenterId={student.coaching_center_id} 
-        studentBatch={student.batch} 
+        studentBatch={student.batch}
+        studentStandard={student.standard}
       />
     </div>
   )

@@ -31,6 +31,7 @@ interface TestInfo {
   subjects: SubjectConfig[]
   target_batches: string[]
   max_marks: number
+  standard?: string
 }
 
 interface StudentRecord {
@@ -144,7 +145,7 @@ export default function UploadResultsPage() {
       // Test info
       const { data: testData, error: testError } = await supabase
         .from('tests')
-        .select('id, test_name, subjects, target_batches, max_marks')
+        .select('id, test_name, subjects, target_batches, max_marks, standard')
         .eq('id', testId)
         .eq('coaching_center_id', profile.coaching_center_id)
         .single()
@@ -173,6 +174,7 @@ export default function UploadResultsPage() {
         .from('students')
         .select('id, roll_no, name')
         .eq('coaching_center_id', profile.coaching_center_id)
+        .eq('standard', testData.standard)
 
       if (testData.target_batches && testData.target_batches.length > 0) {
         query = query.in('batch', testData.target_batches)
@@ -449,7 +451,7 @@ export default function UploadResultsPage() {
     <div className="p-6 lg:p-8 max-w-5xl mx-auto">
       {/* Back link */}
       <Link
-        href={`/dashboard/tests/${testId}`}
+        href={`/dashboard/tests/${testId}?std=${test?.standard || '11th'}`}
         className="inline-flex items-center gap-1.5 text-sm text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition-colors mb-8"
       >
         <ArrowLeft className="w-4 h-4" />
@@ -487,7 +489,7 @@ export default function UploadResultsPage() {
           </p>
           <div className="flex gap-3">
             <Link
-              href={`/dashboard/tests/${testId}`}
+              href={`/dashboard/tests/${testId}?std=${test?.standard || '11th'}`}
               className="inline-flex items-center gap-2 px-4 py-2.5 border border-[var(--border)] text-sm font-medium rounded-lg hover:bg-[var(--secondary)] transition-all"
             >
               View Results

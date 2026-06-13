@@ -44,7 +44,7 @@ export default function ParentNav({ studentId }: { studentId: string | null }) {
         .order('created_at', { ascending: false })
 
       if (absences) {
-        absences.forEach(abs => {
+        absences.forEach((abs: any) => {
           newNotifications.push({
             id: `abs_${abs.id}`,
             type: 'absence',
@@ -68,7 +68,7 @@ export default function ParentNav({ studentId }: { studentId: string | null }) {
         .limit(5)
 
       if (recentRes) {
-        recentRes.forEach(res => {
+        recentRes.forEach((res: any) => {
           newNotifications.push({
             id: `res_${res.id}`,
             type: 'resource',
@@ -92,7 +92,7 @@ export default function ParentNav({ studentId }: { studentId: string | null }) {
         .limit(3)
 
       if (recentResults) {
-        recentResults.forEach(res => {
+        recentResults.forEach((res: any) => {
           newNotifications.push({
             id: `result_${res.id}`,
             type: 'result',
@@ -115,7 +115,7 @@ export default function ParentNav({ studentId }: { studentId: string | null }) {
         .gte('date', thirtyDaysAgo.toISOString())
 
       if (attData && attData.length > 5) {
-        const presentCount = attData.filter(d => d.is_present).length
+        const presentCount = attData.filter((d: any) => d.is_present).length
         const totalCount = attData.length
         const pct = (presentCount / totalCount) * 100
         

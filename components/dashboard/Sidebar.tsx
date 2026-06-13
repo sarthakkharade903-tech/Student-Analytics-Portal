@@ -1,9 +1,8 @@
 'use client'
 
-import React from 'react'
-
+import React, { Suspense } from 'react'
 import Link from 'next/link'
-import { usePathname, useRouter } from 'next/navigation'
+import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import {
   BarChart3,
@@ -16,6 +15,7 @@ import {
   BookOpen,
   TrendingUp,
 } from 'lucide-react'
+import StandardSwitcher from './StandardSwitcher'
 
 type NavItem = {
   href: string
@@ -25,7 +25,7 @@ type NavItem = {
   soon?: boolean
 }
 
-const navItems: NavItem[] = [
+const baseNavItems: NavItem[] = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, active: true },
   { href: '/dashboard/students', label: 'Students', icon: Users, active: true },
   { href: '/dashboard/tests', label: 'Tests', icon: ClipboardList, active: true },
@@ -35,17 +35,20 @@ const navItems: NavItem[] = [
   { href: '/dashboard/settings', label: 'Settings', icon: Settings, active: true },
 ]
 
-export default function Sidebar() {
+function SidebarInner() {
   const pathname = usePathname()
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const std = searchParams.get('std') ?? '11th'
 
   const handleLogout = async () => {
     const supabase = createClient()
     await supabase.auth.signOut()
-    // Perform a hard navigation to clear all Next.js client-side route cache
-    // and ensure the middleware properly catches the cleared session
     window.location.href = '/login'
   }
+
+  // Build href with std param preserved
+  const withStd = (href: string) => `${href}?std=${std}`
 
   return (
     <aside className="w-64 flex-shrink-0 h-screen sticky top-0 flex flex-col border-r border-[var(--border)] bg-[var(--sidebar)]">
@@ -60,9 +63,17 @@ export default function Sidebar() {
         </span>
       </div>
 
+      {/* Standard Switcher */}
+      <div className="px-0 pt-3 pb-1 border-b border-[var(--border)]">
+        <StandardSwitcher />
+        <p className="text-[10px] text-center text-[var(--muted-foreground)] pb-2 font-medium">
+          Viewing: <span className="text-[var(--primary)] font-bold">{std} Std</span>
+        </p>
+      </div>
+
       {/* Nav */}
       <nav className="flex-1 p-3 space-y-0.5 overflow-y-auto">
-        {navItems.map((item) => {
+        {baseNavItems.map((item) => {
           const Icon = item.icon
           const isActive = pathname === item.href
 
@@ -86,7 +97,7 @@ export default function Sidebar() {
           return (
             <Link
               key={item.label}
-              href={item.href}
+              href={withStd(item.href)}
               className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-150 group ${
                 isActive
                   ? 'bg-[oklch(0.62_0.22_265/0.15)] text-[var(--primary)]'
@@ -115,5 +126,15 @@ export default function Sidebar() {
         </button>
       </div>
     </aside>
+  )
+}
+
+export default function Sidebar() {
+  return (
+    <Suspense fallback={
+      <aside className="w-64 flex-shrink-0 h-screen sticky top-0 flex flex-col border-r border-[var(--border)] bg-[var(--sidebar)]" />
+    }>
+      <SidebarInner />
+    </Suspense>
   )
 }

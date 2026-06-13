@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import Papa from 'papaparse'
 import { createClient } from '@/lib/supabase/client'
@@ -109,8 +109,13 @@ function downloadTemplate() {
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
-export default function ImportStudentsPage() {
+import { Suspense, startTransition } from 'react'
+
+function ImportStudentsForm() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const std = searchParams.get('std') ?? '11th'
+  const standard = std === '12th' ? '12th' : '11th'
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [step, setStep] = useState<Step>('upload')
   const [isDragging, setIsDragging] = useState(false)
@@ -245,6 +250,7 @@ export default function ImportStudentsPage() {
       roll_no: r.roll_no,
       parent_phone: r.parent_phone,
       batch: r.batch,
+      standard,
     }))
 
     // Insert in batches of 50
@@ -270,7 +276,9 @@ export default function ImportStudentsPage() {
       errors: failedErrors,
     })
     setStep('done')
-    router.refresh()
+    startTransition(() => {
+      router.push(`/dashboard/students?std=${standard}`)
+    })
   }
 
   // ── Counts ─────────────────────────────────────────────────────────────────
@@ -289,7 +297,7 @@ export default function ImportStudentsPage() {
     <div className="p-6 lg:p-8 max-w-5xl mx-auto">
       {/* Back link */}
       <Link
-        href="/dashboard/students"
+        href={`/dashboard/students?std=${standard}`}
         className="inline-flex items-center gap-1.5 text-sm text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition-colors mb-8"
       >
         <ArrowLeft className="w-4 h-4" />
@@ -302,9 +310,9 @@ export default function ImportStudentsPage() {
           <Upload className="w-5 h-5 text-[var(--primary)]" />
         </div>
         <div>
-          <h1 className="text-2xl font-bold">Import Students</h1>
+          <h1 className="text-2xl font-bold">Import Students — {standard}</h1>
           <p className="text-sm text-[var(--muted-foreground)] mt-0.5">
-            Upload a CSV file to add multiple students at once.
+            Upload a CSV file to add multiple <strong>{standard} standard</strong> students at once.
           </p>
         </div>
       </div>
@@ -636,7 +644,7 @@ export default function ImportStudentsPage() {
                 Import More
               </button>
               <Link
-                href="/dashboard/students"
+                href={`/dashboard/students?std=${standard}`}
                 className="inline-flex items-center gap-2 px-5 py-2.5 bg-[var(--primary)] text-white text-sm font-semibold rounded-lg hover:opacity-90 transition-all glow-primary"
               >
                 <Users className="w-4 h-4" />
@@ -655,5 +663,13 @@ export default function ImportStudentsPage() {
         </div>
       )}
     </div>
+  )
+}
+
+export default function ImportStudentsPage() {
+  return (
+    <Suspense fallback={<div className="p-8 text-center text-[var(--muted-foreground)]">Loading…</div>}>
+      <ImportStudentsForm />
+    </Suspense>
   )
 }

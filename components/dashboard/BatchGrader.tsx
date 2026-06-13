@@ -26,6 +26,7 @@ interface BatchGraderProps {
   maxMarks: number
   targetBatches: string[]
   coachingCenterId: string
+  standard: string
 }
 
 interface GraderRow {
@@ -54,6 +55,7 @@ export default function BatchGrader({
   maxMarks,
   targetBatches,
   coachingCenterId,
+  standard,
 }: BatchGraderProps) {
   const router = useRouter()
   const [open, setOpen] = useState(false)
@@ -101,6 +103,7 @@ export default function BatchGrader({
       .from('students')
       .select('id, name, roll_no')
       .eq('coaching_center_id', coachingCenterId)
+      .eq('standard', standard)
       .eq('batch', batch)
       .order('roll_no', { ascending: true })
 

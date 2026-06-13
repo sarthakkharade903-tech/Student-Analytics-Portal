@@ -1,18 +1,27 @@
 import Link from 'next/link'
+import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import StatCard from '@/components/dashboard/StatCard'
 import { Users, ClipboardList, MessageCircle, CalendarCheck, ArrowRight, CheckCircle } from 'lucide-react'
 
-export default async function DashboardPage() {
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ std?: string }>
+}) {
+  const { std: stdParam } = await searchParams
+  const standard = stdParam === '12th' ? '12th' : '11th'
+
   const supabase = await createClient()
 
   const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/login')
 
   // Fetch user profile
   const { data: userProfile } = await supabase
     .from('users')
     .select('name, role, coaching_center_id')
-    .eq('id', user!.id)
+    .eq('id', user.id)
     .single()
 
   // Fetch coaching center
@@ -24,34 +33,47 @@ export default async function DashboardPage() {
         .single()
     : { data: null }
 
-  // Fetch real student count
+  // Fetch student count filtered by standard
   const { count: studentCount } = userProfile?.coaching_center_id
     ? await supabase
         .from('students')
         .select('id', { count: 'exact', head: true })
         .eq('coaching_center_id', userProfile.coaching_center_id)
+        .eq('standard', standard)
     : { count: 0 }
 
-  // Fetch real test count
+  // Fetch test count filtered by standard
   const { count: testCount } = userProfile?.coaching_center_id
     ? await supabase
         .from('tests')
         .select('id', { count: 'exact', head: true })
         .eq('coaching_center_id', userProfile.coaching_center_id)
+        .eq('standard', standard)
     : { count: 0 }
 
-  // Fetch overall attendance to calculate rate
-  const { data: attendanceData } = userProfile?.coaching_center_id
-    ? await supabase
+  // Fetch attendance rate — get students of this standard, then their attendance
+  let attendanceRate = '--'
+  if (userProfile?.coaching_center_id) {
+    const { data: stdStudents } = await supabase
+      .from('students')
+      .select('id')
+      .eq('coaching_center_id', userProfile.coaching_center_id)
+      .eq('standard', standard)
+
+    const studentIds = (stdStudents ?? []).map((s: { id: string }) => s.id)
+
+    if (studentIds.length > 0) {
+      const { data: attendanceData } = await supabase
         .from('attendance')
         .select('is_present')
         .eq('coaching_center_id', userProfile.coaching_center_id)
-    : { data: [] }
-  
-  let attendanceRate = '--'
-  if (attendanceData && attendanceData.length > 0) {
-    const presentCount = attendanceData.filter(a => a.is_present).length
-    attendanceRate = Math.round((presentCount / attendanceData.length) * 100) + '%'
+        .in('student_id', studentIds)
+
+      if (attendanceData && attendanceData.length > 0) {
+        const presentCount = attendanceData.filter((a: { is_present: boolean }) => a.is_present).length
+        attendanceRate = Math.round((presentCount / attendanceData.length) * 100) + '%'
+      }
+    }
   }
 
   const displayName = userProfile?.name ?? user?.email ?? 'there'
@@ -61,10 +83,10 @@ export default async function DashboardPage() {
     {
       step: 1,
       title: 'Add Students',
-      description: 'Add your students manually with their roll number, batch, and parent contact.',
+      description: `Add your ${standard} students manually with their roll number, batch, and parent contact.`,
       icon: Users,
       comingSoon: false,
-      href: '/dashboard/students',
+      href: `/dashboard/students?std=${standard}`,
       actionLabel: 'Go to Students',
     },
     {
@@ -73,7 +95,7 @@ export default async function DashboardPage() {
       description: 'Create a test and upload a CSV of marks — ranks and percentages are calculated automatically.',
       icon: ClipboardList,
       comingSoon: false,
-      href: '/dashboard/tests',
+      href: `/dashboard/tests?std=${standard}`,
       actionLabel: 'Go to Tests',
     },
     {
@@ -96,12 +118,16 @@ export default async function DashboardPage() {
           <span>Account active</span>
           <span className="text-[var(--border)]">·</span>
           <span>{centerName}</span>
+          <span className="text-[var(--border)]">·</span>
+          <span className="px-2 py-0.5 rounded-full bg-[var(--primary)]/10 text-[var(--primary)] text-[11px] font-bold border border-[var(--primary)]/20">
+            {standard} Std
+          </span>
         </div>
         <h1 className="text-2xl sm:text-3xl font-bold">
           Welcome back, <span className="gradient-text">{displayName.split(' ')[0]}</span> 👋
         </h1>
         <p className="text-[var(--muted-foreground)] mt-1 text-sm">
-          Here&apos;s a snapshot of your coaching institute today.
+          Here&apos;s a snapshot of your <strong>{standard} standard</strong> students today.
         </p>
       </div>
 
@@ -111,14 +137,14 @@ export default async function DashboardPage() {
           title="Total Students"
           value={studentCount ?? 0}
           icon={Users}
-          description={studentCount ? 'Students enrolled' : 'Add students to get started'}
+          description={studentCount ? `${standard} students enrolled` : 'Add students to get started'}
           color="purple"
         />
         <StatCard
           title="Tests Uploaded"
           value={testCount ?? 0}
           icon={ClipboardList}
-          description={testCount ? 'Tests created' : 'Create your first test'}
+          description={testCount ? `${standard} tests created` : 'Create your first test'}
           color="blue"
         />
         <StatCard
@@ -132,7 +158,7 @@ export default async function DashboardPage() {
           title="Attendance Rate"
           value={attendanceRate}
           icon={CalendarCheck}
-          description="Average across all batches"
+          description={`Average across ${standard} batches`}
           color="orange"
         />
       </section>
@@ -141,10 +167,9 @@ export default async function DashboardPage() {
       <div className="glass-card rounded-2xl p-8 mb-8 relative overflow-hidden">
         <div className="absolute top-0 right-0 w-64 h-64 bg-[oklch(0.62_0.22_265/0.08)] rounded-full blur-3xl pointer-events-none" />
         <div className="relative">
-          <h2 className="text-xl font-semibold mb-2">Welcome to Coaching Analytics Portal</h2>
+          <h2 className="text-xl font-semibold mb-2">Coaching Analytics Portal — {standard} Standard</h2>
           <p className="text-[var(--muted-foreground)] text-sm max-w-2xl leading-relaxed">
-            Your account is ready. Start by adding your students, then upload test results to
-            unlock powerful analytics and automated parent communication.
+            You are currently viewing <strong>{standard} standard</strong> data. Use the class switcher in the sidebar to switch between 11th and 12th standard students, tests, and attendance independently.
           </p>
         </div>
       </div>

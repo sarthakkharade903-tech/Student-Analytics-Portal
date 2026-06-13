@@ -2,7 +2,14 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import ResourcesClient from './ResourcesClient'
 
-export default async function ResourcesPage() {
+export default async function ResourcesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ std?: string }>
+}) {
+  const { std: stdParam } = await searchParams
+  const standard = stdParam === '12th' ? '12th' : '11th'
+
   const supabase = await createClient()
 
   const { data: { user } } = await supabase.auth.getUser()
@@ -33,6 +40,7 @@ export default async function ResourcesPage() {
     .from('students')
     .select('batch')
     .eq('coaching_center_id', coachingCenterId)
+    .eq('standard', standard)
 
   const batchSet = new Set<string>()
   students?.forEach((s) => {
@@ -46,7 +54,7 @@ export default async function ResourcesPage() {
         <h1 className="text-2xl font-bold tracking-tight text-gray-900">Resource Management</h1>
         <p className="text-[var(--muted-foreground)] text-sm mt-1">Upload and manage study materials for students.</p>
       </div>
-      <ResourcesClient coachingCenterId={coachingCenterId} batches={batches} />
+      <ResourcesClient coachingCenterId={coachingCenterId} batches={batches} standard={standard} />
     </div>
   )
 }

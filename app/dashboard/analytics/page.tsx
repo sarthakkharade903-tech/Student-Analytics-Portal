@@ -2,7 +2,14 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import AnalyticsClient from './AnalyticsClient'
 
-export default async function AnalyticsPage() {
+export default async function AnalyticsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ std?: string }>
+}) {
+  const { std: stdParam } = await searchParams
+  const standard = stdParam === '12th' ? '12th' : '11th'
+
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
@@ -17,7 +24,10 @@ export default async function AnalyticsPage() {
 
   // --- Fetch At-Risk Students via RPC ---
   const { data: atRiskStudents } = await supabase
-    .rpc('get_at_risk_students', { p_center_id: profile.coaching_center_id })
+    .rpc('get_at_risk_students', { 
+      p_center_id: profile.coaching_center_id,
+      p_standard: standard
+    })
 
   return (
     <AnalyticsClient

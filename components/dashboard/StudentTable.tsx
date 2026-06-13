@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, startTransition } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Search, UserPlus, Users, Upload, Trash2, Loader2, AlertTriangle, ChevronDown, Pencil, Check, X } from 'lucide-react'
@@ -13,16 +13,18 @@ interface Student {
   batch: string
   parent_phone: string
   created_at: string
+  standard?: string
 }
 
 interface StudentTableProps {
   students: Student[]
+  standard?: string
 }
 
 const inputCls =
   'w-full px-2.5 py-1.5 rounded-md bg-[var(--input)] border border-[var(--border)] text-[var(--foreground)] placeholder:text-[var(--muted-foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--ring)] transition-all text-sm'
 
-export default function StudentTable({ students: initialStudents }: StudentTableProps) {
+export default function StudentTable({ students: initialStudents, standard = '11th' }: StudentTableProps) {
   const router = useRouter()
   const [query, setQuery] = useState('')
   const [students, setStudents] = useState<Student[]>(initialStudents)
@@ -93,7 +95,9 @@ export default function StudentTable({ students: initialStudents }: StudentTable
     )
     setSaving(false)
     closeEdit()
-    router.refresh()
+    startTransition(() => {
+      router.refresh()
+    })
   }
 
   const handleDelete = async (student: Student) => {
@@ -111,7 +115,9 @@ export default function StudentTable({ students: initialStudents }: StudentTable
     setStudents((prev) => prev.filter((s) => s.id !== student.id))
     setDeletingId(null)
     closeEdit()
-    router.refresh()
+    startTransition(() => {
+      router.refresh()
+    })
   }
 
   return (
@@ -147,7 +153,7 @@ export default function StudentTable({ students: initialStudents }: StudentTable
         <div className="flex gap-2 flex-shrink-0">
           <Link
             id="import-students-btn"
-            href="/dashboard/students/import"
+            href={`/dashboard/students/import?std=${standard}`}
             className="inline-flex items-center gap-2 px-4 py-2.5 border border-[var(--border)] text-[var(--foreground)] text-sm font-medium rounded-lg hover:bg-[var(--secondary)] transition-all duration-200 whitespace-nowrap"
           >
             <Upload className="w-4 h-4" />
@@ -155,7 +161,7 @@ export default function StudentTable({ students: initialStudents }: StudentTable
           </Link>
           <Link
             id="add-student-btn"
-            href="/dashboard/students/new"
+            href={`/dashboard/students/new?std=${standard}`}
             className="inline-flex items-center gap-2 px-4 py-2.5 bg-[var(--primary)] text-white text-sm font-semibold rounded-lg hover:opacity-90 transition-all duration-200 glow-primary whitespace-nowrap"
           >
             <UserPlus className="w-4 h-4" />
@@ -180,11 +186,11 @@ export default function StudentTable({ students: initialStudents }: StudentTable
           </p>
           {!query && selectedBatch === 'All Batches' && (
             <div className="flex gap-3">
-              <Link href="/dashboard/students/import" className="inline-flex items-center gap-2 px-4 py-2 border border-[var(--border)] text-sm font-medium rounded-lg hover:bg-[var(--secondary)] transition-all">
+              <Link href={`/dashboard/students/import?std=${standard}`} className="inline-flex items-center gap-2 px-4 py-2 border border-[var(--border)] text-sm font-medium rounded-lg hover:bg-[var(--secondary)] transition-all">
                 <Upload className="w-4 h-4" />
                 Import CSV
               </Link>
-              <Link href="/dashboard/students/new" className="inline-flex items-center gap-2 px-4 py-2 bg-[var(--primary)] text-white text-sm font-medium rounded-lg hover:opacity-90 transition-all">
+              <Link href={`/dashboard/students/new?std=${standard}`} className="inline-flex items-center gap-2 px-4 py-2 bg-[var(--primary)] text-white text-sm font-medium rounded-lg hover:opacity-90 transition-all">
                 <UserPlus className="w-4 h-4" />
                 Add Student
               </Link>

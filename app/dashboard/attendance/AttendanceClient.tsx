@@ -20,7 +20,7 @@ interface AttendanceRecord {
   is_present: boolean
 }
 
-export default function AttendanceClient({ coachingCenterId }: { coachingCenterId: string }) {
+export default function AttendanceClient({ coachingCenterId, standard }: { coachingCenterId: string, standard: string }) {
   const supabase = useMemo(() => createClient(), [])
   const todayStr = useMemo(() => new Date().toISOString().split('T')[0], [])
 
@@ -63,6 +63,7 @@ export default function AttendanceClient({ coachingCenterId }: { coachingCenterI
         .from('students')
         .select('id, name, roll_no, batch')
         .eq('coaching_center_id', coachingCenterId)
+        .eq('standard', standard)
       
       if (error) setError(error.message)
       else if (data) {
@@ -76,7 +77,7 @@ export default function AttendanceClient({ coachingCenterId }: { coachingCenterI
       setLoading(false)
     }
     fetchStudents()
-  }, [coachingCenterId])
+  }, [coachingCenterId, standard])
 
   // Fetch attendance when date or batch changes
   useEffect(() => {
@@ -416,8 +417,8 @@ export default function AttendanceClient({ coachingCenterId }: { coachingCenterI
             <Calendar className="w-5 h-5 text-[var(--primary)]" />
           </div>
           <div>
-            <h1 className="text-xl font-bold">Attendance</h1>
-            <p className="text-xs text-[var(--muted-foreground)] mt-0.5">Manage daily student attendance</p>
+            <h1 className="text-xl font-bold">Attendance — {standard}</h1>
+            <p className="text-xs text-[var(--muted-foreground)] mt-0.5">Manage daily {standard} student attendance</p>
           </div>
         </div>
 

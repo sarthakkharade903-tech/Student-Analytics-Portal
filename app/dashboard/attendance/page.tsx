@@ -6,7 +6,14 @@ export const metadata = {
   title: 'Attendance | Student Analytics Portal',
 }
 
-export default async function AttendancePage() {
+export default async function AttendancePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ std?: string }>
+}) {
+  const { std: stdParam } = await searchParams
+  const standard = stdParam === '12th' ? '12th' : '11th'
+
   const supabase = await createClient()
 
   const { data: { user } } = await supabase.auth.getUser()
@@ -22,5 +29,5 @@ export default async function AttendancePage() {
     redirect('/login')
   }
 
-  return <AttendanceClient coachingCenterId={profile.coaching_center_id} />
+  return <AttendanceClient coachingCenterId={profile.coaching_center_id} standard={standard} />
 }

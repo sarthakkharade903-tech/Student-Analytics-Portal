@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { redirect } from 'next/navigation'
 import { EditProfileDialog } from './EditProfileDialog'
 import {
   Building2,
@@ -136,16 +137,24 @@ function ComingSoonCard({ icon, iconBgClass, title, description, badge }: Coming
 /* ─────────────────────────────────────────────────────
    PAGE
 ───────────────────────────────────────────────────── */
-export default async function SettingsPage() {
+export default async function SettingsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ std?: string }>
+}) {
+  const { std: stdParam } = await searchParams
+  const standard = stdParam === '12th' ? '12th' : '11th'
+
   const supabase = await createClient()
   const {
     data: { user },
   } = await supabase.auth.getUser()
+  if (!user) redirect('/login')
 
   const { data: userProfile } = await supabase
     .from('users')
     .select('*')
-    .eq('id', user!.id)
+    .eq('id', user.id)
     .single()
 
   const { data: coachingCenter } = userProfile?.coaching_center_id
@@ -161,6 +170,7 @@ export default async function SettingsPage() {
         .from('students')
         .select('*', { count: 'exact', head: true })
         .eq('coaching_center_id', userProfile.coaching_center_id)
+        .eq('standard', standard)
     : { count: 0 }
 
   const { count: testsUploaded } = userProfile?.coaching_center_id
@@ -168,6 +178,7 @@ export default async function SettingsPage() {
         .from('tests')
         .select('*', { count: 'exact', head: true })
         .eq('coaching_center_id', userProfile.coaching_center_id)
+        .eq('standard', standard)
     : { count: 0 }
 
   let activeBatches = 0
@@ -176,6 +187,7 @@ export default async function SettingsPage() {
       .from('students')
       .select('batch')
       .eq('coaching_center_id', userProfile.coaching_center_id)
+      .eq('standard', standard)
     
     const batchSet = new Set<string>()
     students?.forEach((s) => {
@@ -221,7 +233,7 @@ export default async function SettingsPage() {
                 System Settings
               </div>
               <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-gray-900">
-                Settings
+                Settings — {standard}
               </h1>
               <p className="text-sm text-gray-500 mt-1">
                 Manage institute information, account details and platform preferences.

@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { redirect } from 'next/navigation'
 import StudentTable from '@/components/dashboard/StudentTable'
 import { Users } from 'lucide-react'
 
@@ -7,24 +8,32 @@ export const metadata = {
   description: 'Manage your student roster.',
 }
 
-export default async function StudentsPage() {
+export default async function StudentsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ std?: string }>
+}) {
+  const { std: stdParam } = await searchParams
+  const standard = stdParam === '12th' ? '12th' : '11th'
   const supabase = await createClient()
 
   const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/login')
 
   // Get user's coaching_center_id
   const { data: userProfile } = await supabase
     .from('users')
     .select('coaching_center_id')
-    .eq('id', user!.id)
+    .eq('id', user.id)
     .single()
 
-  // Fetch all students for this coaching center
+  // Fetch students filtered by standard
   const { data: students, error } = userProfile?.coaching_center_id
     ? await supabase
         .from('students')
-        .select('id, name, roll_no, batch, parent_phone, created_at')
+        .select('id, name, roll_no, batch, parent_phone, created_at, standard')
         .eq('coaching_center_id', userProfile.coaching_center_id)
+        .eq('standard', standard)
         .order('created_at', { ascending: false })
     : { data: [], error: null }
 
@@ -36,9 +45,9 @@ export default async function StudentsPage() {
           <Users className="w-5 h-5 text-[var(--primary)]" />
         </div>
         <div>
-          <h1 className="text-2xl font-bold">Students</h1>
+          <h1 className="text-2xl font-bold">Students — {standard}</h1>
           <p className="text-sm text-[var(--muted-foreground)] mt-0.5">
-            Manage your coaching institute&apos;s student roster.
+            {standard} standard student roster for your coaching institute.
           </p>
         </div>
       </div>
@@ -51,7 +60,7 @@ export default async function StudentsPage() {
       )}
 
       {/* Student Table with Search */}
-      <StudentTable students={students ?? []} />
+      <StudentTable students={students ?? []} standard={standard} />
     </div>
   )
 }
