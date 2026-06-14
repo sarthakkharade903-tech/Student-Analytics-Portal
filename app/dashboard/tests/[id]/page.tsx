@@ -15,7 +15,10 @@ import BatchGrader from '@/components/dashboard/BatchGrader'
 import TestResultsTable from '@/components/dashboard/TestResultsTable'
 import type { ScoreRecord } from '@/components/dashboard/TestResultsTable'
 import DeleteTestButton from '@/components/dashboard/DeleteTestButton'
+import WhatsAppShareButton from '@/components/dashboard/WhatsAppShareButton'
 import { normaliseSubjects } from '@/lib/subjects'
+
+export const dynamic = 'force-dynamic'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -107,20 +110,30 @@ export default async function TestDetailsPage({ params }: { params: Promise<{ id
   const { data: userProfile } = user
     ? await supabase
         .from('users')
-        .select('coaching_center_id')
+        .select('coaching_center_id, coaching_centers(name)')
         .eq('id', user.id)
         .single()
     : { data: null }
   const coachingCenterId: string = userProfile?.coaching_center_id ?? ''
+  // @ts-ignore
+  const coachingName: string = userProfile?.coaching_centers?.name ?? 'Your Institute'
 
   // Fetch test
-  const { data: test } = await supabase
+  const { data: test, error: testError } = await supabase
     .from('tests')
     .select('*')
     .eq('id', id)
     .single()
 
-  if (!test) notFound()
+  if (!test) {
+    return (
+      <div className="p-8 text-center">
+        <h1 className="text-2xl font-bold text-red-500 mb-4">Error Loading Test</h1>
+        <p className="text-gray-400">ID: {id}</p>
+        <p className="text-gray-400">Error: {JSON.stringify(testError)}</p>
+      </div>
+    )
+  }
 
   // Normalise subjects (handles legacy string[] and new SubjectConfig[])
   const subjects = normaliseSubjects(test.subjects)
@@ -266,6 +279,16 @@ export default async function TestDetailsPage({ params }: { params: Promise<{ id
           />
         </div>
       )}
+
+      {/* Share Section at the bottom */}
+      <div className="mt-8">
+        <WhatsAppShareButton
+          testName={test.test_name}
+          standard={test.standard || '11th'}
+          coachingName={coachingName}
+          portalUrl={`${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/parent/login`}
+        />
+      </div>
     </div>
   )
 }

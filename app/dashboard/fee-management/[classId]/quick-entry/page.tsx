@@ -52,7 +52,7 @@ export default function QuickFeeEntryPage({ params }: { params: Promise<{ classI
 
     if (data) {
       // Extract the latest payment from each record
-      const recent = data.map(record => {
+      const recent = data.map((record: any) => {
         const history = record.payment_history || []
         if (history.length === 0) return null
         

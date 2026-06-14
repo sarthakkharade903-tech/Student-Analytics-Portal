@@ -1,4 +1,5 @@
 'use client'
+// Cache busting comment to force Next.js HMR rebuild: 1
 
 import { useMemo, useState } from 'react'
 import {
@@ -86,7 +87,7 @@ function buildMessage(student: AtRiskStudent): string {
   return (
     `Hello! This is a message from the coaching institute regarding ${name} (Batch: ${batch}).\n\n` +
     parts.join('\n\n') +
-    `\n\nPlease feel free to reach out to us — we are here to support ${name}'s success. 🙏`
+    `\n\nPlease feel free to reach out to us - we are here to support ${name}'s success. ${String.fromCodePoint(0x1F64F)}`
   )
 }
 

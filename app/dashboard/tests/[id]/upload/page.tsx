@@ -22,6 +22,7 @@ import {
   ClipboardList,
   Ban,
 } from 'lucide-react'
+import WhatsAppShareButton from '@/components/dashboard/WhatsAppShareButton'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -116,6 +117,7 @@ export default function UploadResultsPage() {
   const [test, setTest] = useState<TestInfo | null>(null)
   const [students, setStudents] = useState<StudentRecord[]>([])
   const [coachingCenterId, setCoachingCenterId] = useState<string | null>(null)
+  const [coachingName, setCoachingName] = useState<string>('Your Institute')
 
   const [rows, setRows] = useState<ValidatedRow[]>([])
   const [parseError, setParseError] = useState<string | null>(null)
@@ -135,12 +137,17 @@ export default function UploadResultsPage() {
       // Profile
       const { data: profile } = await supabase
         .from('users')
-        .select('coaching_center_id')
+        .select('coaching_center_id, coaching_centers(name)')
         .eq('id', user.id)
         .single()
 
       if (!profile?.coaching_center_id) return
       setCoachingCenterId(profile.coaching_center_id)
+      // @ts-ignore
+      if (profile.coaching_centers?.name) {
+        // @ts-ignore
+        setCoachingName(profile.coaching_centers.name)
+      }
 
       // Test info
       const { data: testData, error: testError } = await supabase
@@ -772,13 +779,22 @@ export default function UploadResultsPage() {
             </p>
             <div className="flex gap-3">
               <Link
-                href={`/dashboard/tests/${testId}`}
+                href={`/dashboard/tests/${testId}?std=${test.standard || '11th'}`}
                 className="inline-flex items-center gap-2 px-5 py-2.5 bg-[var(--primary)] text-white text-sm font-semibold rounded-lg hover:opacity-90 transition-all glow-primary"
               >
                 <ClipboardList className="w-4 h-4" />
                 View Results
               </Link>
             </div>
+          </div>
+
+          <div className="flex justify-center">
+            <WhatsAppShareButton
+              testName={test.test_name}
+              standard={test.standard || '11th'}
+              coachingName={coachingName}
+              portalUrl={`${process.env.NEXT_PUBLIC_SITE_URL || ''}/parent/login`}
+            />
           </div>
 
           {/* DB errors if any */}
