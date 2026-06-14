@@ -14,6 +14,7 @@ import {
   LayoutDashboard,
   BookOpen,
   TrendingUp,
+  Banknote,
 } from 'lucide-react'
 import StandardSwitcher from './StandardSwitcher'
 
@@ -28,6 +29,7 @@ type NavItem = {
 const baseNavItems: NavItem[] = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, active: true },
   { href: '/dashboard/students', label: 'Students', icon: Users, active: true },
+  { href: '/dashboard/fee-management', label: 'Fee Management', icon: Banknote, active: true },
   { href: '/dashboard/tests', label: 'Tests', icon: ClipboardList, active: true },
   { href: '/dashboard/attendance', label: 'Attendance', icon: CalendarCheck, active: true },
   { href: '/dashboard/resources', label: 'Resources', icon: BookOpen, active: true },

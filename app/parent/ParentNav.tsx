@@ -270,7 +270,8 @@ export default function ParentNav({ studentId }: { studentId: string | null }) {
       <div className="max-w-5xl mx-auto px-4 lg:px-8 border-t border-slate-800 flex gap-6 overflow-x-auto no-scrollbar">
         {[
           { label: 'Dashboard', path: '/parent' },
-          { label: 'Resources', path: '/parent/resources' }
+          { label: 'Resources', path: '/parent/resources' },
+          { label: 'Fees', path: '/parent/fees' }
         ].map((tab) => {
           const isActive = tab.path === '/parent' 
             ? pathname === '/parent'

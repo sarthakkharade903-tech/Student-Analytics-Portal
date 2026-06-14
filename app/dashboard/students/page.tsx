@@ -27,15 +27,29 @@ export default async function StudentsPage({
     .eq('id', user.id)
     .single()
 
-  // Fetch students filtered by standard
-  const { data: students, error } = userProfile?.coaching_center_id
-    ? await supabase
-        .from('students')
-        .select('id, name, roll_no, batch, parent_phone, created_at, standard')
-        .eq('coaching_center_id', userProfile.coaching_center_id)
-        .eq('standard', standard)
-        .order('created_at', { ascending: false })
-    : { data: [], error: null }
+  let studentsData = []
+  let errorMsg = null
+
+  if (userProfile?.coaching_center_id) {
+    // We infer class 11 vs 12 based on whether the batch contains "12"
+    let studQuery = supabase
+      .from('students')
+      .select('id, name, roll_no, batch, parent_phone, created_at')
+      .eq('coaching_center_id', userProfile.coaching_center_id)
+      .order('created_at', { ascending: false })
+
+    if (standard === '12th') {
+      studQuery = studQuery.ilike('batch', '%12%')
+    } else {
+      studQuery = studQuery.not('batch', 'ilike', '%12%')
+    }
+
+    const { data: students, error } = await studQuery
+    studentsData = students || []
+    if (error) {
+      errorMsg = error.message
+    }
+  }
 
   return (
     <div className="p-6 lg:p-8 max-w-6xl mx-auto">
@@ -53,14 +67,14 @@ export default async function StudentsPage({
       </div>
 
       {/* Error state */}
-      {error && (
+      {errorMsg && (
         <div className="rounded-lg bg-red-500/10 border border-red-500/30 px-4 py-3 text-sm text-red-400 mb-6">
-          Failed to load students: {error.message}
+          Failed to load students: {errorMsg}
         </div>
       )}
 
       {/* Student Table with Search */}
-      <StudentTable students={students ?? []} standard={standard} />
+      <StudentTable students={studentsData} standard={standard} />
     </div>
   )
 }
