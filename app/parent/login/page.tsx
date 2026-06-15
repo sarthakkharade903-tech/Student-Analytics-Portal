@@ -34,7 +34,8 @@ export default function ParentLogin() {
         throw new Error(data.error || 'Failed to login')
       }
 
-      router.replace('/parent')
+      // Use window.location for a full page reload so the server reads the fresh cookie
+      window.location.href = '/parent'
     } catch (err: any) {
       setError(err.message)
       setLoading(false)
