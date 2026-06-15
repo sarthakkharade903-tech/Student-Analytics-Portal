@@ -19,12 +19,17 @@ export default function WhatsAppShareButton({
 }: WhatsAppShareButtonProps) {
   const [isCopied, setIsCopied] = useState(false)
   
-  const defaultMessage = `[*] Test Results Published: ${testName} (${standard})
-[+] View marks, rank & performance analysis
-[>] https://studentiq.vercel.app/parent/login
+  const defaultMessage = `*Test Results Published!*
 
-[#] Login using:
+Test: *${testName}* (${standard})
+
+View marks, rank & performance analysis:
+https://studentiq.vercel.app/parent/login
+
+----------------------------
+*Login using:*
 Roll Number + Parent Phone
+----------------------------
 
 - ${coachingName}`
 
