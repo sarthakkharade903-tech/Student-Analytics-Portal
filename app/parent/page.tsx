@@ -35,7 +35,7 @@ export default async function ParentDashboard() {
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     { cookies: { getAll: () => [], setAll: () => {} } }
   )
 
@@ -276,45 +276,7 @@ export default async function ParentDashboard() {
             </div>
           </div>
         </div>
-
-        {/* Status Badge */}
-        {latestScore && (
-          <div className={`flex items-center gap-3 px-5 py-3 rounded-2xl backdrop-blur-md border shadow-sm transition-all duration-300 ${
-            statusColor === 'text-green-500' ? 'bg-green-500/10 border-green-500/20' :
-            statusColor === 'text-red-500' ? 'bg-red-500/10 border-red-500/20' :
-            statusColor === 'text-amber-500' ? 'bg-amber-500/10 border-amber-500/20' :
-            statusColor === 'text-blue-500' ? 'bg-blue-500/10 border-blue-500/20' :
-            'bg-slate-800 border-slate-700'
-          }`}>
-            <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
-              statusColor === 'text-green-500' ? 'bg-green-500/20' :
-              statusColor === 'text-red-500' ? 'bg-red-500/20' :
-              statusColor === 'text-amber-500' ? 'bg-amber-500/20' :
-              statusColor === 'text-blue-500' ? 'bg-blue-500/20' :
-              'bg-slate-700'
-            }`}>
-              <StatusIcon className={`w-5 h-5 ${statusColor}`} />
-            </div>
-            <div>
-              <p className="text-[10px] uppercase tracking-[0.15em] font-bold text-slate-400">Current Status</p>
-              <p className={`text-sm font-bold ${statusColor}`}>{status}</p>
-            </div>
-          </div>
-        )}
       </div>
-
-      {/* ALERTS */}
-      {dailyAttendancePercentage < 75 && totalDays > 0 && (
-        <div className="bg-red-500/10 border border-red-500/20 rounded-2xl p-4 flex items-start gap-3">
-          <AlertTriangle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
-          <div>
-            <h3 className="text-sm font-semibold text-red-400">⚠ Attendance Alert</h3>
-            <p className="text-sm text-red-300 mt-1">
-              Your attendance is currently {dailyAttendancePercentage}%. Regular attendance improves performance.
-            </p>
-          </div>
-        </div>
-      )}
 
       {!latestScore ? (
         <div className="rounded-2xl p-12 text-center border border-slate-800 bg-[#1a2540] shadow-sm">
@@ -411,6 +373,49 @@ export default async function ParentDashboard() {
                 <span className="absolute text-sm font-bold text-white">{dailyAttendancePercentage}%</span>
               </div>
             </div>
+          </div>
+
+          {/* ALERTS & STATUS */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Status Badge */}
+            {latestScore && (
+              <div className={`flex items-center gap-4 px-6 py-4 rounded-2xl backdrop-blur-md border shadow-sm transition-all duration-300 ${
+                statusColor === 'text-green-500' ? 'bg-green-500/10 border-green-500/20' :
+                statusColor === 'text-red-500' ? 'bg-red-500/10 border-red-500/20' :
+                statusColor === 'text-amber-500' ? 'bg-amber-500/10 border-amber-500/20' :
+                statusColor === 'text-blue-500' ? 'bg-blue-500/10 border-blue-500/20' :
+                'bg-slate-800 border-slate-700'
+              }`}>
+                <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
+                  statusColor === 'text-green-500' ? 'bg-green-500/20' :
+                  statusColor === 'text-red-500' ? 'bg-red-500/20' :
+                  statusColor === 'text-amber-500' ? 'bg-amber-500/20' :
+                  statusColor === 'text-blue-500' ? 'bg-blue-500/20' :
+                  'bg-slate-700'
+                }`}>
+                  <StatusIcon className={`w-6 h-6 ${statusColor}`} />
+                </div>
+                <div>
+                  <p className="text-[11px] uppercase tracking-[0.15em] font-bold text-slate-400">Current Academic Status</p>
+                  <p className={`text-base font-bold mt-0.5 ${statusColor}`}>{status}</p>
+                </div>
+              </div>
+            )}
+
+            {/* ALERTS */}
+            {dailyAttendancePercentage < 75 && totalDays > 0 && (
+              <div className="bg-red-500/10 border border-red-500/20 rounded-2xl p-4 flex items-center gap-4">
+                <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-red-500/20 flex-shrink-0">
+                  <AlertTriangle className="w-6 h-6 text-red-500" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-semibold text-red-400">Attendance Alert</h3>
+                  <p className="text-sm text-red-300 mt-0.5">
+                    Currently at {dailyAttendancePercentage}%. Needs improvement.
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* AI PERFORMANCE SUMMARY */}

@@ -3,9 +3,8 @@
 import { useState, useRef } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { createClient } from '@/lib/supabase/client'
 import { SignupFormData } from '@/lib/types'
-import { BarChart3, Eye, EyeOff, Loader2 } from 'lucide-react'
+import { Eye, EyeOff, Loader2 } from 'lucide-react'
 
 export default function SignupPage() {
   const router = useRouter()
@@ -18,6 +17,7 @@ export default function SignupPage() {
     phone: '',
     password: '',
   })
+  const [inviteCode, setInviteCode] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -33,77 +33,42 @@ export default function SignupPage() {
     setLoading(true)
     setError(null)
 
-    const supabase = createClient()
-
-    // Helper to extract message from any error type (Error or Supabase PostgrestError)
-    const getErrorMessage = (err: unknown): string => {
-      if (!err) return 'Unknown error'
-      if (err instanceof Error) return err.message
-      if (typeof err === 'object') {
-        const e = err as Record<string, unknown>
-        if (typeof e.message === 'string') return e.message
-        if (typeof e.details === 'string') return e.details
-        if (typeof e.error_description === 'string') return e.error_description
-        return JSON.stringify(err)
-      }
-      return String(err)
-    }
-
     try {
-      // Step 1: Create auth user
-      const { data: authData, error: authError } = await supabase.auth.signUp({
+      // All logic (invite code check + DB writes) happens securely on the server
+      const res = await fetch('/api/auth/signup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          coachingName: formData.coachingName,
+          ownerName: formData.ownerName,
+          email: formData.email,
+          phone: formData.phone,
+          password: formData.password,
+          inviteCode,
+        }),
+      })
+
+      const data = await res.json()
+
+      if (!res.ok) {
+        throw new Error(data.error || 'Signup failed. Please try again.')
+      }
+
+      // Account fully created — now sign in on the client so the session cookie is set
+      const { createClient } = await import('@/lib/supabase/client')
+      const supabase = createClient()
+      const { error: signInError } = await supabase.auth.signInWithPassword({
         email: formData.email,
         password: formData.password,
-        options: {
-          data: { name: formData.ownerName },
-        },
       })
-
-      if (authError) {
-        throw new Error('[Auth] ' + getErrorMessage(authError))
-      }
-      if (!authData.user) {
-        throw new Error('Could not create auth account. Please try again.')
-      }
-
-      const userId = authData.user.id
-
-      // Step 2: Create coaching center record
-      const { data: centerData, error: centerError } = await supabase
-        .from('coaching_centers')
-        .insert({
-          name: formData.coachingName,
-          phone: formData.phone,
-          email: formData.email,
-        })
-        .select('id')
-        .single()
-
-      if (centerError) {
-        throw new Error('[DB coaching_centers] ' + getErrorMessage(centerError))
-      }
-
-      // Step 3: Create user profile record
-      const { error: userError } = await supabase.from('users').insert({
-        id: userId,
-        coaching_center_id: centerData.id,
-        name: formData.ownerName,
-        email: formData.email,
-        role: 'owner',
-      })
-
-      if (userError) {
-        throw new Error('[DB users] ' + getErrorMessage(userError))
+      if (signInError) {
+        throw new Error('Account created but could not log in automatically. Please log in manually.')
       }
 
       setSuccess(true)
       setTimeout(() => {
         if (!redirectingRef.current) {
           redirectingRef.current = true
-          // Use replace() so users cannot navigate "back" to the signup page.
-          // Do NOT call router.refresh() — it triggers a middleware re-evaluation
-          // of the current /signup path while navigation is in flight, causing
-          // a redirect race that produces the flickering symptom.
           router.replace('/dashboard')
         }
       }, 1500)
@@ -287,6 +252,24 @@ export default function SignupPage() {
                     {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                   </button>
                 </div>
+              </div>
+
+              {/* Invite Code */}
+              <div className="space-y-1.5">
+                <label htmlFor="inviteCode" className="text-sm font-semibold text-slate-700">
+                  Invite Code
+                </label>
+                <input
+                  id="inviteCode"
+                  name="inviteCode"
+                  type="password"
+                  required
+                  placeholder="Enter your invite code"
+                  value={inviteCode}
+                  onChange={(e) => { setInviteCode(e.target.value); setError(null) }}
+                  className="w-full px-4 py-3 rounded-xl bg-white border border-slate-200 text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#5b21b6]/20 focus:border-[#5b21b6] transition-all text-sm shadow-sm"
+                />
+                <p className="text-xs text-slate-400">Contact the administrator to get your invite code.</p>
               </div>
 
               {/* Error */}

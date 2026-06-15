@@ -27,7 +27,7 @@ export default async function ParentFeesPage() {
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     { cookies: { getAll: () => [], setAll: () => {} } }
   )
 
@@ -53,9 +53,23 @@ export default async function ParentFeesPage() {
     .eq('student_id', studentId)
     .maybeSingle()
 
-  const totalFee = feeRecord?.total_fee || 0
+  // Extract just the number from standard (e.g. "12th" -> 12)
+  const numericStandard = parseInt(String(student.standard).replace(/\D/g, '')) || 0
+
+  // Fetch Class Fee Settings for fallback
+  const { data: classFeeSettings } = await supabase
+    .from('class_fee_settings')
+    .select('*')
+    .eq('coaching_center_id', student.coaching_center_id)
+    .eq('standard', numericStandard)
+    .maybeSingle()
+
+  const classFallbackFee = classFeeSettings?.total_fee || 0
+  const classFallbackInst = classFeeSettings?.installments || []
+
+  const totalFee = (feeRecord?.total_fee && feeRecord.total_fee > 0) ? feeRecord.total_fee : classFallbackFee
   const amountPaid = feeRecord?.amount_paid || 0
-  const installments: any[] = feeRecord?.installments || []
+  const installments: any[] = (feeRecord?.installments && feeRecord.installments.length > 0) ? feeRecord.installments : classFallbackInst
   
   // payment_history is stored as JSONB: [{ amount, date, receipt_number }]
   const rawHistory: any[] = feeRecord?.payment_history || []

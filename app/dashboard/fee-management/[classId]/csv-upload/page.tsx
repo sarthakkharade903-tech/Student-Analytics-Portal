@@ -132,8 +132,7 @@ export default function CsvUploadPage({ params }: { params: Promise<{ classId: s
                   student_id: student.id,
                   total_fee: initialTotalFee,
                   amount_paid: amount,
-                  payment_history: [newPayment],
-                  installments: []
+                  payment_history: [newPayment]
                 })
                 
               if (insertError) throw insertError
@@ -266,14 +265,24 @@ export default function CsvUploadPage({ params }: { params: Promise<{ classId: s
         </div>
       )}
 
-      <button
-        onClick={handleFileUpload}
-        disabled={!file || loading}
-        className="w-full bg-[var(--primary)] text-primary-foreground font-semibold rounded-xl py-3.5 px-4 hover:opacity-90 transition-opacity disabled:opacity-40 flex items-center justify-center gap-2 text-sm"
-      >
-        <UploadCloud className="w-4 h-4" />
-        {loading ? `Processing... (${progress}%)` : 'Upload & Process Payments'}
-      </button>
+      {!results ? (
+        <button
+          onClick={handleFileUpload}
+          disabled={!file || loading}
+          className="w-full bg-[var(--primary)] text-primary-foreground font-semibold rounded-xl py-3.5 px-4 hover:opacity-90 transition-opacity disabled:opacity-40 flex items-center justify-center gap-2 text-sm"
+        >
+          <UploadCloud className="w-4 h-4" />
+          {loading ? `Processing... (${progress}%)` : 'Upload & Process Payments'}
+        </button>
+      ) : (
+        <button
+          onClick={() => { setFile(null); setResults(null); if (fileInputRef.current) fileInputRef.current.value = '' }}
+          className="w-full bg-[var(--sidebar-accent)] text-[var(--foreground)] border border-[var(--border)] font-semibold rounded-xl py-3.5 px-4 hover:bg-[oklch(0.62_0.22_265/0.05)] transition-colors flex items-center justify-center gap-2 text-sm"
+        >
+          <UploadCloud className="w-4 h-4" />
+          Upload Another CSV
+        </button>
+      )}
 
       {/* Results */}
       {results && (

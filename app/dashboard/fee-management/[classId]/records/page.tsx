@@ -134,7 +134,7 @@ export default function StudentFeeRecordsPage({ params }: { params: Promise<{ cl
       const classFallbackFee = classFeeSettings?.total_fee || 0
       const classFallbackInst = classFeeSettings?.installments || []
 
-      const total = feeRow?.total_fee ?? classFallbackFee
+      const total = (feeRow?.total_fee && feeRow.total_fee > 0) ? feeRow.total_fee : classFallbackFee
       const paid = feeRow?.amount_paid ?? 0
       const history = feeRow?.payment_history || []
       const insts = feeRow?.installments?.length > 0 ? feeRow.installments : classFallbackInst
@@ -233,8 +233,7 @@ export default function StudentFeeRecordsPage({ params }: { params: Promise<{ cl
         student_id: selectedStudent.student_id,
         total_fee: feeVal,
         amount_paid: 0,
-        payment_history: [],
-        installments: []
+        payment_history: []
       })
     }
 
@@ -242,6 +241,32 @@ export default function StudentFeeRecordsPage({ params }: { params: Promise<{ cl
     setSelectedStudent(prev => prev ? { ...prev, total_fee: feeVal, remaining: feeVal - prev.amount_paid } : null)
     setEditingTotalFee(false)
     setSavingStudentFee(false)
+  }
+
+  const handleDeletePayment = async (receiptNumber: string, amount: number) => {
+    if (!selectedStudent || !selectedStudent.fee_id) return
+    if (!confirm('Are you sure you want to delete this payment? This will permanently update the total amount paid.')) return
+
+    const newHistory = selectedStudent.payment_history.filter((p: any) => p.receipt_number !== receiptNumber)
+    const newPaid = Math.max(0, selectedStudent.amount_paid - amount)
+
+    const { error } = await supabase
+      .from('fees')
+      .update({ payment_history: newHistory, amount_paid: newPaid, updated_at: new Date().toISOString() })
+      .eq('id', selectedStudent.fee_id)
+
+    if (error) {
+      alert(`Error deleting payment: ${error.message}`)
+      return
+    }
+
+    await fetchRecords()
+    setSelectedStudent((prev: any) => prev ? { 
+      ...prev, 
+      payment_history: newHistory, 
+      amount_paid: newPaid, 
+      remaining: prev.total_fee > 0 ? prev.total_fee - newPaid : prev.remaining 
+    } : null)
   }
 
   return (
@@ -533,7 +558,18 @@ export default function StudentFeeRecordsPage({ params }: { params: Promise<{ cl
                               <p className="text-xs text-[var(--muted-foreground)] font-mono mt-0.5">{p.receipt_number}</p>
                             </div>
                           </div>
-                          <div className="text-sm text-[var(--muted-foreground)]">{new Date(p.date).toLocaleDateString('en-IN', { dateStyle: 'medium' })}</div>
+                          <div className="flex items-center gap-4">
+                            <div className="text-sm text-[var(--muted-foreground)] text-right">
+                              {new Date(p.date).toLocaleDateString('en-IN', { dateStyle: 'medium' })}
+                            </div>
+                            <button
+                              onClick={() => handleDeletePayment(p.receipt_number, Number(p.amount))}
+                              className="p-2 bg-red-500/10 text-red-500 rounded-lg hover:bg-red-500 hover:text-white transition-colors"
+                              title="Delete Payment"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
                         </div>
                       ))}
                     </div>

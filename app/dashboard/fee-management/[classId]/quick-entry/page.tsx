@@ -200,8 +200,7 @@ export default function QuickFeeEntryPage({ params }: { params: Promise<{ classI
             student_id: selectedStudent.id,
             total_fee: 0, // Admin must set this manually via details modal
             amount_paid: amount,
-            payment_history: [newPayment],
-            installments: []
+            payment_history: [newPayment]
           })
           
         if (error) throw error
