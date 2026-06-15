@@ -779,7 +779,7 @@ export default function UploadResultsPage() {
             </p>
             <div className="flex gap-3">
               <Link
-                href={`/dashboard/tests/${testId}?std=${test.standard || '11th'}`}
+                href={`/dashboard/tests/${testId}?std=${test?.standard || '11th'}`}
                 className="inline-flex items-center gap-2 px-5 py-2.5 bg-[var(--primary)] text-white text-sm font-semibold rounded-lg hover:opacity-90 transition-all glow-primary"
               >
                 <ClipboardList className="w-4 h-4" />
@@ -790,8 +790,8 @@ export default function UploadResultsPage() {
 
           <div className="flex justify-center">
             <WhatsAppShareButton
-              testName={test.test_name}
-              standard={test.standard || '11th'}
+              testName={test?.test_name ?? ''}
+              standard={test?.standard || '11th'}
               coachingName={coachingName}
               portalUrl={`${process.env.NEXT_PUBLIC_SITE_URL || ''}/parent/login`}
             />

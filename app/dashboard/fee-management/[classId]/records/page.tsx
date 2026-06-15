@@ -19,10 +19,35 @@ type StudentFee = {
   total_fee: number
   amount_paid: number
   remaining: number
-  installments: any[]
-  payment_history: any[]
+  installments: PaymentRecord[]
+  payment_history: PaymentRecord[]
   last_payment_date: string | null
   has_payment: boolean
+}
+
+type StudentRow = {
+  id: string
+  name: string
+  roll_no: string
+  batch: string
+  parent_phone: string
+}
+
+type PaymentRecord = {
+  date: string
+  amount: number
+  receipt_number?: string
+  [key: string]: unknown
+}
+
+type FeeRow = {
+  id: string
+  student_id: string
+  total_fee: number
+  amount_paid: number
+  payment_history: PaymentRecord[]
+  installments: PaymentRecord[]
+  [key: string]: unknown
 }
 
 export default function StudentFeeRecordsPage({ params }: { params: Promise<{ classId: string }> }) {
@@ -105,8 +130,8 @@ export default function StudentFeeRecordsPage({ params }: { params: Promise<{ cl
       return
     }
 
-    const studentIds = students.map((s: { id: string; batch: string }) => s.id)
-    const uniqueBatches = [...new Set(students.map((s: { id: string; batch: string }) => s.batch).filter(Boolean) as string[])]
+    const studentIds = (students as StudentRow[]).map((s) => s.id)
+    const uniqueBatches = [...new Set((students as StudentRow[]).map((s) => s.batch).filter(Boolean) as string[])]
     setBatches(uniqueBatches)
 
     // 2. Fetch fee records
@@ -129,15 +154,17 @@ export default function StudentFeeRecordsPage({ params }: { params: Promise<{ cl
     }
 
     // 4. Map data
-    const mapped: StudentFee[] = students.map(student => {
-      const feeRow = feeRecords?.find(f => f.student_id === student.id)
+    const typedStudents = students as StudentRow[]
+    const typedFeeRecords = (feeRecords || []) as FeeRow[]
+    const mapped: StudentFee[] = typedStudents.map((student) => {
+      const feeRow = typedFeeRecords.find((f) => f.student_id === student.id)
       const classFallbackFee = classFeeSettings?.total_fee || 0
-      const classFallbackInst = classFeeSettings?.installments || []
+      const classFallbackInst = (classFeeSettings?.installments || []) as PaymentRecord[]
 
       const total = (feeRow?.total_fee && feeRow.total_fee > 0) ? feeRow.total_fee : classFallbackFee
       const paid = feeRow?.amount_paid ?? 0
-      const history = feeRow?.payment_history || []
-      const insts = feeRow?.installments?.length > 0 ? feeRow.installments : classFallbackInst
+      const history = (feeRow?.payment_history || []) as PaymentRecord[]
+      const insts = (feeRow?.installments?.length ?? 0) > 0 ? feeRow!.installments : classFallbackInst
       const hasPayment = paid > 0
 
       let lastDate: string | null = null
@@ -563,7 +590,7 @@ export default function StudentFeeRecordsPage({ params }: { params: Promise<{ cl
                               {new Date(p.date).toLocaleDateString('en-IN', { dateStyle: 'medium' })}
                             </div>
                             <button
-                              onClick={() => handleDeletePayment(p.receipt_number, Number(p.amount))}
+                              onClick={() => handleDeletePayment(p.receipt_number ?? '', Number(p.amount))}
                               className="p-2 bg-red-500/10 text-red-500 rounded-lg hover:bg-red-500 hover:text-white transition-colors"
                               title="Delete Payment"
                             >

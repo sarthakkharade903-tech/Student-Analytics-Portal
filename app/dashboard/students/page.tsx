@@ -27,7 +27,7 @@ export default async function StudentsPage({
     .eq('id', user.id)
     .single()
 
-  let studentsData = []
+  let studentsData: { id: string; name: string; roll_no: string; batch: string; parent_phone: string; created_at: string }[] = []
   let errorMsg = null
 
   if (userProfile?.coaching_center_id) {
