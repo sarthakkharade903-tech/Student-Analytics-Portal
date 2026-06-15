@@ -105,8 +105,8 @@ export default function StudentFeeRecordsPage({ params }: { params: Promise<{ cl
       return
     }
 
-    const studentIds = students.map(s => s.id)
-    const uniqueBatches = [...new Set(students.map(s => s.batch).filter(Boolean) as string[])]
+    const studentIds = students.map((s: { id: string; batch: string }) => s.id)
+    const uniqueBatches = [...new Set(students.map((s: { id: string; batch: string }) => s.batch).filter(Boolean) as string[])]
     setBatches(uniqueBatches)
 
     // 2. Fetch fee records
