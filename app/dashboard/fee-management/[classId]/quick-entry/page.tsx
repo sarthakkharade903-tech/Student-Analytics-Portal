@@ -161,7 +161,8 @@ export default function QuickFeeEntryPage({ params }: { params: Promise<{ classI
     setLoading(true)
     setMessage(null)
 
-    const amount = parseFloat(amountPaid)
+    // Use Math.round to eliminate floating-point errors (e.g. 35000.00000000003)
+    const amount = Math.round(parseFloat(amountPaid))
 
     try {
       const { data: { user } } = await supabase.auth.getUser()
@@ -179,7 +180,8 @@ export default function QuickFeeEntryPage({ params }: { params: Promise<{ classI
       if (selectedStudent.fee_record_id) {
         // Update existing fee record
         const updatedHistory = [...(selectedStudent.payment_history || []), newPayment]
-        const newTotalPaid = Number(selectedStudent.amount_paid || 0) + amount
+        // Safe integer rupee arithmetic — prevents floating-point drift
+        const newTotalPaid = Math.round((Number(selectedStudent.amount_paid || 0) + amount) * 100) / 100
         
         const { error } = await supabase
           .from('fees')

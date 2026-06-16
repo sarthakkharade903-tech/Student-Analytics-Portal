@@ -2,8 +2,9 @@
 
 import React, { Suspense } from 'react'
 import Link from 'next/link'
-import { usePathname, useRouter, useSearchParams } from 'next/navigation'
+import { usePathname } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import { useStandard } from '@/lib/StandardContext'
 import {
   BarChart3,
   Users,
@@ -39,9 +40,8 @@ const baseNavItems: NavItem[] = [
 
 function SidebarInner() {
   const pathname = usePathname()
-  const router = useRouter()
-  const searchParams = useSearchParams()
-  const std = searchParams.get('std') ?? '11th'
+  // Use context — updates instantly when toggle is clicked, no URL round-trip
+  const { standard } = useStandard()
 
   const handleLogout = async () => {
     const supabase = createClient()
@@ -50,7 +50,8 @@ function SidebarInner() {
   }
 
   // Build href with std param preserved
-  const withStd = (href: string) => `${href}?std=${std}`
+  const withStd = (href: string) => `${href}?std=${standard}`
+
 
   return (
     <aside className="w-64 flex-shrink-0 h-screen sticky top-0 flex flex-col border-r border-[var(--border)] bg-[var(--sidebar)]">
@@ -69,7 +70,7 @@ function SidebarInner() {
       <div className="px-0 pt-3 pb-1 border-b border-[var(--border)]">
         <StandardSwitcher />
         <p className="text-[10px] text-center text-[var(--muted-foreground)] pb-2 font-medium">
-          Viewing: <span className="text-[var(--primary)] font-bold">{std} Std</span>
+          Viewing: <span className="text-[var(--primary)] font-bold">{standard} Std</span>
         </p>
       </div>
 

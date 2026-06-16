@@ -194,7 +194,7 @@ export default function StudentFeeRecordsPage({ params }: { params: Promise<{ cl
     setRecords(mapped)
 
     // Compute stats
-    const totalCollected = mapped.reduce((sum, r) => sum + r.amount_paid, 0)
+    const totalCollected = Math.round(mapped.reduce((sum, r) => sum + r.amount_paid, 0) * 100) / 100
     const paidCount = mapped.filter(r => r.has_payment).length
     setStats({ total: mapped.length, paid: paidCount, pending: mapped.length - paidCount, totalCollected })
 
@@ -275,7 +275,8 @@ export default function StudentFeeRecordsPage({ params }: { params: Promise<{ cl
     if (!confirm('Are you sure you want to delete this payment? This will permanently update the total amount paid.')) return
 
     const newHistory = selectedStudent.payment_history.filter((p: any) => p.receipt_number !== receiptNumber)
-    const newPaid = Math.max(0, selectedStudent.amount_paid - amount)
+    // Safe rupee arithmetic — avoids float drift like 35000 - 3 = 34997
+    const newPaid = Math.round(Math.max(0, selectedStudent.amount_paid - amount) * 100) / 100
 
     const { error } = await supabase
       .from('fees')

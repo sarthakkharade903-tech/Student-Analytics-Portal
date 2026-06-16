@@ -68,13 +68,13 @@ export default function CsvUploadPage({ params }: { params: Promise<{ classId: s
               continue
             }
 
-            const amount = parseFloat(amountStr)
+            const amount = Math.round(parseFloat(amountStr))
             if (isNaN(amount) || amount <= 0) {
               errorList.push(`Row ${rowNum}: Invalid Fee Amount Paid for ${rollNo || name}`)
               continue
             }
 
-            const totalFeeOverride = totalFeeStr ? parseFloat(totalFeeStr) : null
+            const totalFeeOverride = totalFeeStr ? Math.round(parseFloat(totalFeeStr)) : null
 
             // Find student
             let query = supabase.from('students').select('id, standard, batch').eq('coaching_center_id', centerId)
@@ -107,7 +107,7 @@ export default function CsvUploadPage({ params }: { params: Promise<{ classId: s
             if (existingRecord) {
               // Update
               const updatedHistory = [...(existingRecord.payment_history || []), newPayment]
-              const newTotalPaid = Number(existingRecord.amount_paid || 0) + amount
+              const newTotalPaid = Math.round((Number(existingRecord.amount_paid || 0) + amount) * 100) / 100
               const newTotalFee = totalFeeOverride !== null && !isNaN(totalFeeOverride) ? totalFeeOverride : existingRecord.total_fee
 
               const { error: updateError } = await supabase

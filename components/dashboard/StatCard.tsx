@@ -1,8 +1,9 @@
+import React from 'react'
 import { LucideIcon, TrendingUp } from 'lucide-react'
 
 interface StatCardProps {
   title: string
-  value: string | number
+  value: React.ReactNode
   icon: LucideIcon
   description?: string
   trend?: string
