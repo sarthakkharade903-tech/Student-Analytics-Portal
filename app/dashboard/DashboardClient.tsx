@@ -1,7 +1,7 @@
 'use client'
 
 import useSWR from 'swr'
-import { useStandard } from '@/lib/StandardContext'
+import { useSearchParams } from 'next/navigation'
 import StatCard from '@/components/dashboard/StatCard'
 import { Users, ClipboardList, MessageCircle, CalendarCheck, ArrowRight, CheckCircle, Loader2 } from 'lucide-react'
 import Link from 'next/link'
@@ -18,15 +18,14 @@ interface DashboardData {
 }
 
 export default function DashboardClient() {
-  const { standard } = useStandard()
+  const searchParams = useSearchParams()
+  const standard = searchParams.get('std') === '12th' ? '12th' : '11th'
 
   const { data, isLoading } = useSWR<DashboardData>(
     `/api/std-data/dashboard?std=${standard}`,
     fetcher,
     {
       revalidateOnFocus: false,
-      // Keep previous data while fetching new — zero blank flash on toggle
-      keepPreviousData: true,
     }
   )
 

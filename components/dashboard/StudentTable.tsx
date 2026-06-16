@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, startTransition } from 'react'
+import { useState, useEffect, startTransition } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Search, UserPlus, Users, Upload, Trash2, Loader2, AlertTriangle, ChevronDown, Pencil, Check, X } from 'lucide-react'
@@ -28,6 +28,18 @@ export default function StudentTable({ students: initialStudents, standard = '11
   const router = useRouter()
   const [query, setQuery] = useState('')
   const [students, setStudents] = useState<Student[]>(initialStudents)
+
+  // Bug fix: sync internal state whenever parent passes fresh data (e.g. after 11th/12th toggle)
+  // Without this, the table is frozen at the first render's data forever.
+  useEffect(() => {
+    setStudents(initialStudents)
+    // Also reset search/filter so user doesn't see stale filtered results
+    setQuery('')
+    setSelectedBatch('All Batches')
+    setEditingId(null)
+    setConfirmDeleteId(null)
+  }, [initialStudents])
+
 
   // Edit state
   const [editingId, setEditingId] = useState<string | null>(null)

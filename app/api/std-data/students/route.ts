@@ -19,19 +19,15 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ students: [] })
   }
 
-  let studQuery = supabase
+  // Use the `standard` column directly — same as dashboard/tests/attendance pages.
+  // DO NOT filter by batch name pattern ('%12%') — batches like "CET A", "JEE", "NEET"
+  // don't contain "12" so that approach silently returns zero results.
+  const { data: students, error } = await supabase
     .from('students')
     .select('id, name, roll_no, batch, parent_phone, created_at')
     .eq('coaching_center_id', userProfile.coaching_center_id)
+    .eq('standard', standard)
     .order('created_at', { ascending: false })
-
-  if (standard === '12th') {
-    studQuery = studQuery.ilike('batch', '%12%')
-  } else {
-    studQuery = studQuery.not('batch', 'ilike', '%12%')
-  }
-
-  const { data: students, error } = await studQuery
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 })
@@ -39,3 +35,4 @@ export async function GET(req: NextRequest) {
 
   return NextResponse.json({ students: students ?? [] })
 }
+

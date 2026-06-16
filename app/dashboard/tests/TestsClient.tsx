@@ -2,7 +2,7 @@
 
 import useSWR from 'swr'
 import Link from 'next/link'
-import { useStandard } from '@/lib/StandardContext'
+import { useSearchParams } from 'next/navigation'
 import { ClipboardList, Plus, Trophy, Users, TrendingUp, Calendar, Loader2 } from 'lucide-react'
 import type { Test, SubjectConfig } from '@/lib/types'
 import { normaliseSubjects } from '@/lib/subjects'
@@ -29,14 +29,14 @@ function formatDate(dateStr: string) {
 }
 
 export default function TestsClient() {
-  const { standard } = useStandard()
+  const searchParams = useSearchParams()
+  const standard = searchParams.get('std') === '12th' ? '12th' : '11th'
 
   const { data, isLoading, error } = useSWR<{ tests: Test[]; error?: string }>(
     `/api/std-data/tests?std=${standard}`,
     fetcher,
     {
       revalidateOnFocus: false,
-      keepPreviousData: true,
     }
   )
 
