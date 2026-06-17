@@ -73,6 +73,7 @@ function AddStudentForm() {
       roll_no: formData.roll_no.trim(),
       parent_phone: formData.parent_phone.trim(),
       batch: formData.batch.trim(),
+      standard: formData.standard,
       pin: generatedPin,
     })
 
@@ -88,7 +89,7 @@ function AddStudentForm() {
 
     setSuccess(true)
     setTimeout(() => {
-      router.push('/dashboard/students')
+      router.push(`/dashboard/students?std=${formData.standard}`)
       router.refresh()
     }, 1200)
   }

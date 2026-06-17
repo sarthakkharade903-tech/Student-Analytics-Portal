@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 
-// Cache is valid for 24 hours
-const CACHE_TTL_MS = 24 * 60 * 60 * 1000
+// Cache is valid for 7 days
+const CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000
 
 function normaliseSubjectsLocal(raw: unknown): Array<{ name: string; max_marks: number }> {
   if (!Array.isArray(raw)) return []
