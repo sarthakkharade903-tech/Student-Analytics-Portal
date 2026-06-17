@@ -5,22 +5,25 @@ export async function POST(req: NextRequest) {
   try {
     const { coachingName, ownerName, email, phone, password, inviteCode } = await req.json()
 
-    // Step 0: Verify invite code server-side
-    const validCode = process.env.ADMIN_INVITE_CODE
-    if (!validCode) {
-      return NextResponse.json({ error: 'Signups are currently disabled.' }, { status: 403 })
-    }
-    if (!inviteCode || inviteCode.trim() !== validCode.trim()) {
-      return NextResponse.json({ error: 'Invalid invite code. Please contact the administrator.' }, { status: 401 })
-    }
-
     // Use service role key — bypasses RLS safely on the server
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     )
 
-    // Step 1: Check if email already has a complete account (coaching center + user)
+    // Step 0: Verify invite code against institute_access_codes table
+    const { data: accessCodeRecord, error: accessCodeError } = await supabase
+      .from('institute_access_codes')
+      .select('*')
+      .eq('code', inviteCode.trim())
+      .eq('status', 'Unused')
+      .maybeSingle()
+
+    if (!accessCodeRecord || accessCodeError) {
+      return NextResponse.json({ error: 'Invalid or already used invite code. Please contact the administrator.' }, { status: 401 })
+    }
+
+    // Step 1: Check if email already has a complete account
     const { data: existingUser } = await supabase
       .from('users')
       .select('id')
@@ -31,11 +34,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'An account with this email already exists. Please log in instead.' }, { status: 409 })
     }
 
-    // Step 2: Create auth user using the Admin API (service role)
+    // Step 2: Create auth user
     const { data: authData, error: authError } = await supabase.auth.admin.createUser({
       email,
       password,
-      email_confirm: true, // auto-confirm so they don't need email verification
+      email_confirm: true,
       user_metadata: { name: ownerName },
     })
 
@@ -45,17 +48,54 @@ export async function POST(req: NextRequest) {
 
     const userId = authData.user.id
 
-    // Step 3: Create coaching center
-    const { data: centerData, error: centerError } = await supabase
-      .from('coaching_centers')
-      .insert({ name: coachingName, phone, email })
-      .select('id')
-      .single()
+    // Default dates for a standard 1 year plan (fallback)
+    const startDate = new Date()
+    const endDate = new Date()
+    endDate.setFullYear(endDate.getFullYear() + 1)
+
+    // Step 3: Create or Update coaching center
+    let centerData;
+    let centerError;
+
+    if (accessCodeRecord.coaching_center_id) {
+      // Pre-created by Super Admin, update with final details
+      const response = await supabase
+        .from('coaching_centers')
+        .update({ 
+          name: coachingName, 
+          owner_name: ownerName,
+          phone, 
+          email,
+        })
+        .eq('id', accessCodeRecord.coaching_center_id)
+        .select('id')
+        .single()
+      centerData = response.data
+      centerError = response.error
+    } else {
+      // Legacy code (no pre-created institute)
+      const response = await supabase
+        .from('coaching_centers')
+        .insert({ 
+          name: coachingName, 
+          owner_name: ownerName,
+          phone, 
+          email,
+          plan_type: 'Standard',
+          start_date: startDate.toISOString(),
+          end_date: endDate.toISOString(),
+          account_status: 'Active',
+          is_active: true
+        })
+        .select('id')
+        .single()
+      centerData = response.data
+      centerError = response.error
+    }
 
     if (centerError || !centerData) {
-      // Rollback: delete the auth user we just created
       await supabase.auth.admin.deleteUser(userId)
-      return NextResponse.json({ error: 'Failed to create coaching center: ' + centerError?.message }, { status: 500 })
+      return NextResponse.json({ error: 'Failed to initialize coaching center: ' + centerError?.message }, { status: 500 })
     }
 
     // Step 4: Create user profile
@@ -68,11 +108,22 @@ export async function POST(req: NextRequest) {
     })
 
     if (userError) {
-      // Rollback: delete auth user and coaching center
       await supabase.auth.admin.deleteUser(userId)
       await supabase.from('coaching_centers').delete().eq('id', centerData.id)
       return NextResponse.json({ error: 'Failed to create user profile: ' + userError.message }, { status: 500 })
     }
+
+    // Step 5: Mark access code as used and permanently link it
+    await supabase.from('institute_access_codes').update({ 
+      status: 'Used',
+      coaching_center_id: centerData.id
+    }).eq('id', accessCodeRecord.id)
+    
+    // Step 6: Log audit event
+    await supabase.from('audit_logs').insert({
+      event_type: 'ACCESS_CODE_USED',
+      description: `Access code ${accessCodeRecord.code} was used to create coaching center: ${coachingName}`
+    })
 
     return NextResponse.json({ success: true })
   } catch (err: unknown) {

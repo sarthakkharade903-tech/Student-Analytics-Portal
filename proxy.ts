@@ -7,6 +7,23 @@ export async function proxy(request: NextRequest) {
     request,
   })
 
+  const { pathname } = request.nextUrl
+
+  // Super Admin Protection
+  if (
+    pathname.startsWith('/super-admin-panel-8472') &&
+    !pathname.startsWith('/super-admin-panel-8472/login')
+  ) {
+    const authCookie = request.cookies.get('super_admin_auth')?.value
+    const validCode = process.env.SUPER_ADMIN_SECURITY_CODE
+    
+    if (!authCookie || authCookie !== validCode) {
+      const url = request.nextUrl.clone()
+      url.pathname = '/super-admin-panel-8472/login'
+      return NextResponse.redirect(url)
+    }
+  }
+
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -33,8 +50,6 @@ export async function proxy(request: NextRequest) {
   const {
     data: { user },
   } = await supabase.auth.getUser()
-
-  const { pathname } = request.nextUrl
 
   // Redirect unauthenticated users away from protected routes
   if (!user && pathname.startsWith('/dashboard')) {

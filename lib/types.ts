@@ -3,6 +3,28 @@ export interface CoachingCenter {
   name: string
   phone: string
   email: string
+  owner_name?: string
+  city?: string
+  plan_type?: string
+  start_date?: string
+  end_date?: string
+  account_status?: string // 'Active', 'Expired', 'Suspended', 'Trial'
+  is_active?: boolean
+  features?: any // JSONB containing feature toggles
+  created_at: string
+}
+
+export interface InstituteAccessCode {
+  id: string
+  code: string
+  status: string // 'Unused' | 'Used'
+  created_at: string
+}
+
+export interface AuditLog {
+  id: string
+  event_type: string
+  description: string
   created_at: string
 }
 

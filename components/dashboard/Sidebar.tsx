@@ -24,21 +24,22 @@ type NavItem = {
   label: string
   icon: React.ForwardRefExoticComponent<React.PropsWithoutRef<React.SVGProps<SVGSVGElement>> & { title?: string; titleId?: string } & React.RefAttributes<SVGSVGElement>>
   active: boolean
+  featureKey?: string
   soon?: boolean
 }
 
 const baseNavItems: NavItem[] = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, active: true },
-  { href: '/dashboard/students', label: 'Students', icon: Users, active: true },
-  { href: '/dashboard/fee-management', label: 'Fee Management', icon: Banknote, active: true },
-  { href: '/dashboard/tests', label: 'Tests', icon: ClipboardList, active: true },
-  { href: '/dashboard/attendance', label: 'Attendance', icon: CalendarCheck, active: true },
-  { href: '/dashboard/resources', label: 'Resources', icon: BookOpen, active: true },
-  { href: '/dashboard/analytics', label: 'Analytics', icon: TrendingUp, active: true },
+  { href: '/dashboard/students', label: 'Students', icon: Users, active: true, featureKey: 'students' },
+  { href: '/dashboard/fee-management', label: 'Fee Management', icon: Banknote, active: true, featureKey: 'fee_management' },
+  { href: '/dashboard/tests', label: 'Tests', icon: ClipboardList, active: true, featureKey: 'tests' },
+  { href: '/dashboard/attendance', label: 'Attendance', icon: CalendarCheck, active: true, featureKey: 'attendance' },
+  { href: '/dashboard/resources', label: 'Resources', icon: BookOpen, active: true, featureKey: 'resources' },
+  { href: '/dashboard/analytics', label: 'Analytics', icon: TrendingUp, active: true, featureKey: 'analytics' },
   { href: '/dashboard/settings', label: 'Settings', icon: Settings, active: true },
 ]
 
-function SidebarInner() {
+function SidebarInner({ features }: { features?: any }) {
   const pathname = usePathname()
   // Use context — updates instantly when toggle is clicked, no URL round-trip
   const { standard } = useStandard()
@@ -52,6 +53,16 @@ function SidebarInner() {
   // Build href with std param preserved
   const withStd = (href: string) => `${href}?std=${standard}`
 
+  // Apply default features if null
+  const defaultFeatures = {
+    students: true,
+    fee_management: true,
+    tests: true,
+    attendance: true,
+    resources: true,
+    analytics: true
+  }
+  const currentFeatures = features || defaultFeatures
 
   return (
     <aside className="w-64 flex-shrink-0 h-screen sticky top-0 flex flex-col border-r border-[var(--border)] bg-[var(--sidebar)]">
@@ -77,6 +88,11 @@ function SidebarInner() {
       {/* Nav */}
       <nav className="flex-1 p-3 space-y-0.5 overflow-y-auto">
         {baseNavItems.map((item) => {
+          // Check feature flag
+          if (item.featureKey && currentFeatures[item.featureKey] === false) {
+            return null // Hide it entirely!
+          }
+
           const Icon = item.icon
           const isActive = pathname === item.href
 
@@ -132,12 +148,12 @@ function SidebarInner() {
   )
 }
 
-export default function Sidebar() {
+export default function Sidebar({ features }: { features?: any }) {
   return (
     <Suspense fallback={
       <aside className="w-64 flex-shrink-0 h-screen sticky top-0 flex flex-col border-r border-[var(--border)] bg-[var(--sidebar)]" />
     }>
-      <SidebarInner />
+      <SidebarInner features={features} />
     </Suspense>
   )
 }

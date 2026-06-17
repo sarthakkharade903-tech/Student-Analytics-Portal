@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { EditProfileDialog } from './EditProfileDialog'
+import { FeatureManagement } from './FeatureManagement'
 import {
   Building2,
   Mail,
@@ -164,6 +165,8 @@ export default async function SettingsPage({
         .eq('id', userProfile.coaching_center_id)
         .single()
     : { data: null }
+
+  const savedFeatures = coachingCenter?.features ?? {}
 
   const { count: totalStudents } = userProfile?.coaching_center_id
     ? await supabase
@@ -366,6 +369,9 @@ export default async function SettingsPage({
             </div>
           </div>
         </SectionCard>
+
+        {/* ══ FEATURE MANAGEMENT ═══════════════════════════════════ */}
+        <FeatureManagement initialFeatures={savedFeatures} />
 
         {/* ══ COMING SOON SECTION ════════════════════════════════ */}
         <div>
