@@ -117,16 +117,19 @@ export default async function SuperAdminDashboard() {
               ) : (
                 list.map((institute) => {
                   const boundCode = instituteCodes[institute.id]
+                  const displayName = institute.features?.superAdminData?.name || institute.name
+                  const displayOwner = institute.features?.superAdminData?.owner_name || institute.owner_name
+
                   return (
                     <tr key={institute.id} className="hover:bg-white/[0.02] transition-colors group">
                       <td className="p-5">
                         <div className="font-semibold text-white group-hover:text-red-400 transition-colors">
-                          {institute.name}
+                          {displayName}
                         </div>
                         <div className="text-xs text-white/40 mt-1">{institute.city || 'Location unknown'}</div>
                       </td>
                       <td className="p-5">
-                        <div className="text-white/80">{institute.owner_name || 'N/A'}</div>
+                        <div className="text-white/80">{displayOwner || 'N/A'}</div>
                         <div className="text-xs text-white/40 mt-1">{institute.email}</div>
                       </td>
                       <td className="p-5">

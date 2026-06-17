@@ -11,8 +11,8 @@ export default function EditInstituteForm({ institute }: { institute: any }) {
 
   const [formData, setFormData] = useState({
     id: institute.id,
-    name: institute.name || '',
-    owner_name: institute.owner_name || '',
+    name: institute.features?.superAdminData?.name || institute.name || '',
+    owner_name: institute.features?.superAdminData?.owner_name || institute.owner_name || '',
     email: institute.email || '',
     phone: institute.phone || '',
     city: institute.city || '',

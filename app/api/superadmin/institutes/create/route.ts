@@ -52,7 +52,8 @@ export async function POST(request: Request) {
         start_date: startDate.toISOString(),
         end_date: endDate.toISOString(),
         account_status: account_status || 'Active',
-        is_active: true
+        is_active: true,
+        features: { superAdminData: { name, owner_name } }
       })
       .select('id')
       .single()

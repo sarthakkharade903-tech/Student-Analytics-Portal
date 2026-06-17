@@ -21,18 +21,23 @@ export async function POST(request: Request) {
 
     const supabase = createAdminClient()
 
+    // Fetch existing center to get features
+    const { data: existingCenter } = await supabase.from('coaching_centers').select('features').eq('id', id).single()
+    const features = existingCenter?.features || {}
+    const superAdminData = { ...(features.superAdminData || {}), name, owner_name }
+    const updatedFeatures = { ...features, superAdminData }
+
     const { error } = await supabase
       .from('coaching_centers')
       .update({
-        name,
-        owner_name,
         email,
         phone,
         city,
         plan_type,
         start_date,
         end_date,
-        account_status
+        account_status,
+        features: updatedFeatures
       })
       .eq('id', id)
 

@@ -27,6 +27,8 @@ export default async function InstituteDetailsPage({ params }: { params: Promise
     daysRemaining = Math.max(0, Math.ceil((end - now) / (1000 * 60 * 60 * 24)))
   }
 
+  const displayName = institute.features?.superAdminData?.name || institute.name
+
   return (
     <div className="space-y-6 max-w-5xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-700 ease-out">
       <Link href="/super-admin-panel-8472/dashboard" className="inline-flex items-center text-sm font-medium text-white/40 hover:text-white transition-colors mb-4 group">
@@ -39,7 +41,7 @@ export default async function InstituteDetailsPage({ params }: { params: Promise
           <h1 className="text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-white to-white/60 tracking-tight">
             Manage Institute
           </h1>
-          <p className="text-white/40 mt-1">Configure details, access control, and subscription settings for {institute.name}.</p>
+          <p className="text-white/40 mt-1">Configure details, access control, and subscription settings for {displayName}.</p>
         </div>
       </div>
 
