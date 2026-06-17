@@ -169,7 +169,12 @@ export default function StudentFeeRecordsPage({ params }: { params: Promise<{ cl
 
       let lastDate: string | null = null
       if (history.length > 0) {
-        const sorted = [...history].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+        const sorted = [...history].sort((a, b) => {
+          const dateDiff = new Date(b.date).getTime() - new Date(a.date).getTime()
+          if (dateDiff !== 0) return dateDiff
+          // Same day: use receipt_number as tiebreaker — it contains Date.now() so it's chronological
+          return (b.receipt_number || '').localeCompare(a.receipt_number || '')
+        })
         lastDate = sorted[0].date
       }
 
@@ -208,6 +213,13 @@ export default function StudentFeeRecordsPage({ params }: { params: Promise<{ cl
     const matchSearch = r.name.toLowerCase().includes(q) || r.roll_no.toLowerCase().includes(q) || r.batch?.toLowerCase().includes(q)
     const matchBatch = filterBatch === 'All' || r.batch === filterBatch
     return matchSearch && matchBatch
+  }).sort((a, b) => {
+    // Sort by roll number numerically (treats "10" > "9", not "10" < "9")
+    const aNum = parseInt(a.roll_no) || 0
+    const bNum = parseInt(b.roll_no) || 0
+    if (aNum !== bNum) return aNum - bNum
+    // Fallback: alphabetical by roll_no string if not purely numeric
+    return a.roll_no.localeCompare(b.roll_no)
   })
 
   // Save class-level fee setting
@@ -331,9 +343,11 @@ export default function StudentFeeRecordsPage({ params }: { params: Promise<{ cl
               <div className="relative w-72">
                 <IndianRupee className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--muted-foreground)]" />
                 <input
-                  type="number"
+                  type="text"
+                  inputMode="numeric"
+                  autoComplete="off"
                   value={classTotalFee}
-                  onChange={e => setClassTotalFee(e.target.value)}
+                  onChange={e => setClassTotalFee(e.target.value.replace(/[^0-9]/g, ''))}
                   placeholder="e.g. 60000"
                   className="w-full bg-[var(--sidebar)] border border-[var(--border)] rounded-xl pl-9 pr-4 py-2.5 text-sm focus:outline-none focus:border-[var(--primary)] transition-colors"
                 />
@@ -368,7 +382,7 @@ export default function StudentFeeRecordsPage({ params }: { params: Promise<{ cl
                 </div>
                 <div>
                   <label className="block text-xs text-[var(--muted-foreground)] mb-1">Amount (₹)</label>
-                  <input type="number" value={newInstAmount} onChange={e => setNewInstAmount(e.target.value)} placeholder="e.g. 20000" className="bg-[var(--sidebar)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[var(--primary)] transition-colors w-28" />
+                  <input type="text" inputMode="numeric" autoComplete="off" value={newInstAmount} onChange={e => setNewInstAmount(e.target.value.replace(/[^0-9]/g, ''))} placeholder="e.g. 20000" className="bg-[var(--sidebar)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[var(--primary)] transition-colors w-28" />
                 </div>
                 <div>
                   <label className="block text-xs text-[var(--muted-foreground)] mb-1">Due Date</label>
@@ -548,7 +562,7 @@ export default function StudentFeeRecordsPage({ params }: { params: Promise<{ cl
                     <div className="flex items-center gap-2 mt-1">
                       <div className="relative flex-1">
                         <IndianRupee className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--muted-foreground)]" />
-                        <input type="number" value={newStudentTotalFee} onChange={e => setNewStudentTotalFee(e.target.value)} className="w-full bg-[var(--background)] border border-[var(--primary)] rounded-md pl-7 pr-2 py-1 text-sm font-bold focus:outline-none" autoFocus />
+                        <input type="text" inputMode="numeric" autoComplete="off" value={newStudentTotalFee} onChange={e => setNewStudentTotalFee(e.target.value.replace(/[^0-9]/g, ''))} className="w-full bg-[var(--background)] border border-[var(--primary)] rounded-md pl-7 pr-2 py-1 text-sm font-bold focus:outline-none" autoFocus />
                       </div>
                       <button onClick={handleUpdateStudentFee} disabled={savingStudentFee} className="p-1.5 bg-[var(--primary)] text-primary-foreground rounded-md hover:opacity-90">
                         {savingStudentFee ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
@@ -577,7 +591,12 @@ export default function StudentFeeRecordsPage({ params }: { params: Promise<{ cl
                     <p className="text-sm text-[var(--muted-foreground)] italic p-4 bg-[var(--sidebar)] rounded-xl border border-dashed border-[var(--border)] text-center">No payments recorded yet.</p>
                   ) : (
                     <div className="space-y-3">
-                      {[...selectedStudent.payment_history].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map((p, i) => (
+                      {[...selectedStudent.payment_history].sort((a, b) => {
+                        const dateDiff = new Date(b.date).getTime() - new Date(a.date).getTime()
+                        if (dateDiff !== 0) return dateDiff
+                        // Same day: receipt_number contains Date.now() — higher = newer
+                        return (b.receipt_number || '').localeCompare(a.receipt_number || '')
+                      }).map((p, i) => (
                         <div key={i} className="flex items-center justify-between p-3 rounded-xl border border-[var(--border)] hover:border-[var(--primary)]/30 transition-colors">
                           <div className="flex items-center gap-3">
                             <div className="w-10 h-10 rounded-full bg-emerald-500/10 flex items-center justify-center"><IndianRupee className="w-4 h-4 text-emerald-500" /></div>

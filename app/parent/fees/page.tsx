@@ -40,8 +40,10 @@ export default async function ParentFeesPage() {
 
   if (!student) redirect('/parent/login')
 
+  // coaching_center_id points to the coaching_centers table — NOT users.name
+  // Same pattern used by dashboard API and tests pages
   const { data: coachingCenter } = await supabase
-    .from('users')
+    .from('coaching_centers')
     .select('name')
     .eq('id', student.coaching_center_id)
     .single()
@@ -74,10 +76,13 @@ export default async function ParentFeesPage() {
   // payment_history is stored as JSONB: [{ amount, date, receipt_number }]
   const rawHistory: any[] = feeRecord?.payment_history || []
 
-  // Sort payment history newest first
-  const payments = [...rawHistory].sort(
-    (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
-  )
+  // Sort newest first; use receipt_number as tiebreaker for same-day payments
+  // (receipt_number contains Date.now() so it's naturally chronological)
+  const payments = [...rawHistory].sort((a, b) => {
+    const dateDiff = new Date(b.date).getTime() - new Date(a.date).getTime()
+    if (dateDiff !== 0) return dateDiff
+    return (b.receipt_number || '').localeCompare(a.receipt_number || '')
+  })
 
   // Find current installment (first unpaid one)
   let cumulativePaid = amountPaid

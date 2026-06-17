@@ -289,9 +289,11 @@ export default function FeeStructurePage({ params }: { params: Promise<{ classId
                 <div className="relative">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted-foreground)] font-bold">₹</span>
                   <input
-                    type="number"
+                    type="text"
+                    inputMode="numeric"
+                    autoComplete="off"
                     value={totalFeeInput}
-                    onChange={(e) => setTotalFeeInput(e.target.value)}
+                    onChange={(e) => setTotalFeeInput(e.target.value.replace(/[^0-9]/g, ''))}
                     className="w-full bg-[var(--sidebar)] border border-[var(--border)] rounded-xl pl-8 pr-4 py-2.5 focus:outline-none focus:border-[var(--primary)] transition-colors text-sm"
                     placeholder="e.g. 60000"
                   />
@@ -349,7 +351,7 @@ export default function FeeStructurePage({ params }: { params: Promise<{ classId
                     </div>
                     <div>
                       <label className="block text-xs text-[var(--muted-foreground)] mb-1.5 font-medium">Amount (₹)</label>
-                      <input required type="number" value={instAmount} onChange={e => setInstAmount(e.target.value)} placeholder="20000" className="w-full bg-[var(--sidebar)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[var(--primary)]" />
+                      <input required type="text" inputMode="numeric" autoComplete="off" value={instAmount} onChange={e => setInstAmount(e.target.value.replace(/[^0-9]/g, ''))} placeholder="20000" className="w-full bg-[var(--sidebar)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[var(--primary)]" />
                     </div>
                     <div>
                       <label className="block text-xs text-[var(--muted-foreground)] mb-1.5 font-medium">Due Date</label>

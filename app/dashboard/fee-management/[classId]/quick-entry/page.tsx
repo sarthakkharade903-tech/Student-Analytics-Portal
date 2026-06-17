@@ -105,11 +105,12 @@ export default function QuickFeeEntryPage({ params }: { params: Promise<{ classI
         .or(`name.ilike.%${query}%,roll_no.ilike.%${query}%`)
         .limit(8)
 
-      // Filter by class based on batch name pattern
+      // Filter by class using the standard column (same as the main students API)
+      // DO NOT use batch name pattern — batches like "CET A", "JEE" don't contain "12"
       if (classId === 12) {
-        studentQuery = studentQuery.ilike('batch', '%12%')
+        studentQuery = studentQuery.eq('standard', '12th')
       } else {
-        studentQuery = studentQuery.not('batch', 'ilike', '%12%')
+        studentQuery = studentQuery.eq('standard', '11th')
       }
 
       const { data } = await studentQuery
@@ -134,17 +135,37 @@ export default function QuickFeeEntryPage({ params }: { params: Promise<{ classI
   }, [])
 
   const handleSelectStudent = async (student: StudentSearch) => {
-    // Fetch fee info
+    // 1. Fetch the per-student fee record
     const { data: record } = await supabase
       .from('fees')
       .select('id, total_fee, amount_paid, payment_history')
       .eq('student_id', student.id)
       .maybeSingle()
 
+    // 2. Get user's coaching_center_id
+    const { data: { user } } = await supabase.auth.getUser()
+    const { data: profile } = await supabase
+      .from('users').select('coaching_center_id').eq('id', user!.id).single()
+
+    // 3. Fetch class-level fee settings as fallback for total_fee.
+    //    This matters when the student's fee record has total_fee=0 (not yet individually set).
+    //    Without this, the snapshot captures total_fee=0 → remaining=0 → wrong receipt.
+    const { data: classFeeSettings } = await supabase
+      .from('class_fee_settings')
+      .select('total_fee')
+      .eq('coaching_center_id', profile!.coaching_center_id)
+      .eq('standard', classId)
+      .maybeSingle()
+
+    const perStudentFee = record?.total_fee && record.total_fee > 0 ? record.total_fee : 0
+    const classFallbackFee = classFeeSettings?.total_fee || 0
+    // Effective total fee: per-student override first, then class setting, then 0
+    const effectiveTotalFee = perStudentFee > 0 ? perStudentFee : classFallbackFee
+
     setSelectedStudent({
       ...student,
       fee_record_id: record?.id,
-      total_fee: record?.total_fee || 0,
+      total_fee: effectiveTotalFee,
       amount_paid: record?.amount_paid || 0,
       payment_history: record?.payment_history || []
     })
@@ -171,7 +192,14 @@ export default function QuickFeeEntryPage({ params }: { params: Promise<{ classI
 
       const receiptNumber = `REC-${Date.now().toString().slice(-6)}-${Math.floor(Math.random() * 1000)}`
       
-      const newPayment = {
+      const newPayment: {
+        amount: number
+        date: string
+        receipt_number: string
+        paid_to_date?: number
+        total_fee_at_time?: number
+        remaining_at_time?: number
+      } = {
         amount,
         date: paymentDate,
         receipt_number: receiptNumber
@@ -179,28 +207,46 @@ export default function QuickFeeEntryPage({ params }: { params: Promise<{ classI
 
       if (selectedStudent.fee_record_id) {
         // Update existing fee record
-        const updatedHistory = [...(selectedStudent.payment_history || []), newPayment]
-        // Safe integer rupee arithmetic — prevents floating-point drift
         const newTotalPaid = Math.round((Number(selectedStudent.amount_paid || 0) + amount) * 100) / 100
+        // totalFee is from selectedStudent which already uses class_fee_settings as fallback
+        // (set in handleSelectStudent). We write it back to the DB here to heal stale 0 values —
+        // otherwise old receipts (pre-snapshot) fall back to fees.total_fee which may still be 0.
+        const totalFee = Number(selectedStudent.total_fee || 0)
+
+        // Freeze snapshot
+        newPayment.paid_to_date = newTotalPaid
+        newPayment.total_fee_at_time = totalFee
+        newPayment.remaining_at_time = Math.max(0, totalFee - newTotalPaid)
+        const updatedHistoryWithSnapshot = [...(selectedStudent.payment_history || []), newPayment]
         
         const { error } = await supabase
           .from('fees')
           .update({
+            // Always write total_fee back — if DB had 0 (stale), this heals it.
+            // If DB already had correct value, this is a no-op.
+            total_fee: totalFee,
             amount_paid: newTotalPaid,
-            payment_history: updatedHistory,
+            payment_history: updatedHistoryWithSnapshot,
             updated_at: new Date().toISOString()
           })
           .eq('id', selectedStudent.fee_record_id)
           
         if (error) throw error
+
       } else {
-        // Insert new fee record
+        // Insert new fee record — total_fee comes from selectedStudent which already
+        // has class_fee_settings as fallback (set in handleSelectStudent)
+        const effectiveTotalFee = Number(selectedStudent.total_fee || 0)
+        newPayment.paid_to_date = amount
+        newPayment.total_fee_at_time = effectiveTotalFee
+        newPayment.remaining_at_time = Math.max(0, effectiveTotalFee - amount)
+
         const { error } = await supabase
           .from('fees')
           .insert({
             coaching_center_id: centerId,
             student_id: selectedStudent.id,
-            total_fee: 0, // Admin must set this manually via details modal
+            total_fee: effectiveTotalFee,
             amount_paid: amount,
             payment_history: [newPayment]
           })
@@ -315,13 +361,25 @@ export default function QuickFeeEntryPage({ params }: { params: Promise<{ classI
             <label className="block text-sm font-semibold mb-2">Amount Paid (₹)</label>
             <div className="relative">
               <IndianRupee className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--muted-foreground)]" />
+              {/* 
+                type="text" + inputMode="numeric" instead of type="number":
+                - Prevents scroll-wheel from silently incrementing the value (Bug A: 15000→15009)
+                - Removes browser spinner arrows that users accidentally click
+                - autoComplete="off" stops Chrome filling "10" from form history (Bug B)
+                - pattern validation still enforces numbers-only
+              */}
               <input
-                type="number"
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                autoComplete="off"
                 value={amountPaid}
-                onChange={(e) => setAmountPaid(e.target.value)}
+                onChange={(e) => {
+                  // Only allow digits — no decimals, no minus, no letters
+                  const raw = e.target.value.replace(/[^0-9]/g, '')
+                  setAmountPaid(raw)
+                }}
                 placeholder="e.g. 15000"
-                min="1"
-                step="1"
                 required
                 className="w-full bg-[var(--sidebar)] border border-[var(--border)] rounded-xl pl-10 pr-4 py-3 text-sm focus:outline-none focus:border-[var(--primary)] transition-colors"
               />

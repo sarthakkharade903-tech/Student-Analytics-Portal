@@ -33,64 +33,162 @@ type FeeData = {
 export default function FeeDashboardClient({ data }: { data: FeeData }) {
   const progress = data.totalFee > 0 ? Math.min(100, Math.round((data.amountPaid / data.totalFee) * 100)) : 0
 
-  const handleDownloadReceipt = (payment: Payment) => {
+  const handleDownloadReceipt = (payment: Payment & {
+    paid_to_date?: number
+    total_fee_at_time?: number
+    remaining_at_time?: number
+  }) => {
     const doc = new jsPDF()
 
-    // Header
+    // ── FROZEN SNAPSHOT ─────────────────────────────────────
+    // Use values frozen at the moment this payment was recorded.
+    // Falls back to live totals only for old payments (before this fix was deployed).
+    const paidToDate    = payment.paid_to_date     ?? data.amountPaid
+    const totalFeeSnap  = payment.total_fee_at_time ?? data.totalFee
+    const remainingSnap = payment.remaining_at_time ?? Math.max(0, data.totalFee - data.amountPaid)
+
+    const paymentDate = new Date(payment.date).toLocaleDateString('en-IN', {
+      day: '2-digit', month: 'long', year: 'numeric'
+    })
+
+    // ── HEADER ───────────────────────────────────────────────
+    doc.setFont('helvetica', 'bold')
     doc.setFontSize(20)
+    doc.setTextColor(20, 20, 20)
     doc.text(data.instituteName, 105, 20, { align: 'center' })
-    
-    doc.setFontSize(14)
-    doc.text('FEE RECEIPT', 105, 30, { align: 'center' })
-    
+
+    doc.setFont('helvetica', 'normal')
     doc.setFontSize(10)
-    doc.setTextColor(100)
-    doc.text(`Receipt No: ${payment.receipt_number}`, 14, 45)
-    doc.text(`Date: ${new Date(payment.date).toLocaleDateString('en-IN')}`, 140, 45)
+    doc.setTextColor(100, 100, 100)
+    doc.text('FEE RECEIPT', 105, 28, { align: 'center' })
 
-    doc.line(14, 50, 196, 50)
+    doc.setDrawColor(200, 200, 200)
+    doc.setLineWidth(0.4)
+    doc.line(14, 33, 196, 33)
 
-    // Student Details
-    doc.setTextColor(0)
-    doc.text('Student Details', 14, 60)
+    // Receipt No + Date
+    doc.setFontSize(9)
+    doc.setTextColor(80, 80, 80)
+    doc.text(`Receipt No: ${payment.receipt_number}`, 14, 40)
+    doc.text(`Date: ${paymentDate}`, 196, 40, { align: 'right' })
+    doc.line(14, 44, 196, 44)
+
+    // ── STUDENT DETAILS ──────────────────────────────────────
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(10)
+    doc.setTextColor(30, 30, 30)
+    doc.text('Student Details', 14, 52)
+
     autoTable(doc, {
-      startY: 65,
+      startY: 55,
       theme: 'plain',
-      styles: { cellPadding: 1, fontSize: 10 },
+      styles: { cellPadding: 1.5, fontSize: 10, textColor: [30, 30, 30] },
       body: [
-        ['Name:', data.studentName, 'Standard:', `Class ${data.standard || 'N/A'}`],
-        ['Roll No:', data.rollNo, 'Batch:', data.batch]
+        ['Name', data.studentName, 'Standard', `Class ${data.standard || 'N/A'}`],
+        ['Roll No', String(data.rollNo), 'Batch', data.batch],
       ],
       columnStyles: {
-        0: { fontStyle: 'bold', cellWidth: 30 },
-        2: { fontStyle: 'bold', cellWidth: 30 }
-      }
+        0: { fontStyle: 'bold', cellWidth: 26, textColor: [90, 90, 90] },
+        2: { fontStyle: 'bold', cellWidth: 26, textColor: [90, 90, 90] },
+      },
     })
 
-    // Payment Details
-    const finalY = (doc as any).lastAutoTable.finalY + 10
-    doc.text('Payment Details', 14, finalY)
+    // ── THIS PAYMENT ─────────────────────────────────────────
+    const y1 = (doc as any).lastAutoTable.finalY + 7
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(10)
+    doc.setTextColor(30, 30, 30)
+    doc.text('Payment Details', 14, y1)
+
     autoTable(doc, {
-      startY: finalY + 5,
+      startY: y1 + 4,
       theme: 'grid',
-      headStyles: { fillColor: [41, 128, 185] },
+      headStyles: { fillColor: [28, 78, 160], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 10 },
+      styles: { fontSize: 10, cellPadding: 3 },
       head: [['Description', 'Amount']],
       body: [
-        ['Fee Payment', `Rs. ${Number(payment.amount).toLocaleString()}`],
-        [{ content: 'Total Paid', styles: { fontStyle: 'bold' } }, { content: `Rs. ${Number(payment.amount).toLocaleString()}`, styles: { fontStyle: 'bold' } }]
-      ]
+        ['Fee Payment', `Rs. ${Number(payment.amount).toLocaleString('en-IN')}`],
+        [
+          { content: 'Amount Paid (This Receipt)', styles: { fontStyle: 'bold' } },
+          { content: `Rs. ${Number(payment.amount).toLocaleString('en-IN')}`, styles: { fontStyle: 'bold' } },
+        ],
+      ],
     })
 
-    // Footer summary
-    const summaryY = (doc as any).lastAutoTable.finalY + 15
-    doc.setFontSize(10)
-    doc.text(`Total Course Fee: Rs. ${data.totalFee.toLocaleString()}`, 14, summaryY)
-    doc.text(`Total Amount Paid to Date: Rs. ${data.amountPaid.toLocaleString()}`, 14, summaryY + 6)
-    doc.text(`Remaining Balance: Rs. ${data.remainingFee.toLocaleString()}`, 14, summaryY + 12)
+    // ── PAYMENT HISTORY (all payments up to & including this one) ────────
+    // Sort chronologically oldest-first; receipt_number tiebreaks same-day payments
+    const allPayments = [...(data.payments || [])].sort((a, b) => {
+      const dateDiff = new Date(a.date).getTime() - new Date(b.date).getTime()
+      if (dateDiff !== 0) return dateDiff
+      return (a.receipt_number || '').localeCompare(b.receipt_number || '')
+    })
+    const thisIndex = allPayments.findIndex(p => p.receipt_number === payment.receipt_number)
+    const historyUpto = thisIndex >= 0 ? allPayments.slice(0, thisIndex + 1) : [payment]
 
+    if (historyUpto.length > 1) {
+      const y2 = (doc as any).lastAutoTable.finalY + 7
+      doc.setFont('helvetica', 'bold')
+      doc.setFontSize(10)
+      doc.setTextColor(30, 30, 30)
+      doc.text('Payment History (Cumulative)', 14, y2)
+
+      let running = 0
+      const histRows = historyUpto.map(p => {
+        running += Number(p.amount)
+        return [
+          new Date(p.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }),
+          p.receipt_number,
+          `Rs. ${Number(p.amount).toLocaleString('en-IN')}`,
+          `Rs. ${running.toLocaleString('en-IN')}`,
+        ]
+      })
+
+      autoTable(doc, {
+        startY: y2 + 4,
+        theme: 'striped',
+        headStyles: { fillColor: [60, 60, 60], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 9 },
+        styles: { fontSize: 9, cellPadding: 2.5 },
+        head: [['Date', 'Receipt No.', 'Amount Paid', 'Cumulative Total']],
+        body: histRows,
+      })
+    }
+
+    // ── FEE SUMMARY (FROZEN SNAPSHOT) ────────────────────────
+    const y3 = (doc as any).lastAutoTable.finalY + 7
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(10)
+    doc.setTextColor(30, 30, 30)
+    doc.text('Fee Summary (As on this receipt date)', 14, y3)
+
+    autoTable(doc, {
+      startY: y3 + 4,
+      theme: 'plain',
+      styles: { fontSize: 10, cellPadding: 3 },
+      body: [
+        [
+          'Total Course Fee',
+          totalFeeSnap > 0
+            ? `Rs. ${Number(totalFeeSnap).toLocaleString('en-IN')}`
+            : 'Not Set'
+        ],
+        [
+          { content: 'Total Paid to Date', styles: { fontStyle: 'bold', textColor: [0, 120, 60] } },
+          { content: `Rs. ${Number(paidToDate).toLocaleString('en-IN')}`, styles: { fontStyle: 'bold', textColor: [0, 120, 60] } },
+        ],
+        [
+          { content: 'Remaining Balance', styles: { fontStyle: 'bold', textColor: totalFeeSnap > 0 ? (remainingSnap > 0 ? [180, 60, 0] : [0, 120, 60]) : [120, 120, 120] } },
+          { content: totalFeeSnap > 0 ? `Rs. ${Number(remainingSnap).toLocaleString('en-IN')}` : '—', styles: { fontStyle: 'bold', textColor: totalFeeSnap > 0 ? (remainingSnap > 0 ? [180, 60, 0] : [0, 120, 60]) : [120, 120, 120] } },
+        ],
+      ],
+      columnStyles: { 0: { cellWidth: 120 } },
+    })
+
+    // ── FOOTER ───────────────────────────────────────────────
+    doc.setFont('helvetica', 'italic')
     doc.setFontSize(8)
-    doc.setTextColor(150)
-    doc.text('This is a computer generated receipt.', 105, 280, { align: 'center' })
+    doc.setTextColor(160, 160, 160)
+    doc.text('This is a computer-generated receipt and does not require a physical signature.', 105, 282, { align: 'center' })
+    doc.text(data.instituteName, 105, 287, { align: 'center' })
 
     doc.save(`${data.studentName}_Receipt_${payment.receipt_number}.pdf`)
   }

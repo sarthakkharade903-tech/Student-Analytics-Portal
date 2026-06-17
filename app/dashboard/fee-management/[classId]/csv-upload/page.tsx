@@ -91,7 +91,14 @@ export default function CsvUploadPage({ params }: { params: Promise<{ classId: s
             const student = students[0]
             const receiptNumber = `CSV-${Date.now().toString().slice(-8)}-${index}`
             
-            const newPayment = {
+            const newPayment: {
+              amount: number
+              date: string
+              receipt_number: string
+              paid_to_date?: number
+              total_fee_at_time?: number
+              remaining_at_time?: number
+            } = {
               amount,
               date: new Date().toISOString(),
               receipt_number: receiptNumber
@@ -106,9 +113,15 @@ export default function CsvUploadPage({ params }: { params: Promise<{ classId: s
 
             if (existingRecord) {
               // Update
-              const updatedHistory = [...(existingRecord.payment_history || []), newPayment]
               const newTotalPaid = Math.round((Number(existingRecord.amount_paid || 0) + amount) * 100) / 100
               const newTotalFee = totalFeeOverride !== null && !isNaN(totalFeeOverride) ? totalFeeOverride : existingRecord.total_fee
+
+              // Freeze snapshot so old receipts are immutable
+              newPayment.paid_to_date = newTotalPaid
+              newPayment.total_fee_at_time = newTotalFee
+              newPayment.remaining_at_time = Math.max(0, newTotalFee - newTotalPaid)
+
+              const updatedHistory = [...(existingRecord.payment_history || []), newPayment]
 
               const { error: updateError } = await supabase
                 .from('fees')
@@ -124,6 +137,11 @@ export default function CsvUploadPage({ params }: { params: Promise<{ classId: s
             } else {
               // Insert
               const initialTotalFee = totalFeeOverride !== null && !isNaN(totalFeeOverride) ? totalFeeOverride : 0
+
+              // Freeze snapshot for first payment
+              newPayment.paid_to_date = amount
+              newPayment.total_fee_at_time = initialTotalFee
+              newPayment.remaining_at_time = Math.max(0, initialTotalFee - amount)
               
               const { error: insertError } = await supabase
                 .from('fees')
