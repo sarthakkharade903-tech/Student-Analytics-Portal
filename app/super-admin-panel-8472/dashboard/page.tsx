@@ -34,7 +34,7 @@ export default async function SuperAdminDashboard() {
 
   // Create a map of coaching_center_id -> code
   const instituteCodes: Record<string, string> = {}
-  codes.forEach(c => {
+  codes.forEach((c: any) => {
     if (c.coaching_center_id) {
       instituteCodes[c.coaching_center_id] = c.code
     }
@@ -42,10 +42,10 @@ export default async function SuperAdminDashboard() {
 
   // Calculate metrics
   const total = list.length
-  const active = list.filter(i => i.account_status === 'Active' && i.is_active !== false).length
-  const expired = list.filter(i => i.account_status === 'Expired').length
-  const suspended = list.filter(i => i.account_status === 'Suspended' || i.is_active === false).length
-  const trial = list.filter(i => i.account_status === 'Trial' && i.is_active !== false).length
+  const active = list.filter((i: any) => i.account_status === 'Active' && i.is_active !== false).length
+  const expired = list.filter((i: any) => i.account_status === 'Expired').length
+  const suspended = list.filter((i: any) => i.account_status === 'Suspended' || i.is_active === false).length
+  const trial = list.filter((i: any) => i.account_status === 'Trial' && i.is_active !== false).length
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 ease-out">
@@ -115,7 +115,7 @@ export default async function SuperAdminDashboard() {
                   </td>
                 </tr>
               ) : (
-                list.map((institute) => {
+                list.map((institute: any) => {
                   const boundCode = instituteCodes[institute.id]
                   const displayName = institute.features?.superAdminData?.name || institute.name
                   const displayOwner = institute.features?.superAdminData?.owner_name || institute.owner_name
