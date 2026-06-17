@@ -3,7 +3,7 @@
 import { useState, useEffect, startTransition } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { Search, UserPlus, Users, Upload, Trash2, Loader2, AlertTriangle, ChevronDown, Pencil, Check, X } from 'lucide-react'
+import { Search, UserPlus, Users, Upload, Trash2, Loader2, AlertTriangle, ChevronDown, Pencil, Check, X, RefreshCw, Copy } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 
 interface Student {
@@ -14,6 +14,7 @@ interface Student {
   parent_phone: string
   created_at: string
   standard?: string
+  pin?: string
 }
 
 interface StudentTableProps {
@@ -65,7 +66,7 @@ export default function StudentTable({ students: initialStudents, standard = '11
 
   const openEdit = (student: Student) => {
     setEditingId(student.id)
-    setEditDraft({ name: student.name, roll_no: student.roll_no, batch: student.batch, parent_phone: student.parent_phone })
+    setEditDraft({ name: student.name, roll_no: student.roll_no, batch: student.batch, parent_phone: student.parent_phone, pin: student.pin })
     setSaveError(null)
     setConfirmDeleteId(null)
   }
@@ -89,6 +90,7 @@ export default function StudentTable({ students: initialStudents, standard = '11
         roll_no: editDraft.roll_no?.trim() || student.roll_no,
         batch: editDraft.batch?.trim() || student.batch,
         parent_phone: editDraft.parent_phone?.trim() || student.parent_phone,
+        pin: editDraft.pin?.trim() || student.pin,
       })
       .eq('id', student.id)
 
@@ -101,7 +103,7 @@ export default function StudentTable({ students: initialStudents, standard = '11
     setStudents((prev) =>
       prev.map((s) =>
         s.id === student.id
-          ? { ...s, ...editDraft, name: editDraft.name ?? s.name, roll_no: editDraft.roll_no ?? s.roll_no, batch: editDraft.batch ?? s.batch, parent_phone: editDraft.parent_phone ?? s.parent_phone }
+          ? { ...s, ...editDraft, name: editDraft.name ?? s.name, roll_no: editDraft.roll_no ?? s.roll_no, batch: editDraft.batch ?? s.batch, parent_phone: editDraft.parent_phone ?? s.parent_phone, pin: editDraft.pin ?? s.pin }
           : s
       )
     )
@@ -214,12 +216,13 @@ export default function StudentTable({ students: initialStudents, standard = '11
           {/* Table header */}
           <div
             className="grid gap-4 px-5 py-3 border-b border-[var(--border)] bg-[oklch(0.10_0.01_240/0.5)]"
-            style={{ gridTemplateColumns: '1fr 1.5fr 1fr 1fr 80px' }}
+            style={{ gridTemplateColumns: '1fr 1.5fr 1fr 1fr 90px 80px' }}
           >
             <span className="text-xs font-semibold uppercase tracking-wider text-[var(--muted-foreground)]">Roll No.</span>
             <span className="text-xs font-semibold uppercase tracking-wider text-[var(--muted-foreground)]">Name</span>
             <span className="text-xs font-semibold uppercase tracking-wider text-[var(--muted-foreground)]">Batch</span>
             <span className="text-xs font-semibold uppercase tracking-wider text-[var(--muted-foreground)]">Parent Phone</span>
+            <span className="text-xs font-semibold uppercase tracking-wider text-[var(--muted-foreground)]">PIN</span>
             <span className="text-xs font-semibold uppercase tracking-wider text-[var(--muted-foreground)]">Actions</span>
           </div>
 
@@ -241,7 +244,7 @@ export default function StudentTable({ students: initialStudents, standard = '11
                         ? 'bg-[oklch(0.10_0.01_240/0.3)] hover:bg-[oklch(0.62_0.22_265/0.04)]'
                         : 'hover:bg-[oklch(0.62_0.22_265/0.04)]'
                     }`}
-                    style={{ gridTemplateColumns: '1fr 1.5fr 1fr 1fr 80px' }}
+                    style={{ gridTemplateColumns: '1fr 1.5fr 1fr 1fr 90px 80px' }}
                   >
                     {/* Roll No */}
                     <div className="flex items-center">
@@ -268,6 +271,17 @@ export default function StudentTable({ students: initialStudents, standard = '11
                     {/* Phone */}
                     <div className="flex items-center">
                       <span className="text-sm text-[var(--muted-foreground)] font-mono">{student.parent_phone || '—'}</span>
+                    </div>
+
+                    {/* PIN */}
+                    <div className="flex items-center">
+                      {student.pin ? (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-800 border border-slate-700 text-slate-100 text-xs font-mono font-bold tracking-widest select-all shadow-sm">
+                          🔑 {student.pin}
+                        </span>
+                      ) : (
+                        <span className="text-xs text-[var(--muted-foreground)] italic">—</span>
+                      )}
                     </div>
 
                     {/* Edit button */}
@@ -338,6 +352,55 @@ export default function StudentTable({ students: initialStudents, standard = '11
                             className={inputCls}
                             placeholder="10-digit number"
                           />
+                        </div>
+                      </div>
+
+                      {/* Parent Login Credentials */}
+                      <div className="mb-5 bg-[var(--background)]/40 rounded-xl p-4 border border-[var(--border)]">
+                        <h4 className="text-sm font-semibold mb-3 flex items-center gap-2">
+                          <Users className="w-4 h-4 text-[var(--primary)]" />
+                          Parent Login Credentials
+                        </h4>
+                        <div className="flex flex-col sm:flex-row gap-4 items-end">
+                          <div className="space-y-1 flex-1">
+                            <label className="text-xs font-medium text-[var(--muted-foreground)]">Registered Phone</label>
+                            <input
+                              value={editDraft.parent_phone || student.parent_phone || ''}
+                              disabled
+                              className={`${inputCls} opacity-70 bg-[var(--secondary)] cursor-not-allowed`}
+                            />
+                          </div>
+                          <div className="space-y-1 flex-1">
+                            <label className="text-xs font-medium text-[var(--muted-foreground)]">4-Digit PIN</label>
+                            <div className="flex gap-2">
+                              <input
+                                id={`edit-pin-${student.id}`}
+                                value={editDraft.pin ?? ''}
+                                onChange={(e) => setEditDraft((d) => ({ ...d, pin: e.target.value.replace(/\D/g, '').slice(0, 4) }))}
+                                className={`${inputCls} font-mono`}
+                                placeholder="e.g. 1234"
+                                maxLength={4}
+                              />
+                              <button
+                                type="button"
+                                onClick={() => setEditDraft(d => ({ ...d, pin: Math.floor(1000 + Math.random() * 9000).toString() }))}
+                                className="px-3 py-1.5 border border-[var(--border)] text-xs font-medium rounded-lg hover:bg-[var(--secondary)] transition-all flex-shrink-0"
+                                title="Regenerate PIN"
+                              >
+                                <RefreshCw className="w-4 h-4 text-[var(--muted-foreground)]" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  if (editDraft.pin) navigator.clipboard.writeText(editDraft.pin);
+                                }}
+                                className="px-3 py-1.5 border border-[var(--border)] text-xs font-medium rounded-lg hover:bg-[var(--secondary)] transition-all flex-shrink-0"
+                                title="Copy PIN"
+                              >
+                                <Copy className="w-4 h-4 text-[var(--muted-foreground)]" />
+                              </button>
+                            </div>
+                          </div>
                         </div>
                       </div>
 

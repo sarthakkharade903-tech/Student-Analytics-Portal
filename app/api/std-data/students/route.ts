@@ -24,7 +24,7 @@ export async function GET(req: NextRequest) {
   // don't contain "12" so that approach silently returns zero results.
   const { data: students, error } = await supabase
     .from('students')
-    .select('id, name, roll_no, batch, parent_phone, created_at')
+    .select('id, name, roll_no, batch, parent_phone, pin, created_at')
     .eq('coaching_center_id', userProfile.coaching_center_id)
     .eq('standard', standard)
     .order('created_at', { ascending: false })

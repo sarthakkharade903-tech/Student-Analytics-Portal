@@ -64,12 +64,16 @@ function AddStudentForm() {
 
     const supabase = createClient()
 
+    // Automatically generate a 4-digit PIN for the parent login
+    const generatedPin = Math.floor(1000 + Math.random() * 9000).toString()
+
     const { error: insertError } = await supabase.from('students').insert({
       coaching_center_id: coachingCenterId,
       name: formData.name.trim(),
       roll_no: formData.roll_no.trim(),
       parent_phone: formData.parent_phone.trim(),
       batch: formData.batch.trim(),
+      pin: generatedPin,
     })
 
     if (insertError) {

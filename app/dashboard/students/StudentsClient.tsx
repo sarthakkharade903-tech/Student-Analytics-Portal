@@ -13,6 +13,7 @@ interface Student {
   roll_no: string
   batch: string
   parent_phone: string
+  pin?: string
   created_at: string
 }
 

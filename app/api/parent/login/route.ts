@@ -15,11 +15,11 @@ const JWT_SECRET = new TextEncoder().encode(
 
 export async function POST(req: Request) {
   try {
-    const { standard, roll_no, parent_phone } = await req.json()
+    const { parent_phone, pin } = await req.json()
 
-    if (!standard || !roll_no || !parent_phone) {
+    if (!parent_phone || !pin) {
       return NextResponse.json(
-        { error: 'Standard, Roll number, and parent phone number are required' },
+        { error: 'Parent phone number and PIN are required' },
         { status: 400 }
       )
     }
@@ -30,14 +30,13 @@ export async function POST(req: Request) {
     const { data: student, error } = await supabase
       .from('students')
       .select('id, name')
-      .eq('standard', standard)
-      .eq('roll_no', roll_no)
       .eq('parent_phone', parent_phone)
+      .eq('pin', pin)
       .single()
 
     if (error || !student) {
       return NextResponse.json(
-        { error: 'Invalid credentials. Please check the roll number and phone number.' },
+        { error: 'Invalid phone number or PIN.' },
         { status: 401 }
       )
     }

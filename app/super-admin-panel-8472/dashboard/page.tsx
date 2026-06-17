@@ -6,6 +6,18 @@ import DeleteInstituteModal from './DeleteInstituteModal'
 
 export const dynamic = 'force-dynamic'
 
+interface Institute {
+  id: string
+  name: string
+  owner_name?: string
+  email?: string
+  city?: string
+  account_status?: string
+  is_active?: boolean
+  features?: { superAdminData?: { name?: string; owner_name?: string } }
+  created_at?: string
+}
+
 export default async function SuperAdminDashboard() {
   const supabase = createAdminClient()
 
@@ -29,12 +41,12 @@ export default async function SuperAdminDashboard() {
     console.error('Error fetching codes:', codesError)
   }
 
-  const list = institutesData || []
+  const list: Institute[] = institutesData || []
   const codes = codesData || []
 
   // Create a map of coaching_center_id -> code
   const instituteCodes: Record<string, string> = {}
-  codes.forEach((c: any) => {
+  codes.forEach((c: { coaching_center_id?: string; code: string }) => {
     if (c.coaching_center_id) {
       instituteCodes[c.coaching_center_id] = c.code
     }

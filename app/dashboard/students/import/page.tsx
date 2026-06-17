@@ -251,6 +251,7 @@ function ImportStudentsForm() {
       parent_phone: r.parent_phone,
       batch: r.batch,
       standard,
+      pin: Math.floor(1000 + Math.random() * 9000).toString(),
     }))
 
     // Insert in batches of 50
