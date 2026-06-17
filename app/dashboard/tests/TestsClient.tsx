@@ -4,6 +4,7 @@ import useSWR from 'swr'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { ClipboardList, Plus, Trophy, Users, TrendingUp, Calendar, Loader2 } from 'lucide-react'
+import StandardTabs from '@/components/dashboard/StandardTabs'
 import type { Test, SubjectConfig } from '@/lib/types'
 import { normaliseSubjects } from '@/lib/subjects'
 
@@ -59,23 +60,25 @@ export default function TestsClient() {
               )}
             </h1>
             <p className="text-sm text-[var(--muted-foreground)] mt-0.5">
-              Manage {standard} standard tests and upload student marks.
+              Manage {standard} standard tests, upload marks, and view results.
             </p>
           </div>
         </div>
         <Link
           id="create-test-btn"
           href={`/dashboard/tests/new?std=${standard}`}
-          className="inline-flex items-center gap-2 px-4 py-2.5 bg-[var(--primary)] text-white text-sm font-semibold rounded-lg hover:opacity-90 transition-all glow-primary whitespace-nowrap"
+          className="inline-flex items-center gap-2 px-4 py-2.5 bg-[var(--primary)] text-white text-sm font-semibold rounded-lg hover:opacity-90 transition-all duration-200 glow-primary whitespace-nowrap"
         >
           <Plus className="w-4 h-4" />
           Create Test
         </Link>
       </div>
 
-      {/* Error */}
+      <StandardTabs />
+
+      {/* Error state */}
       {errorMsg && (
-        <div className="rounded-lg bg-red-500/10 border border-red-500/30 px-4 py-3 text-sm text-red-400 mb-6">
+        <div className="rounded-lg bg-red-500/10 border border-red-500/30 px-4 py-3 text-sm text-red-400 mb-6 mt-6">
           Failed to load tests: {errorMsg}
         </div>
       )}

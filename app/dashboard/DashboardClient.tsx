@@ -1,7 +1,6 @@
 'use client'
 
 import useSWR from 'swr'
-import { useSearchParams } from 'next/navigation'
 import StatCard from '@/components/dashboard/StatCard'
 import { Users, ClipboardList, MessageCircle, CalendarCheck, ArrowRight, CheckCircle, Loader2 } from 'lucide-react'
 import Link from 'next/link'
@@ -9,7 +8,6 @@ import Link from 'next/link'
 const fetcher = (url: string) => fetch(url).then(r => r.json())
 
 interface DashboardData {
-  standard: string
   displayName: string
   centerName: string
   studentCount: number
@@ -18,11 +16,8 @@ interface DashboardData {
 }
 
 export default function DashboardClient() {
-  const searchParams = useSearchParams()
-  const standard = searchParams.get('std') === '12th' ? '12th' : '11th'
-
   const { data, isLoading } = useSWR<DashboardData>(
-    `/api/std-data/dashboard?std=${standard}`,
+    `/api/std-data/dashboard`,
     fetcher,
     {
       revalidateOnFocus: false,
@@ -39,10 +34,10 @@ export default function DashboardClient() {
     {
       step: 1,
       title: 'Add Students',
-      description: `Add your ${standard} students manually with their roll number, batch, and parent contact.`,
+      description: `Add your students manually with their roll number, batch, and parent contact.`,
       icon: Users,
       comingSoon: false,
-      href: `/dashboard/students?std=${standard}`,
+      href: `/dashboard/students`,
       actionLabel: 'Go to Students',
     },
     {
@@ -51,7 +46,7 @@ export default function DashboardClient() {
       description: 'Create a test and upload a CSV of marks — ranks and percentages are calculated automatically.',
       icon: ClipboardList,
       comingSoon: false,
-      href: `/dashboard/tests?std=${standard}`,
+      href: `/dashboard/tests`,
       actionLabel: 'Go to Tests',
     },
     {
@@ -78,10 +73,6 @@ export default function DashboardClient() {
           ) : (
             <span>{centerName}</span>
           )}
-          <span className="text-[var(--border)]">·</span>
-          <span className="px-2 py-0.5 rounded-full bg-[var(--primary)]/10 text-[var(--primary)] text-[11px] font-bold border border-[var(--primary)]/20 transition-all duration-200">
-            {standard} Std
-          </span>
         </div>
         <h1 className="text-2xl sm:text-3xl font-bold">
           Welcome back,{' '}
@@ -93,8 +84,7 @@ export default function DashboardClient() {
           👋
         </h1>
         <p className="text-[var(--muted-foreground)] mt-1 text-sm">
-          Here&apos;s a snapshot of your{' '}
-          <strong>{standard} standard</strong> students today.
+          Here&apos;s a snapshot of your institute today.
         </p>
       </div>
 
@@ -104,14 +94,14 @@ export default function DashboardClient() {
           title="Total Students"
           value={isLoading && !data ? <Loader2 className="w-5 h-5 animate-spin" /> : studentCount}
           icon={Users}
-          description={studentCount ? `${standard} students enrolled` : 'Add students to get started'}
+          description={studentCount ? `Students enrolled` : 'Add students to get started'}
           color="purple"
         />
         <StatCard
           title="Tests Uploaded"
           value={isLoading && !data ? <Loader2 className="w-5 h-5 animate-spin" /> : testCount}
           icon={ClipboardList}
-          description={testCount ? `${standard} tests created` : 'Create your first test'}
+          description={testCount ? `Tests created` : 'Create your first test'}
           color="blue"
         />
         <StatCard
@@ -125,7 +115,7 @@ export default function DashboardClient() {
           title="Attendance Rate"
           value={isLoading && !data ? <Loader2 className="w-5 h-5 animate-spin" /> : attendanceRate}
           icon={CalendarCheck}
-          description={`Average across ${standard} batches`}
+          description={`Average across batches`}
           color="orange"
         />
       </section>
@@ -134,11 +124,11 @@ export default function DashboardClient() {
       <div className="glass-card rounded-2xl p-8 mb-8 relative overflow-hidden">
         <div className="absolute top-0 right-0 w-64 h-64 bg-[oklch(0.62_0.22_265/0.08)] rounded-full blur-3xl pointer-events-none" />
         <div className="relative">
-          <h2 className="text-xl font-semibold mb-2">
-            Coaching Analytics Portal — {standard} Standard
+          <h2 className="text-xl font-bold mb-1">
+            Coaching Analytics Portal
           </h2>
-          <p className="text-[var(--muted-foreground)] text-sm max-w-2xl leading-relaxed">
-            You are currently viewing <strong>{standard} standard</strong> data. Use the class switcher in the sidebar to switch between 11th and 12th standard students, tests, and attendance independently.
+          <p className="text-sm text-[var(--muted-foreground)] leading-relaxed">
+            You are viewing your global dashboard. Use the sidebar to dive into students, fee management, attendance, and tests.
           </p>
         </div>
       </div>

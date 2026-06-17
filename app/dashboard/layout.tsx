@@ -2,7 +2,6 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import Sidebar from '@/components/dashboard/Sidebar'
 import BackButton from '@/components/ui/BackButton'
-import StandardProviderWrapper from '@/components/dashboard/StandardProviderWrapper'
 
 export default async function DashboardLayout({
   children,
@@ -62,7 +61,6 @@ if (isBlocked) {
 const ExpirationBanner = (await import('@/components/ui/ExpirationBanner')).default
 
 return (
-  <StandardProviderWrapper>
     <div className="flex min-h-screen bg-[var(--background)]">
       <Sidebar features={features} />
       <main className="flex-1 overflow-y-auto relative flex flex-col">
@@ -79,6 +77,5 @@ return (
         </div>
       </main>
     </div>
-  </StandardProviderWrapper>
-)
+  )
 }

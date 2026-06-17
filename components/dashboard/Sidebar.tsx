@@ -2,9 +2,8 @@
 
 import React, { Suspense } from 'react'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { useStandard } from '@/lib/StandardContext'
 import {
   BarChart3,
   Users,
@@ -17,7 +16,6 @@ import {
   TrendingUp,
   Banknote,
 } from 'lucide-react'
-import StandardSwitcher from './StandardSwitcher'
 
 type NavItem = {
   href: string
@@ -41,8 +39,8 @@ const baseNavItems: NavItem[] = [
 
 function SidebarInner({ features }: { features?: any }) {
   const pathname = usePathname()
-  // Use context — updates instantly when toggle is clicked, no URL round-trip
-  const { standard } = useStandard()
+  const searchParams = useSearchParams()
+  const standard = searchParams.get('std') === '12th' ? '12th' : '11th'
 
   const handleLogout = async () => {
     const supabase = createClient()
@@ -50,8 +48,18 @@ function SidebarInner({ features }: { features?: any }) {
     window.location.href = '/login'
   }
 
-  // Build href with std param preserved
-  const withStd = (href: string) => `${href}?std=${standard}`
+  // Build href with std param preserved so the user doesn't lose their 11th/12th state
+  const withStd = (href: string) => {
+    // Don't append to dashboard or settings as they are global
+    if (href === '/dashboard' || href === '/dashboard/settings') return href
+    // Fee management has its own routing /11/records, so don't append ?std to it. 
+    // Wait, the baseNavItems has { href: '/dashboard/fee-management' }.
+    // Let's just append it anyway, or fee management ignores it.
+    if (href === '/dashboard/fee-management') {
+      return `/dashboard/fee-management/${standard === '12th' ? '12' : '11'}/records`
+    }
+    return `${href}?std=${standard}`
+  }
 
   // Apply default features if null
   const defaultFeatures = {
@@ -77,13 +85,6 @@ function SidebarInner({ features }: { features?: any }) {
         </span>
       </div>
 
-      {/* Standard Switcher */}
-      <div className="px-0 pt-3 pb-1 border-b border-[var(--border)]">
-        <StandardSwitcher />
-        <p className="text-[10px] text-center text-[var(--muted-foreground)] pb-2 font-medium">
-          Viewing: <span className="text-[var(--primary)] font-bold">{standard} Std</span>
-        </p>
-      </div>
 
       {/* Nav */}
       <nav className="flex-1 p-3 space-y-0.5 overflow-y-auto">

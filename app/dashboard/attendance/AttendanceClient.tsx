@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Calendar, Upload, AlertTriangle, Loader2, CheckCircle2, FileSpreadsheet, LayoutGrid, Clock, BarChart, History, ChevronDown, ChevronRight } from 'lucide-react'
+import StandardTabs from '@/components/dashboard/StandardTabs'
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts'
 
 interface Student {
@@ -444,8 +445,10 @@ export default function AttendanceClient({ coachingCenterId, standard }: { coach
         </div>
       </div>
 
+      <StandardTabs />
+
       {/* Tabs */}
-      <div className="flex items-center gap-1 bg-black/20 p-1 rounded-xl w-max border border-[var(--border)]">
+      <div className="flex items-center gap-2 mb-6 bg-[oklch(0.97_0.01_240)] p-1 rounded-xl w-fit border border-[var(--border)]">
         <button
           onClick={() => setActiveTab('daily')}
           className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${

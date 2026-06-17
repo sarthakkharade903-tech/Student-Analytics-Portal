@@ -2,8 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 
 export async function GET(req: NextRequest) {
-  const std = req.nextUrl.searchParams.get('std')
-  const standard = std === '12th' ? '12th' : '11th'
+  // The dashboard is global now, so we don't filter by standard
 
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -27,13 +26,13 @@ export async function GET(req: NextRequest) {
       ? supabase.from('coaching_centers').select('name').eq('id', centerId).single()
       : Promise.resolve({ data: null }),
     centerId
-      ? supabase.from('students').select('id', { count: 'exact', head: true }).eq('coaching_center_id', centerId).eq('standard', standard)
+      ? supabase.from('students').select('id', { count: 'exact', head: true }).eq('coaching_center_id', centerId)
       : Promise.resolve({ count: 0 }),
     centerId
-      ? supabase.from('tests').select('id', { count: 'exact', head: true }).eq('coaching_center_id', centerId).eq('standard', standard)
+      ? supabase.from('tests').select('id', { count: 'exact', head: true }).eq('coaching_center_id', centerId)
       : Promise.resolve({ count: 0 }),
     centerId
-      ? supabase.from('students').select('id').eq('coaching_center_id', centerId).eq('standard', standard)
+      ? supabase.from('students').select('id').eq('coaching_center_id', centerId)
       : Promise.resolve({ data: [] }),
   ])
 
@@ -53,7 +52,6 @@ export async function GET(req: NextRequest) {
   }
 
   return NextResponse.json({
-    standard,
     displayName: userProfile?.name ?? user?.email ?? 'there',
     centerName: coachingCenter?.name ?? 'your institute',
     studentCount: studentCount ?? 0,

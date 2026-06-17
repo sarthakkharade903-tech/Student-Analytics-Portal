@@ -7,6 +7,7 @@ import {
   Users, BarChart2, CalendarX, TrendingDown, ShieldAlert,
   ArrowRight, PhoneCall
 } from 'lucide-react'
+import StandardTabs from '@/components/dashboard/StandardTabs'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -260,6 +261,9 @@ export default function AnalyticsClient({ atRiskStudents }: Props) {
         </div>
       </div>
 
+      <StandardTabs />
+
+      {/* Stats Summary Panel */}
       {sortedAtRisk.length === 0 ? (
         <div className="relative rounded-3xl p-16 text-center border border-gray-200 bg-gradient-to-b from-gray-50 to-transparent overflow-hidden">
           <div className="absolute inset-0 bg-emerald-500/5 blur-3xl pointer-events-none" />

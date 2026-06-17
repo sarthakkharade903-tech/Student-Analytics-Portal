@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import ResourcesClient from './ResourcesClient'
+import StandardTabs from '@/components/dashboard/StandardTabs'
 
 export default async function ResourcesPage({
   searchParams,
@@ -52,8 +53,9 @@ export default async function ResourcesPage({
     <div className="p-6 max-w-7xl mx-auto space-y-6">
       <div>
         <h1 className="text-2xl font-bold tracking-tight text-gray-900">Resource Management</h1>
-        <p className="text-[var(--muted-foreground)] text-sm mt-1">Upload and manage study materials for students.</p>
+        <p className="text-[var(--muted-foreground)] text-sm mt-1">Upload and manage study materials for {standard} standard students.</p>
       </div>
+      <StandardTabs />
       <ResourcesClient coachingCenterId={coachingCenterId} batches={batches} standard={standard} />
     </div>
   )

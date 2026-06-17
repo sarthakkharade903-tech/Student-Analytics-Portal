@@ -138,13 +138,7 @@ function ComingSoonCard({ icon, iconBgClass, title, description, badge }: Coming
 /* ─────────────────────────────────────────────────────
    PAGE
 ───────────────────────────────────────────────────── */
-export default async function SettingsPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ std?: string }>
-}) {
-  const { std: stdParam } = await searchParams
-  const standard = stdParam === '12th' ? '12th' : '11th'
+export default async function SettingsPage() {
 
   const supabase = await createClient()
   const {
@@ -173,7 +167,6 @@ export default async function SettingsPage({
         .from('students')
         .select('*', { count: 'exact', head: true })
         .eq('coaching_center_id', userProfile.coaching_center_id)
-        .eq('standard', standard)
     : { count: 0 }
 
   const { count: testsUploaded } = userProfile?.coaching_center_id
@@ -181,7 +174,6 @@ export default async function SettingsPage({
         .from('tests')
         .select('*', { count: 'exact', head: true })
         .eq('coaching_center_id', userProfile.coaching_center_id)
-        .eq('standard', standard)
     : { count: 0 }
 
   let activeBatches = 0
@@ -190,7 +182,6 @@ export default async function SettingsPage({
       .from('students')
       .select('batch')
       .eq('coaching_center_id', userProfile.coaching_center_id)
-      .eq('standard', standard)
     
     const batchSet = new Set<string>()
     students?.forEach((s) => {
@@ -226,19 +217,20 @@ export default async function SettingsPage({
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
           <div className="flex items-start gap-4">
             {/* Large icon */}
-            <div className="w-14 h-14 rounded-2xl flex items-center justify-center flex-shrink-0 bg-blue-600 shadow-lg shadow-blue-600/20">
-              <Settings2 className="w-7 h-7 text-white" />
+            <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg shadow-blue-600/20">
+              <Settings2 className="w-5 h-5 text-white" />
             </div>
             <div>
-              {/* Badge */}
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-widest mb-2 bg-blue-50 text-blue-600 border border-blue-100">
-                <Settings2 className="w-3 h-3" />
-                System Settings
+              <div className="flex items-center gap-2 mb-1">
+                <span className="text-[10px] font-bold text-blue-600 tracking-wider uppercase flex items-center gap-1.5">
+                  <div className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-pulse" />
+                  System Settings
+                </span>
               </div>
-              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-gray-900">
-                Settings — {standard}
+              <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight">
+                Settings
               </h1>
-              <p className="text-sm text-gray-500 mt-1">
+              <p className="text-sm font-medium text-gray-500 mt-1">
                 Manage institute information, account details and platform preferences.
               </p>
             </div>
