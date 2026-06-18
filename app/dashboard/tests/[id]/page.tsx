@@ -110,13 +110,15 @@ export default async function TestDetailsPage({ params }: { params: Promise<{ id
   const { data: userProfile } = user
     ? await supabase
         .from('users')
-        .select('coaching_center_id, coaching_centers(name)')
+        .select('coaching_center_id, coaching_centers(name, whatsapp_test_template)')
         .eq('id', user.id)
         .single()
     : { data: null }
   const coachingCenterId: string = userProfile?.coaching_center_id ?? ''
   // @ts-ignore
   const coachingName: string = userProfile?.coaching_centers?.name ?? 'Your Institute'
+  // @ts-ignore
+  const whatsappTemplate: string | null = userProfile?.coaching_centers?.whatsapp_test_template ?? null
 
   // Fetch test
   const { data: test, error: testError } = await supabase
@@ -287,6 +289,7 @@ export default async function TestDetailsPage({ params }: { params: Promise<{ id
           standard={test.standard || '11th'}
           coachingName={coachingName}
           portalUrl={`${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/parent/login`}
+          initialTemplate={whatsappTemplate}
         />
       </div>
     </div>

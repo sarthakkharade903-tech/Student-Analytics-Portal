@@ -53,8 +53,19 @@ export default function AttendanceClient({ coachingCenterId, standard }: { coach
   }, [students])
 
   const currentBatchStudents = useMemo(() => {
-    if (selectedBatch === 'All') return [...students].sort((a, b) => a.roll_no.localeCompare(b.roll_no))
-    return students.filter(s => s.batch === selectedBatch).sort((a, b) => a.roll_no.localeCompare(b.roll_no))
+    const sortFn = (a: { roll_no: string }, b: { roll_no: string }) => {
+      const aMatch = a.roll_no?.match(/^(\D*)(\d+)(.*)$/)
+      const bMatch = b.roll_no?.match(/^(\D*)(\d+)(.*)$/)
+      if (aMatch && bMatch) {
+        if (aMatch[1] === bMatch[1]) {
+          return parseInt(aMatch[2]) - parseInt(bMatch[2])
+        }
+      }
+      return (a.roll_no || '').localeCompare(b.roll_no || '')
+    }
+
+    if (selectedBatch === 'All') return [...students].sort(sortFn)
+    return students.filter(s => s.batch === selectedBatch).sort(sortFn)
   }, [students, selectedBatch])
 
   // Fetch all students on mount

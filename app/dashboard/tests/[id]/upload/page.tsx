@@ -118,6 +118,7 @@ export default function UploadResultsPage() {
   const [students, setStudents] = useState<StudentRecord[]>([])
   const [coachingCenterId, setCoachingCenterId] = useState<string | null>(null)
   const [coachingName, setCoachingName] = useState<string>('Your Institute')
+  const [whatsappTemplate, setWhatsappTemplate] = useState<string | null>(null)
 
   const [rows, setRows] = useState<ValidatedRow[]>([])
   const [parseError, setParseError] = useState<string | null>(null)
@@ -137,16 +138,20 @@ export default function UploadResultsPage() {
       // Profile
       const { data: profile } = await supabase
         .from('users')
-        .select('coaching_center_id, coaching_centers(name)')
+        .select('coaching_center_id, coaching_centers(name, whatsapp_test_template)')
         .eq('id', user.id)
         .single()
 
       if (!profile?.coaching_center_id) return
       setCoachingCenterId(profile.coaching_center_id)
-      // @ts-ignore
       if (profile.coaching_centers?.name) {
         // @ts-ignore
         setCoachingName(profile.coaching_centers.name)
+      }
+      // @ts-ignore
+      if (profile.coaching_centers?.whatsapp_test_template) {
+        // @ts-ignore
+        setWhatsappTemplate(profile.coaching_centers.whatsapp_test_template)
       }
 
       // Test info
@@ -793,7 +798,8 @@ export default function UploadResultsPage() {
               testName={test?.test_name ?? ''}
               standard={test?.standard || '11th'}
               coachingName={coachingName}
-              portalUrl={`${process.env.NEXT_PUBLIC_SITE_URL || ''}/parent/login`}
+              portalUrl={`${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/parent/login`}
+              initialTemplate={whatsappTemplate}
             />
           </div>
 

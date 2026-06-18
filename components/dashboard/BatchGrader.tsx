@@ -99,13 +99,23 @@ export default function BatchGrader({
 
     const supabase = createClient()
 
-    const { data: students, error: stuErr } = await supabase
+    let query = supabase
       .from('students')
-      .select('id, name, roll_no')
+      .select('id, name, roll_no, batch')
       .eq('coaching_center_id', coachingCenterId)
       .eq('standard', standard)
-      .eq('batch', batch)
-      .order('roll_no', { ascending: true })
+
+    if (batch === 'ALL_SELECTED') {
+      if (!targetBatches || targetBatches.length === 0) {
+        setFetchingStudents(false)
+        return
+      }
+      query = query.in('batch', targetBatches)
+    } else {
+      query = query.eq('batch', batch)
+    }
+
+    const { data: students, error: stuErr } = await query
 
     if (stuErr || !students) {
       setError('Failed to load students. Please try again.')
@@ -123,6 +133,18 @@ export default function BatchGrader({
     setAlreadyScoredCount(alreadyCount)
 
     const unscoredStudents = students.filter((s: { id: string }) => !scoredIds.has(s.id))
+
+    // Client-side smart numeric sort for roll numbers
+    unscoredStudents.sort((a: any, b: any) => {
+      const aMatch = a.roll_no?.match(/^(\D*)(\d+)(.*)$/)
+      const bMatch = b.roll_no?.match(/^(\D*)(\d+)(.*)$/)
+      if (aMatch && bMatch) {
+        if (aMatch[1] === bMatch[1]) {
+          return parseInt(aMatch[2]) - parseInt(bMatch[2])
+        }
+      }
+      return (a.roll_no || '').localeCompare(b.roll_no || '')
+    })
 
     const initialRows: GraderRow[] = unscoredStudents.map(
       (s: { id: string; name: string | null; roll_no: string | null }) => ({
@@ -301,18 +323,24 @@ export default function BatchGrader({
         <div className="border-t border-[var(--border)]">
 
           {/* Batch selector + quick actions */}
-          <div className="px-5 py-4 flex flex-wrap items-center gap-3 border-b border-[var(--border)] bg-[oklch(0.10_0.01_240/0.4)]">
-            <div className="flex items-center gap-2 flex-1 min-w-[200px]">
-              <label htmlFor="batch-select" className="text-sm font-medium whitespace-nowrap">
+          <div className="p-4 border-b border-[var(--border)] bg-black/5 flex flex-col sm:flex-row gap-4 items-center justify-between">
+            <div className="flex items-center gap-3 w-full sm:w-auto">
+              <span className="text-sm font-medium text-[var(--muted-foreground)] whitespace-nowrap">
                 Select Batch:
-              </label>
+              </span>
               <select
-                id="batch-select"
+                className="flex-1 sm:w-64 bg-[var(--background)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/50 transition-shadow cursor-pointer"
                 value={selectedBatch}
                 onChange={(e) => handleBatchChange(e.target.value)}
-                className="flex-1 px-3 py-2 rounded-lg bg-[var(--input)] border border-[var(--border)] text-[var(--foreground)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--ring)] transition-all"
               >
-                <option value="">— Choose a batch —</option>
+                <option value="" disabled>
+                  — Choose a batch —
+                </option>
+                {targetBatches.length > 1 && (
+                  <option value="ALL_SELECTED" className="font-semibold text-[var(--primary)]">
+                    All Selected Batches
+                  </option>
+                )}
                 {targetBatches.map((b) => (
                   <option key={b} value={b}>{b}</option>
                 ))}
