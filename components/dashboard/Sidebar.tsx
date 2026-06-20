@@ -1,6 +1,6 @@
 'use client'
 
-import React, { Suspense } from 'react'
+import React, { Suspense, useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
@@ -16,6 +16,8 @@ import {
   BookOpen,
   TrendingUp,
   Banknote,
+  Menu,
+  X,
 } from 'lucide-react'
 
 type NavItem = {
@@ -42,6 +44,14 @@ function SidebarInner({ features, logoUrl }: { features?: any, logoUrl?: string 
   const pathname = usePathname()
   const searchParams = useSearchParams()
   const standard = searchParams.get('std') === '12th' ? '12th' : '11th'
+  
+  const [isMobileOpen, setIsMobileOpen] = useState(false)
+  const [isDesktopCollapsed, setIsDesktopCollapsed] = useState(false)
+
+  // Close sidebar on route change on mobile
+  useEffect(() => {
+    setIsMobileOpen(false)
+  }, [pathname, searchParams])
 
   const handleLogout = async () => {
     const supabase = createClient()
@@ -49,20 +59,14 @@ function SidebarInner({ features, logoUrl }: { features?: any, logoUrl?: string 
     window.location.href = '/login'
   }
 
-  // Build href with std param preserved so the user doesn't lose their 11th/12th state
   const withStd = (href: string) => {
-    // Don't append to dashboard or settings as they are global
     if (href === '/dashboard' || href === '/dashboard/settings') return href
-    // Fee management has its own routing /11/records, so don't append ?std to it. 
-    // Wait, the baseNavItems has { href: '/dashboard/fee-management' }.
-    // Let's just append it anyway, or fee management ignores it.
     if (href === '/dashboard/fee-management') {
       return `/dashboard/fee-management/${standard === '12th' ? '12' : '11'}/records`
     }
     return `${href}?std=${standard}`
   }
 
-  // Apply default features if null
   const defaultFeatures = {
     students: true,
     fee_management: true,
@@ -74,28 +78,73 @@ function SidebarInner({ features, logoUrl }: { features?: any, logoUrl?: string 
   const currentFeatures = features || defaultFeatures
 
   return (
-    <aside className="w-64 flex-shrink-0 h-screen sticky top-0 flex flex-col border-r border-[var(--border)] bg-[var(--sidebar)]">
-      {/* Logo */}
-      <div className="h-16 flex items-center gap-2.5 px-5 border-b border-[var(--border)]">
-        {logoUrl ? (
-          <div className="relative w-8 h-8 rounded-full overflow-hidden border border-[var(--border)] flex items-center justify-center bg-white flex-shrink-0">
-            <Image
-              src={logoUrl}
-              alt="Academy Logo"
-              fill
-              className="object-cover"
-              unoptimized
-            />
-          </div>
-        ) : (
-          <div className="w-8 h-8 rounded-lg bg-[var(--primary)] flex items-center justify-center flex-shrink-0">
-            <BarChart3 className="w-4.5 h-4.5 text-white w-[18px] h-[18px]" />
-          </div>
-        )}
-        <span className="font-semibold text-sm leading-tight">
-          Coaching Analytics<br />
-          <span className="text-[9px] font-bold tracking-widest text-[var(--primary)] uppercase bg-[var(--primary)]/10 px-1.5 py-0.5 rounded-sm">Portal</span>
-        </span>
+    <>
+      {/* Mobile Open Button */}
+      <button 
+        onClick={() => setIsMobileOpen(true)}
+        className={`lg:hidden fixed top-5 left-5 z-[40] p-2 bg-[var(--sidebar)] text-[var(--foreground)] border border-[var(--border)] rounded-xl shadow-lg transition-all duration-300 ${isMobileOpen ? 'opacity-0 pointer-events-none scale-95' : 'opacity-100 scale-100'}`}
+      >
+        <Menu className="w-5 h-5" />
+      </button>
+
+      {/* Desktop Open Button */}
+      <button 
+        onClick={() => setIsDesktopCollapsed(false)}
+        className={`hidden lg:flex fixed top-5 left-5 z-[40] p-2 bg-[var(--sidebar)] text-[var(--foreground)] border border-[var(--border)] rounded-xl shadow-lg transition-all duration-300 ${!isDesktopCollapsed ? 'opacity-0 pointer-events-none scale-95' : 'opacity-100 scale-100'}`}
+      >
+        <Menu className="w-5 h-5" />
+      </button>
+
+      {/* Mobile Overlay */}
+      {isMobileOpen && (
+        <div 
+          className="lg:hidden fixed inset-0 bg-black/40 backdrop-blur-sm z-[45]"
+          onClick={() => setIsMobileOpen(false)}
+        />
+      )}
+
+      {/* Sidebar */}
+      <aside className={`
+        fixed lg:sticky top-0 left-0 z-50
+        h-screen flex flex-col border-[var(--border)] bg-[var(--sidebar)] overflow-hidden flex-shrink-0
+        transition-all duration-300 ease-in-out w-64
+        ${isMobileOpen ? 'translate-x-0 border-r shadow-2xl' : '-translate-x-full'}
+        ${isDesktopCollapsed ? 'lg:-translate-x-full lg:w-0 lg:border-r-0 lg:opacity-0' : 'lg:translate-x-0 lg:w-64 lg:border-r'}
+      `}>
+        {/* Header */}
+      <div className="h-16 flex items-center justify-between px-4 border-b border-[var(--border)]">
+        <div className="flex items-center gap-2.5">
+          {logoUrl ? (
+            <div className="relative w-8 h-8 rounded-full overflow-hidden border border-[var(--border)] flex items-center justify-center bg-white flex-shrink-0">
+              <Image
+                src={logoUrl}
+                alt="Academy Logo"
+                fill
+                className="object-cover"
+                unoptimized
+              />
+            </div>
+          ) : (
+            <div className="w-8 h-8 rounded-lg bg-[var(--primary)] flex items-center justify-center flex-shrink-0">
+              <BarChart3 className="w-4.5 h-4.5 text-white w-[18px] h-[18px]" />
+            </div>
+          )}
+          <span className="font-semibold text-sm leading-tight">
+            Coaching Analytics<br />
+            <span className="text-[9px] font-bold tracking-widest text-[var(--primary)] uppercase bg-[var(--primary)]/10 px-1.5 py-0.5 rounded-sm">Portal</span>
+          </span>
+        </div>
+        
+        <button 
+           onClick={() => {
+             setIsMobileOpen(false)
+             setIsDesktopCollapsed(true)
+           }}
+           className="p-1.5 rounded-md hover:bg-[var(--secondary)] text-[var(--muted-foreground)] transition-colors"
+        >
+          <X className="w-4 h-4 lg:hidden" />
+          <Menu className="w-4 h-4 hidden lg:block" />
+        </button>
       </div>
 
 
@@ -158,7 +207,8 @@ function SidebarInner({ features, logoUrl }: { features?: any, logoUrl?: string 
           Logout
         </button>
       </div>
-    </aside>
+      </aside>
+    </>
   )
 }
 
