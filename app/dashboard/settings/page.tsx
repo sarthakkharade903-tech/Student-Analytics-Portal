@@ -162,33 +162,6 @@ export default async function SettingsPage() {
 
   const savedFeatures = coachingCenter?.features ?? {}
 
-  const { count: totalStudents } = userProfile?.coaching_center_id
-    ? await supabase
-        .from('students')
-        .select('*', { count: 'exact', head: true })
-        .eq('coaching_center_id', userProfile.coaching_center_id)
-    : { count: 0 }
-
-  const { count: testsUploaded } = userProfile?.coaching_center_id
-    ? await supabase
-        .from('tests')
-        .select('*', { count: 'exact', head: true })
-        .eq('coaching_center_id', userProfile.coaching_center_id)
-    : { count: 0 }
-
-  let activeBatches = 0
-  if (userProfile?.coaching_center_id) {
-    const { data: students } = await supabase
-      .from('students')
-      .select('batch')
-      .eq('coaching_center_id', userProfile.coaching_center_id)
-    
-    const batchSet = new Set<string>()
-    students?.forEach((s) => {
-      if (s.batch) batchSet.add(s.batch)
-    })
-    activeBatches = batchSet.size
-  }
 
   const joinedAt = userProfile?.created_at
     ? new Date(userProfile.created_at).toLocaleDateString('en-IN', {
@@ -245,27 +218,7 @@ export default async function SettingsPage() {
           </div>
         </div>
 
-        {/* ══ QUICK STATS ════════════════════════════════════════ */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <StatCard
-            icon={<Users className="w-5 h-5 text-blue-600" />}
-            iconBgClass="bg-blue-100"
-            label="Total Students"
-            value={totalStudents?.toString() || '0'}
-          />
-          <StatCard
-            icon={<FileSpreadsheet className="w-5 h-5 text-indigo-600" />}
-            iconBgClass="bg-indigo-100"
-            label="Tests Uploaded"
-            value={testsUploaded?.toString() || '0'}
-          />
-          <StatCard
-            icon={<GraduationCap className="w-5 h-5 text-emerald-600" />}
-            iconBgClass="bg-emerald-100"
-            label="Active Batches"
-            value={activeBatches.toString()}
-          />
-        </div>
+        {/* Stats section removed as per user request */}
 
         {/* ══ COACHING INSTITUTE CARD ════════════════════════════ */}
         <SectionCard
@@ -365,31 +318,28 @@ export default async function SettingsPage() {
         {/* ══ FEATURE MANAGEMENT ═══════════════════════════════════ */}
         <FeatureManagement initialFeatures={savedFeatures} />
 
-        {/* ══ COMING SOON SECTION ════════════════════════════════ */}
-        <div>
-          <div className="flex items-center gap-3 mb-4">
-            <h3 className="text-xs font-bold uppercase tracking-widest text-gray-400">
-              Coming Soon
-            </h3>
-            <div className="flex-1 h-px bg-gray-200" />
+        {/* ══ SUBSCRIPTION DETAILS ════════════════════════════════ */}
+        <SectionCard
+          title="Subscription Details"
+          subtitle="Your active plan and dates"
+          icon={<CreditCard className="w-5 h-5 text-pink-600" />}
+          iconBgClass="bg-pink-50 border border-pink-100"
+        >
+          <div className="p-6 grid gap-4 bg-gray-50/30 sm:grid-cols-2">
+            <div className="bg-emerald-50 rounded-2xl p-5 border border-emerald-100 shadow-sm transition-transform hover:-translate-y-1 duration-300">
+              <p className="text-xs font-bold text-emerald-600 uppercase tracking-wider mb-2">Start Date</p>
+              <p className="text-lg font-extrabold text-emerald-900">
+                {coachingCenter?.start_date ? new Date(coachingCenter.start_date).toLocaleDateString('en-IN', { dateStyle: 'long' }) : '—'}
+              </p>
+            </div>
+            <div className="bg-orange-50 rounded-2xl p-5 border border-orange-100 shadow-sm transition-transform hover:-translate-y-1 duration-300">
+              <p className="text-xs font-bold text-orange-600 uppercase tracking-wider mb-2">End Date</p>
+              <p className="text-lg font-extrabold text-orange-900">
+                {coachingCenter?.end_date ? new Date(coachingCenter.end_date).toLocaleDateString('en-IN', { dateStyle: 'long' }) : '—'}
+              </p>
+            </div>
           </div>
-          <div className="grid gap-3">
-            <ComingSoonCard
-              icon={<Bell className="w-5 h-5 text-orange-600" />}
-              iconBgClass="bg-orange-100"
-              title="Notifications"
-              description="Configure email alerts, parent notification settings, and report delivery preferences."
-              badge="Coming Soon"
-            />
-            <ComingSoonCard
-              icon={<CreditCard className="w-5 h-5 text-pink-600" />}
-              iconBgClass="bg-pink-100"
-              title="Subscription"
-              description="Manage your plan, billing information, invoices, and upgrade options."
-              badge="Coming Soon"
-            />
-          </div>
-        </div>
+        </SectionCard>
       </div>
     </div>
   )

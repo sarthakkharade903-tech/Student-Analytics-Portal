@@ -1,8 +1,9 @@
 'use client'
 
+import { useState } from 'react'
 import useSWR from 'swr'
 import StatCard from '@/components/dashboard/StatCard'
-import { Users, ClipboardList, MessageCircle, CalendarCheck, ArrowRight, CheckCircle, Loader2 } from 'lucide-react'
+import { Users, ClipboardList, MessageCircle, CalendarCheck, ArrowRight, Loader2, Building2, User, Bell } from 'lucide-react'
 import Link from 'next/link'
 
 const fetcher = (url: string) => fetch(url).then(r => r.json())
@@ -13,22 +14,35 @@ interface DashboardData {
   studentCount: number
   testCount: number
   attendanceRate: string
+  activeBatches: number
 }
 
 export default function DashboardClient() {
+  const [selectedClass, setSelectedClass] = useState('11')
+  const [showNotifications, setShowNotifications] = useState(false)
+
   const { data, isLoading } = useSWR<DashboardData>(
-    `/api/std-data/dashboard`,
+    `/api/std-data/dashboard?class=${selectedClass}`,
     fetcher,
     {
       revalidateOnFocus: false,
     }
   )
 
-  const displayName = data?.displayName ?? ''
-  const centerName = data?.centerName ?? ''
+  const { data: notifData } = useSWR<{ notifications: any[] }>(
+    `/api/std-data/notifications`,
+    fetcher
+  )
+
+  const notifications = notifData?.notifications ?? []
+  const unreadCount = notifications.filter((n: any) => !n.isRead).length
+
+  const displayName = data?.displayName ?? 'Rishiraj'
+  const centerName = data?.centerName ?? 'TEST ACADEMY'
   const studentCount = data?.studentCount ?? 0
   const testCount = data?.testCount ?? 0
   const attendanceRate = data?.attendanceRate ?? '--'
+  const activeBatches = data?.activeBatches ?? 0
 
   const gettingStartedSteps = [
     {
@@ -36,56 +50,135 @@ export default function DashboardClient() {
       title: 'Add Students',
       description: `Add your students manually with their roll number, batch, and parent contact.`,
       icon: Users,
-      comingSoon: false,
-      href: `/dashboard/students`,
+      href: `/dashboard/students?std=${selectedClass}th`,
       actionLabel: 'Go to Students',
+      bgClass: 'bg-indigo-50/80',
+      borderClass: 'border-indigo-100 hover:border-indigo-300',
+      textClass: 'text-indigo-600',
+      iconBg: 'bg-indigo-100/50',
     },
     {
       step: 2,
       title: 'Upload Test Results',
       description: 'Create a test and upload a CSV of marks — ranks and percentages are calculated automatically.',
       icon: ClipboardList,
-      comingSoon: false,
-      href: `/dashboard/tests`,
+      href: `/dashboard/tests?std=${selectedClass}th`,
       actionLabel: 'Go to Tests',
-    },
-    {
-      step: 3,
-      title: 'Invite Parents',
-      description: "Send parents a link to view their child's performance dashboard.",
-      icon: MessageCircle,
-      comingSoon: true,
-      href: '#',
-      actionLabel: 'Coming soon',
+      bgClass: 'bg-emerald-50/80',
+      borderClass: 'border-emerald-100 hover:border-emerald-300',
+      textClass: 'text-emerald-600',
+      iconBg: 'bg-emerald-100/50',
     },
   ]
 
   return (
     <div className="p-6 lg:p-8 max-w-6xl mx-auto">
-      {/* Header */}
-      <div className="mb-8">
-        <div className="flex items-center gap-2 text-sm text-[var(--muted-foreground)] mb-2">
-          <CheckCircle className="w-3.5 h-3.5 text-green-400" />
-          <span>Account active</span>
-          <span className="text-[var(--border)]">·</span>
-          {isLoading && !data ? (
-            <span className="w-24 h-4 bg-white/10 animate-pulse rounded" />
-          ) : (
-            <span>{centerName}</span>
-          )}
+      {/* Header & Class Toggle */}
+      <div className="bg-white rounded-2xl shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] p-6 mb-8 border border-slate-100 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
+        <div>
+          <div className="flex items-center gap-3 mb-2">
+            <div className="p-2 bg-indigo-50 text-indigo-600 rounded-lg">
+              <Building2 className="w-5 h-5" />
+            </div>
+            <h1 className="text-xl sm:text-2xl font-bold text-slate-800">
+              Institute Name:{' '}
+              {isLoading && !data ? (
+                <span className="inline-block w-32 h-6 bg-slate-100 animate-pulse rounded align-middle" />
+              ) : (
+                <span className="text-indigo-600">{centerName}</span>
+              )}
+            </h1>
+          </div>
+          <div className="flex items-center gap-3 text-slate-600">
+            <div className="p-2 bg-emerald-50 text-emerald-600 rounded-lg">
+              <User className="w-4 h-4" />
+            </div>
+            <p className="font-medium text-[15px]">
+              Owner Name:{' '}
+              {isLoading && !data ? (
+                <span className="inline-block w-24 h-5 bg-slate-100 animate-pulse rounded align-middle" />
+              ) : (
+                <span className="text-slate-800">{displayName}</span>
+              )}
+            </p>
+          </div>
         </div>
-        <h1 className="text-2xl sm:text-3xl font-bold">
-          Welcome back,{' '}
-          {isLoading && !data ? (
-            <span className="inline-block w-24 h-7 bg-white/10 animate-pulse rounded align-middle" />
-          ) : (
-            <span className="gradient-text">{displayName.split(' ')[0]}</span>
-          )}{' '}
-          👋
-        </h1>
-        <p className="text-[var(--muted-foreground)] mt-1 text-sm">
-          Here&apos;s a snapshot of your institute today.
-        </p>
+        
+        <div className="flex flex-col sm:flex-row items-center gap-4 w-full lg:w-auto">
+          {/* Notifications Toggle */}
+          <div className="relative w-full sm:w-auto">
+            <button
+              onClick={() => setShowNotifications(!showNotifications)}
+              className="relative p-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl transition-colors border border-slate-200 w-full sm:w-auto flex items-center justify-center"
+            >
+              <Bell className="w-5 h-5" />
+              {unreadCount > 0 && (
+                <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-slate-100" />
+              )}
+            </button>
+            {showNotifications && (
+              <div className="absolute right-0 top-full mt-2 w-80 sm:w-96 bg-white rounded-xl shadow-xl border border-slate-100 z-50 overflow-hidden">
+                <div className="p-4 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
+                  <h3 className="font-semibold text-slate-800">Notifications</h3>
+                  {unreadCount > 0 && (
+                    <span className="text-xs font-medium bg-red-100 text-red-600 px-2 py-0.5 rounded-full">
+                      {unreadCount} new
+                    </span>
+                  )}
+                </div>
+                <div className="max-h-[300px] overflow-y-auto">
+                  {notifications.length === 0 ? (
+                    <div className="p-6 text-center text-slate-500 text-sm">
+                      No recent notifications
+                    </div>
+                  ) : (
+                    <div className="divide-y divide-slate-100">
+                      {notifications.map((notif: any) => (
+                        <div key={notif.id} className="p-4 hover:bg-slate-50 transition-colors">
+                          <div className="flex justify-between items-start mb-1">
+                            <span className="text-sm font-semibold text-slate-800">
+                              {notif.title}
+                            </span>
+                            <span className="text-xs text-slate-400">
+                              {new Date(notif.timestamp).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
+                            </span>
+                          </div>
+                          <p className="text-sm text-slate-600 leading-snug">
+                            {notif.message}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Modern Segmented Toggle */}
+          <div className="flex bg-slate-100/80 p-1.5 rounded-xl shadow-inner border border-slate-200/60 w-full sm:w-auto">
+            <button
+              onClick={() => setSelectedClass('11')}
+              className={`flex-1 sm:flex-none px-8 py-2.5 rounded-lg text-sm font-semibold transition-all duration-300 ${
+                selectedClass === '11' 
+                  ? 'bg-white text-indigo-600 shadow-[0_2px_8px_-2px_rgba(0,0,0,0.1)]' 
+                  : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'
+              }`}
+            >
+              11th
+            </button>
+            <button
+              onClick={() => setSelectedClass('12')}
+              className={`flex-1 sm:flex-none px-8 py-2.5 rounded-lg text-sm font-semibold transition-all duration-300 ${
+                selectedClass === '12' 
+                  ? 'bg-white text-indigo-600 shadow-[0_2px_8px_-2px_rgba(0,0,0,0.1)]' 
+                  : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'
+              }`}
+            >
+              12th
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* Stats grid */}
@@ -105,10 +198,10 @@ export default function DashboardClient() {
           color="blue"
         />
         <StatCard
-          title="Active Parents"
-          value="--"
-          icon={MessageCircle}
-          description="Coming soon"
+          title="Active Batches"
+          value={isLoading && !data ? <Loader2 className="w-5 h-5 animate-spin" /> : activeBatches}
+          icon={Users}
+          description="Running currently"
           color="green"
         />
         <StatCard
@@ -137,44 +230,32 @@ export default function DashboardClient() {
       <section>
         <h2 className="text-lg font-semibold mb-4">Getting Started</h2>
         <div className="grid sm:grid-cols-3 gap-4">
-          {gettingStartedSteps.map(({ step, title, description, icon: Icon, comingSoon, href, actionLabel }) => (
+          {gettingStartedSteps.map(({ step, title, description, icon: Icon, href, actionLabel, bgClass, borderClass, textClass, iconBg }) => (
             <div
               key={step}
-              className="glass-card rounded-2xl p-6 group relative overflow-hidden hover:border-[oklch(0.62_0.22_265/0.4)] transition-all duration-300"
+              className={`rounded-2xl p-6 group relative overflow-hidden transition-all duration-300 border ${bgClass} ${borderClass}`}
             >
               <div className="flex items-start justify-between mb-4">
-                <div className="w-10 h-10 rounded-xl bg-[oklch(0.62_0.22_265/0.12)] flex items-center justify-center group-hover:bg-[oklch(0.62_0.22_265/0.22)] transition-colors">
-                  <Icon className="w-5 h-5 text-[var(--primary)]" />
+                <div className={`w-12 h-12 rounded-xl flex items-center justify-center transition-colors ${iconBg}`}>
+                  <Icon className={`w-6 h-6 ${textClass}`} />
                 </div>
-                <span className="text-3xl font-bold text-[oklch(0.62_0.22_265/0.12)] select-none">
+                <span className={`text-4xl font-bold opacity-10 select-none ${textClass}`}>
                   {step}
                 </span>
               </div>
-              <h3 className="font-semibold mb-2 flex items-center gap-2">
+              <h3 className="font-bold text-slate-800 mb-2 flex items-center gap-2 text-lg">
                 {title}
-                {comingSoon && (
-                  <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-[var(--secondary)] text-[var(--muted-foreground)]">
-                    Soon
-                  </span>
-                )}
               </h3>
-              <p className="text-sm text-[var(--muted-foreground)] leading-relaxed mb-4">
+              <p className="text-sm text-slate-600 leading-relaxed mb-5">
                 {description}
               </p>
-              {comingSoon ? (
-                <div className="flex items-center gap-1 text-xs text-[var(--muted-foreground)]">
-                  {actionLabel}
-                  <ArrowRight className="w-3 h-3" />
-                </div>
-              ) : (
-                <Link
-                  href={href}
-                  className="inline-flex items-center gap-1 text-xs font-medium text-[var(--primary)] hover:underline group-hover:gap-2 transition-all"
-                >
-                  {actionLabel}
-                  <ArrowRight className="w-3 h-3" />
-                </Link>
-              )}
+              <Link
+                href={href}
+                className={`inline-flex items-center gap-1.5 text-sm font-bold hover:underline group-hover:gap-2.5 transition-all ${textClass}`}
+              >
+                {actionLabel}
+                <ArrowRight className="w-4 h-4" />
+              </Link>
             </div>
           ))}
         </div>

@@ -2,7 +2,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 
 export async function GET(req: NextRequest) {
-  // The dashboard is global now, so we don't filter by standard
+  const { searchParams } = new URL(req.url)
+  const classParam = searchParams.get('class')
+  const standard = classParam === '12' ? '12th' : '11th'
 
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -26,13 +28,13 @@ export async function GET(req: NextRequest) {
       ? supabase.from('coaching_centers').select('name').eq('id', centerId).single()
       : Promise.resolve({ data: null }),
     centerId
-      ? supabase.from('students').select('id', { count: 'exact', head: true }).eq('coaching_center_id', centerId)
+      ? supabase.from('students').select('id', { count: 'exact', head: true }).eq('coaching_center_id', centerId).eq('standard', standard)
       : Promise.resolve({ count: 0 }),
     centerId
-      ? supabase.from('tests').select('id', { count: 'exact', head: true }).eq('coaching_center_id', centerId)
+      ? supabase.from('tests').select('id', { count: 'exact', head: true }).eq('coaching_center_id', centerId).eq('standard', standard)
       : Promise.resolve({ count: 0 }),
     centerId
-      ? supabase.from('students').select('id').eq('coaching_center_id', centerId)
+      ? supabase.from('students').select('id, batch').eq('coaching_center_id', centerId).eq('standard', standard)
       : Promise.resolve({ data: [] }),
   ])
 
@@ -51,11 +53,21 @@ export async function GET(req: NextRequest) {
     }
   }
 
+  // Calculate active batches
+  const batches = new Set()
+  if (stdStudents) {
+    stdStudents.forEach((s: any) => {
+      if (s.batch) batches.add(s.batch)
+    })
+  }
+  const activeBatches = batches.size
+
   return NextResponse.json({
     displayName: userProfile?.name ?? user?.email ?? 'there',
     centerName: coachingCenter?.name ?? 'your institute',
     studentCount: studentCount ?? 0,
     testCount: testCount ?? 0,
     attendanceRate,
+    activeBatches,
   })
 }
