@@ -3,27 +3,59 @@
 import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { useRouter } from 'next/navigation'
-import { Plus, X, Building, User, Mail, Key, Copy, CheckCheck, Loader2 } from 'lucide-react'
+import { Plus, X, Building, User, Mail, Key, Copy, CheckCheck, Loader2, Phone, MapPin, Lock, Share2 } from 'lucide-react'
 
-export default function AddCoachingModal() {
+interface LeadData {
+  id: string
+  institute_name: string
+  owner_name: string
+  email_id: string
+  mobile_number: string
+  location: string
+}
+
+interface AddCoachingModalProps {
+  leadData?: LeadData
+  triggerButton?: React.ReactNode
+}
+
+export default function AddCoachingModal({ leadData, triggerButton }: AddCoachingModalProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  const [generatedKey, setGeneratedKey] = useState('')
+  const [result, setResult] = useState<{ code: string; expiryDate: string } | null>(null)
   const [copied, setCopied] = useState(false)
   const [mounted, setMounted] = useState(false)
   const router = useRouter()
+
+  const isFromLead = !!leadData
 
   useEffect(() => {
     setMounted(true)
   }, [])
 
   const [formData, setFormData] = useState({
-    name: '',
-    owner_name: '',
-    email: '',
-    plan_type: 'Standard'
+    name: leadData?.institute_name || '',
+    owner_name: leadData?.owner_name || '',
+    email: leadData?.email_id || '',
+    phone: leadData?.mobile_number || '',
+    city: leadData?.location || '',
+    plan_type: isFromLead ? 'Trial' : 'Standard',
   })
+
+  // Re-sync if leadData changes (e.g., modal opened for different lead)
+  useEffect(() => {
+    if (leadData) {
+      setFormData({
+        name: leadData.institute_name,
+        owner_name: leadData.owner_name,
+        email: leadData.email_id || '',
+        phone: leadData.mobile_number,
+        city: leadData.location,
+        plan_type: 'Trial',
+      })
+    }
+  }, [leadData])
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value })
@@ -35,15 +67,26 @@ export default function AddCoachingModal() {
     setError('')
 
     try {
+      const payload: any = {
+        ...formData,
+        trial_duration: 3,
+      }
+      if (isFromLead && leadData) {
+        payload.lead_id = leadData.id
+      }
+
       const res = await fetch('/api/superadmin/institutes/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(payload),
       })
       const data = await res.json()
 
       if (res.ok && data.success) {
-        setGeneratedKey(data.code)
+        const expiry = new Date()
+        expiry.setDate(expiry.getDate() + 3)
+        const expiryStr = expiry.toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' })
+        setResult({ code: data.code, expiryDate: expiryStr })
         router.refresh()
       } else {
         setError(data.message || 'Failed to create institute')
@@ -56,44 +99,74 @@ export default function AddCoachingModal() {
   }
 
   const handleCopy = () => {
-    navigator.clipboard.writeText(generatedKey)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2500)
+    if (result) {
+      navigator.clipboard.writeText(result.code)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2500)
+    }
+  }
+
+  const handleShare = () => {
+    if (result && navigator.share) {
+      navigator.share({
+        title: 'Trial Institute Code',
+        text: `Your trial institute code is: ${result.code}\nValid till: ${result.expiryDate}\n\nVisit the portal to get started.`,
+      })
+    } else if (result) {
+      const text = `Your trial institute code is: ${result.code}\nValid till: ${result.expiryDate}`
+      navigator.clipboard.writeText(text)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2500)
+    }
   }
 
   const handleClose = () => {
     setIsOpen(false)
-    setGeneratedKey('')
+    setResult(null)
     setError('')
-    setFormData({ name: '', owner_name: '', email: '', plan_type: 'Standard' })
+    if (!leadData) {
+      setFormData({ name: '', owner_name: '', email: '', phone: '', city: '', plan_type: 'Standard' })
+    }
   }
+
+  const defaultTrigger = (
+    <button
+      onClick={() => setIsOpen(true)}
+      className="w-full py-3.5 px-4 bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white rounded-xl font-bold tracking-wide transition-all shadow-[0_0_20px_rgba(225,29,72,0.3)] flex items-center justify-center group"
+    >
+      <Plus className="w-5 h-5 mr-2 group-hover:scale-125 transition-transform" />
+      Add New Coaching
+    </button>
+  )
 
   return (
     <>
-      <button
-        onClick={() => setIsOpen(true)}
-        className="w-full py-3.5 px-4 bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white rounded-xl font-bold tracking-wide transition-all shadow-[0_0_20px_rgba(225,29,72,0.3)] flex items-center justify-center group"
-      >
-        <Plus className="w-5 h-5 mr-2 group-hover:scale-125 transition-transform" />
-        Add New Coaching
-      </button>
+      <div onClick={() => setIsOpen(true)}>
+        {triggerButton || defaultTrigger}
+      </div>
 
       {isOpen && mounted && createPortal(
         <>
           {/* Backdrop */}
-          <div 
+          <div
             className="fixed inset-0 z-[90] bg-black/70 backdrop-blur-sm animate-in fade-in duration-300"
             onClick={handleClose}
           />
-          
-          {/* Slide-over Drawer (Half Screen on Desktop, Full on Mobile) */}
+
+          {/* Slide-over Drawer */}
           <div className="fixed inset-y-0 right-0 z-[100] w-full md:w-[50vw] max-w-2xl bg-[#0a0a0a] border-l border-white/10 shadow-2xl flex flex-col animate-in slide-in-from-right duration-300">
-            
+
             {/* Header */}
             <div className="flex justify-between items-center px-8 py-6 border-b border-white/5 shrink-0 bg-black/20">
               <div>
-                <h2 className="text-2xl font-black text-white tracking-tight">Add New Institute</h2>
-                <p className="text-sm text-white/40 mt-1">Provision a new coaching center and generate a secure access key.</p>
+                <h2 className="text-2xl font-black text-white tracking-tight">
+                  {isFromLead ? 'Create Trial Institute' : 'Add New Institute'}
+                </h2>
+                <p className="text-sm text-white/40 mt-1">
+                  {isFromLead
+                    ? 'Pre-filled from lead data. Trial locked to 3 days.'
+                    : 'Provision a new coaching center and generate a secure access key.'}
+                </p>
               </div>
               <button onClick={handleClose} className="text-white/40 hover:text-white transition-colors p-2 rounded-xl hover:bg-white/5 border border-transparent hover:border-white/10">
                 <X className="w-6 h-6" />
@@ -102,27 +175,33 @@ export default function AddCoachingModal() {
 
             {/* Body */}
             <div className="flex-1 overflow-y-auto">
-              {generatedKey ? (
+              {result ? (
                 <div className="p-10 flex flex-col min-h-full items-center justify-center text-center gap-8 animate-in fade-in zoom-in-95 duration-500">
                   <div className="w-24 h-24 rounded-full bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20 shadow-[0_0_30px_rgba(16,185,129,0.15)]">
                     <Key className="w-10 h-10 text-emerald-400" />
                   </div>
                   <div>
-                    <h3 className="text-4xl font-black text-white mb-4 tracking-tight">Saved & Generated!</h3>
+                    <h3 className="text-3xl font-black text-white mb-3 tracking-tight">Institute Created Successfully!</h3>
                     <p className="text-base text-white/50 max-w-md mx-auto leading-relaxed">
-                      The institute has been successfully added to your dashboard. Share this secure key with the owner.
+                      Share the code below with the institute owner to get started.
                     </p>
                   </div>
-                  
-                  <div className="w-full max-w-md bg-black/60 border border-emerald-500/30 rounded-2xl p-8 relative overflow-hidden">
+
+                  <div className="w-full max-w-md bg-black/60 border border-emerald-500/30 rounded-2xl p-8 relative overflow-hidden space-y-4">
                     <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/10 blur-[50px] rounded-full pointer-events-none" />
-                    <p className="text-sm font-bold text-emerald-400/50 uppercase tracking-[0.2em] mb-4">Assigned Key</p>
-                    <div className="text-5xl font-black tracking-[0.15em] text-emerald-400 font-mono select-all">
-                      {generatedKey}
+                    <div>
+                      <p className="text-sm font-bold text-emerald-400/50 uppercase tracking-[0.2em] mb-2">Institute Code</p>
+                      <div className="text-5xl font-black tracking-[0.15em] text-emerald-400 font-mono select-all">
+                        {result.code}
+                      </div>
+                    </div>
+                    <div className="border-t border-white/10 pt-4">
+                      <p className="text-sm font-bold text-amber-400/50 uppercase tracking-[0.2em] mb-1">Trial Valid Till</p>
+                      <div className="text-2xl font-bold text-amber-400">{result.expiryDate}</div>
                     </div>
                   </div>
 
-                  <div className="w-full max-w-md flex flex-col gap-4 mt-4">
+                  <div className="w-full max-w-md flex flex-col gap-4 mt-2">
                     <button
                       onClick={handleCopy}
                       className={`w-full py-4 rounded-xl font-bold text-base transition-all flex items-center justify-center gap-3 ${
@@ -131,19 +210,32 @@ export default function AddCoachingModal() {
                           : 'bg-white text-black hover:bg-gray-200'
                       }`}
                     >
-                      {copied ? <><CheckCheck className="w-5 h-5" /> Copied to Clipboard!</> : <><Copy className="w-5 h-5" /> Copy Secret Key</>}
+                      {copied ? <><CheckCheck className="w-5 h-5" /> Copied!</> : <><Copy className="w-5 h-5" /> Copy Code</>}
+                    </button>
+                    <button
+                      onClick={handleShare}
+                      className="w-full py-4 rounded-xl font-bold text-base transition-all flex items-center justify-center gap-3 bg-blue-600 hover:bg-blue-500 text-white"
+                    >
+                      <Share2 className="w-5 h-5" /> Share Code
                     </button>
                     <button onClick={handleClose} className="w-full py-4 text-white/40 hover:text-white font-medium transition-colors border border-transparent hover:border-white/10 rounded-xl">
-                      Done & Close Drawer
+                      Done & Close
                     </button>
                   </div>
                 </div>
               ) : (
-                <form onSubmit={handleSubmit} className="p-8 space-y-8 max-w-xl mx-auto w-full pt-12">
+                <form onSubmit={handleSubmit} className="p-8 space-y-6 max-w-xl mx-auto w-full pt-10">
                   {error && (
                     <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm flex items-center gap-3 font-medium">
                       <X className="w-4 h-4 shrink-0" />
                       {error}
+                    </div>
+                  )}
+
+                  {isFromLead && (
+                    <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400 text-xs flex items-center gap-2">
+                      <Lock className="w-4 h-4 shrink-0" />
+                      Plan locked to Trial (3 days) — converting from lead.
                     </div>
                   )}
 
@@ -178,31 +270,68 @@ export default function AddCoachingModal() {
                   </div>
 
                   <div className="space-y-2">
-                    <label className="text-xs font-bold text-white/50 uppercase tracking-widest mb-2 block">Subscription Plan *</label>
-                    <div className="grid grid-cols-2 gap-4">
-                      <button type="button" onClick={() => setFormData({...formData, plan_type: 'Standard'})}
-                        className={`py-4 px-4 rounded-xl border transition-all text-center flex flex-col items-center justify-center gap-1 ${
-                          formData.plan_type === 'Standard' 
-                          ? 'bg-red-500/10 border-red-500/40 text-red-400 font-bold shadow-[0_0_15px_rgba(225,29,72,0.1)]' 
-                          : 'bg-black/40 border-white/10 text-white/50 hover:border-white/20'
-                        }`}>
-                        <span className="text-lg">Standard</span>
-                        <span className="text-[10px] uppercase tracking-widest opacity-60">1 Year Access</span>
-                      </button>
-                      <button type="button" onClick={() => setFormData({...formData, plan_type: 'Trial'})}
-                        className={`py-4 px-4 rounded-xl border transition-all text-center flex flex-col items-center justify-center gap-1 ${
-                          formData.plan_type === 'Trial' 
-                          ? 'bg-amber-500/10 border-amber-500/40 text-amber-400 font-bold shadow-[0_0_15px_rgba(245,158,11,0.1)]' 
-                          : 'bg-black/40 border-white/10 text-white/50 hover:border-white/20'
-                        }`}>
-                        <span className="text-lg">Trial Mode</span>
-                        <span className="text-[10px] uppercase tracking-widest opacity-60">14 Days Free</span>
-                      </button>
+                    <label className="text-xs font-bold text-white/50 uppercase tracking-widest">Phone Number</label>
+                    <div className="relative">
+                      <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/30" />
+                      <input name="phone" type="tel" value={formData.phone} onChange={handleChange}
+                        className="w-full bg-black/40 border border-white/10 rounded-xl py-4 pl-12 pr-4 text-white placeholder-white/20 focus:outline-none focus:border-red-500/50 focus:ring-1 focus:ring-red-500/50 transition-all"
+                        placeholder="+91 98765 43210" />
                     </div>
                   </div>
 
-                  {/* Fixed bottom actions */}
-                  <div className="pt-8 mt-4 flex flex-col sm:flex-row gap-4">
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-white/50 uppercase tracking-widest">City / Location</label>
+                    <div className="relative">
+                      <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/30" />
+                      <input name="city" type="text" value={formData.city} onChange={handleChange}
+                        className="w-full bg-black/40 border border-white/10 rounded-xl py-4 pl-12 pr-4 text-white placeholder-white/20 focus:outline-none focus:border-red-500/50 focus:ring-1 focus:ring-red-500/50 transition-all"
+                        placeholder="e.g. Pune" />
+                    </div>
+                  </div>
+
+                  {!isFromLead && (
+                    <div className="space-y-2">
+                      <label className="text-xs font-bold text-white/50 uppercase tracking-widest mb-2 block">Subscription Plan *</label>
+                      <div className="grid grid-cols-2 gap-4">
+                        <button type="button" onClick={() => setFormData({...formData, plan_type: 'Standard'})}
+                          className={`py-4 px-4 rounded-xl border transition-all text-center flex flex-col items-center justify-center gap-1 ${
+                            formData.plan_type === 'Standard'
+                            ? 'bg-red-500/10 border-red-500/40 text-red-400 font-bold shadow-[0_0_15px_rgba(225,29,72,0.1)]'
+                            : 'bg-black/40 border-white/10 text-white/50 hover:border-white/20'
+                          }`}>
+                          <span className="text-lg">Standard</span>
+                          <span className="text-[10px] uppercase tracking-widest opacity-60">1 Year Access</span>
+                        </button>
+                        <button type="button" onClick={() => setFormData({...formData, plan_type: 'Trial'})}
+                          className={`py-4 px-4 rounded-xl border transition-all text-center flex flex-col items-center justify-center gap-1 ${
+                            formData.plan_type === 'Trial'
+                            ? 'bg-amber-500/10 border-amber-500/40 text-amber-400 font-bold shadow-[0_0_15px_rgba(245,158,11,0.1)]'
+                            : 'bg-black/40 border-white/10 text-white/50 hover:border-white/20'
+                          }`}>
+                          <span className="text-lg">Trial Mode</span>
+                          <span className="text-[10px] uppercase tracking-widest opacity-60">14 Days Free</span>
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {isFromLead && (
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="py-4 px-4 rounded-xl border border-amber-500/40 bg-amber-500/10 text-amber-400 font-bold text-center flex flex-col items-center justify-center gap-1">
+                        <Lock className="w-4 h-4 mb-1 opacity-60" />
+                        <span className="text-lg">Trial Mode</span>
+                        <span className="text-[10px] uppercase tracking-widest opacity-60">3 Days</span>
+                      </div>
+                      <div className="py-4 px-4 rounded-xl border border-emerald-500/40 bg-emerald-500/10 text-emerald-400 font-bold text-center flex flex-col items-center justify-center gap-1">
+                        <Lock className="w-4 h-4 mb-1 opacity-60" />
+                        <span className="text-lg">Active</span>
+                        <span className="text-[10px] uppercase tracking-widest opacity-60">Immediately</span>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Actions */}
+                  <div className="pt-4 flex flex-col sm:flex-row gap-4">
                     <button type="button" onClick={handleClose}
                       className="w-full sm:w-1/3 py-4 bg-white/5 hover:bg-white/10 text-white font-bold rounded-xl transition-colors order-2 sm:order-1 border border-white/10">
                       Cancel
@@ -210,9 +339,9 @@ export default function AddCoachingModal() {
                     <button type="submit" disabled={loading}
                       className="w-full sm:w-2/3 py-4 bg-white hover:bg-gray-200 text-black font-bold rounded-xl transition-all disabled:opacity-50 flex items-center justify-center gap-2 shadow-lg order-1 sm:order-2 hover:scale-[1.02] active:scale-[0.98]">
                       {loading ? (
-                        <><Loader2 className="w-5 h-5 animate-spin" /> Provisioning...</>
+                        <><Loader2 className="w-5 h-5 animate-spin" /> Creating...</>
                       ) : (
-                        'Save & Generate Key'
+                        isFromLead ? 'Create Trial Institute' : 'Save & Generate Key'
                       )}
                     </button>
                   </div>

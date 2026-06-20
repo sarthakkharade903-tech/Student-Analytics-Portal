@@ -1,5 +1,8 @@
+'use client'
+
 import Link from 'next/link'
 import Image from 'next/image'
+import RequestDemoModal from '@/components/RequestDemoModal'
 import {
   ArrowRight,
   BarChart3,
@@ -16,6 +19,7 @@ import {
   LineChart,
   BookOpen,
   ChevronRight,
+  Sparkles,
 } from 'lucide-react'
 
 /* ─────────────────────────────────────────────────
@@ -140,6 +144,7 @@ export default function LandingPage() {
           </div>
 
           <div className="sap-nav-ctas">
+            <RequestDemoModal />
             <Link href="/login" className="sap-btn sap-btn-ghost">Admin Login</Link>
             <Link href="/parent/login" className="sap-btn sap-btn-primary">Student Login</Link>
           </div>
@@ -177,6 +182,12 @@ export default function LandingPage() {
               <Link href="/login" className="sap-btn sap-btn-outline sap-btn-lg">
                 Admin Login
               </Link>
+            </div>
+
+            {/* Request Demo CTA */}
+            <div className="mt-4 flex items-center gap-3">
+              <RequestDemoModal />
+              <span className="text-sm text-[var(--muted-foreground,#6b7280)]">Get a free 3-day trial for your institute</span>
             </div>
           </div>
 

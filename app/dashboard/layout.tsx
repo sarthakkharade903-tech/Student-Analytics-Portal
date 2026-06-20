@@ -28,17 +28,19 @@ export default async function DashboardLayout({
   let features = null
   let logoUrl: string | null = null
   let daysRemaining = 100 // default safe
+  let planType = 'Standard'
 
   if (profile?.coaching_center_id) {
     const { data: center } = await supabase
       .from('coaching_centers')
-      .select('is_active, account_status, end_date, features, logo_url')
+      .select('is_active, account_status, end_date, features, logo_url, plan_type')
       .eq('id', profile.coaching_center_id)
       .single()
 
     if (center) {
       features = center.features
       logoUrl = center.logo_url
+      planType = center.plan_type || 'Standard'
       const endDate = center.end_date ? new Date(center.end_date) : null
       const isExpired = endDate ? endDate < new Date() : false
       
@@ -55,10 +57,14 @@ export default async function DashboardLayout({
   }
 
 if (isBlocked) {
-  // Import dynamically or simply use a generic return to prevent child rendering
   const BlockedAccess = (await import('@/components/ui/BlockedAccess')).default
-  return <BlockedAccess message="Your institute's platform access has been suspended or the subscription has expired." />
+  const message = planType === 'Trial'
+    ? "Your 3-day trial has expired. Please contact us to activate a full plan and continue using the platform."
+    : "Your institute's platform access has been suspended or the subscription has expired."
+  const isTrialExpired = planType === 'Trial'
+  return <BlockedAccess message={message} isTrialExpired={isTrialExpired} />
 }
+
 
 const ExpirationBanner = (await import('@/components/ui/ExpirationBanner')).default
 

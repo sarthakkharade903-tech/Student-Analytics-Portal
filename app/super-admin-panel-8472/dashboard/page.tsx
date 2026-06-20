@@ -1,6 +1,6 @@
 import { createAdminClient } from '@/lib/supabase/server'
 import Link from 'next/link'
-import { Building2, CheckCircle, XCircle, AlertTriangle, Clock, Key } from 'lucide-react'
+import { Building2, CheckCircle, XCircle, AlertTriangle, Clock, Key, Bell, Users } from 'lucide-react'
 import AddCoachingModal from './AddCoachingModal'
 import DeleteInstituteModal from './DeleteInstituteModal'
 
@@ -41,6 +41,16 @@ export default async function SuperAdminDashboard() {
     console.error('Error fetching codes:', codesError)
   }
 
+  // Fetch demo leads
+  const { data: leadsData } = await supabase
+    .from('demo_leads')
+    .select('id, status')
+
+  const leads = leadsData || []
+  const totalLeads = leads.length
+  const pendingLeads = leads.filter((l: any) => l.status === 'Pending').length
+  const convertedLeads = leads.filter((l: any) => l.status === 'Converted').length
+
   const list: Institute[] = institutesData || []
   const codes = codesData || []
 
@@ -72,12 +82,49 @@ export default async function SuperAdminDashboard() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left Side: Metrics */}
-        <div className="lg:col-span-2 grid grid-cols-2 md:grid-cols-3 gap-4">
-          <MetricCard title="Total Institutes" value={total} icon={Building2} color="from-blue-500 to-cyan-500" />
-          <MetricCard title="Active Plans" value={active} icon={CheckCircle} color="from-emerald-400 to-green-600" />
-          <MetricCard title="Trial Accounts" value={trial} icon={Clock} color="from-amber-400 to-yellow-600" />
-          <MetricCard title="Expired" value={expired} icon={XCircle} color="from-orange-500 to-red-500" />
-          <MetricCard title="Suspended" value={suspended} icon={AlertTriangle} color="from-rose-500 to-red-700" />
+        <div className="lg:col-span-2 space-y-4">
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+            <MetricCard title="Total Institutes" value={total} icon={Building2} color="from-blue-500 to-cyan-500" />
+            <MetricCard title="Active Plans" value={active} icon={CheckCircle} color="from-emerald-400 to-green-600" />
+            <MetricCard title="Trial Accounts" value={trial} icon={Clock} color="from-amber-400 to-yellow-600" />
+            <MetricCard title="Expired" value={expired} icon={XCircle} color="from-orange-500 to-red-500" />
+            <MetricCard title="Suspended" value={suspended} icon={AlertTriangle} color="from-rose-500 to-red-700" />
+          </div>
+
+          {/* Lead Notifications Card */}
+          <Link href="/super-admin-panel-8472/dashboard/leads" className="block group">
+            <div className="bg-black/40 backdrop-blur-xl border border-white/10 hover:border-violet-500/40 rounded-3xl p-5 transition-all duration-300 hover:bg-white/5 relative overflow-hidden shadow-lg">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-violet-500 to-purple-600 opacity-10 rounded-bl-full group-hover:opacity-20 transition-opacity" />
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center shadow-lg relative">
+                    <Bell className="w-5 h-5 text-white" />
+                    {pendingLeads > 0 && (
+                      <span className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-500 rounded-full text-[10px] font-black text-white flex items-center justify-center">{pendingLeads}</span>
+                    )}
+                  </div>
+                  <div>
+                    <div className="font-bold text-white text-base">Lead Notifications</div>
+                    <div className="text-xs text-white/40 mt-0.5">Demo requests from institutes</div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-6 text-right">
+                  <div>
+                    <div className="text-2xl font-black text-white">{totalLeads}</div>
+                    <div className="text-[10px] text-white/40 uppercase tracking-widest">Total</div>
+                  </div>
+                  <div>
+                    <div className="text-2xl font-black text-amber-400">{pendingLeads}</div>
+                    <div className="text-[10px] text-amber-400/60 uppercase tracking-widest">Pending</div>
+                  </div>
+                  <div>
+                    <div className="text-2xl font-black text-emerald-400">{convertedLeads}</div>
+                    <div className="text-[10px] text-emerald-400/60 uppercase tracking-widest">Converted</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </Link>
         </div>
 
         {/* Right Side: Add Coaching Widget */}

@@ -22,7 +22,7 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json()
-    const { name, owner_name, email, phone, city, plan_type, start_date, end_date, account_status } = body
+    const { name, owner_name, email, phone, city, plan_type, start_date, end_date, account_status, trial_duration, lead_id } = body
 
     if (!name || !owner_name || !email) {
       return NextResponse.json({ success: false, message: 'Missing required fields' }, { status: 400 })
@@ -34,7 +34,7 @@ export async function POST(request: Request) {
     const startDate = start_date ? new Date(start_date) : new Date()
     const endDate = end_date ? new Date(end_date) : (() => {
       const d = new Date()
-      if (plan_type === 'Trial') d.setDate(d.getDate() + 14)
+      if (plan_type === 'Trial') d.setDate(d.getDate() + (trial_duration || 3))
       else d.setFullYear(d.getFullYear() + 1)
       return d
     })()
@@ -101,6 +101,11 @@ export async function POST(request: Request) {
       event_type: 'INSTITUTE_CREATED',
       description: `Super Admin created institute "${name}" and generated code ${accessCode}`
     })
+
+    // 4. If created from a lead, mark it as Converted
+    if (lead_id) {
+      await supabase.from('demo_leads').update({ status: 'Converted' }).eq('id', lead_id)
+    }
 
     return NextResponse.json({ success: true, code: accessCode })
 
