@@ -20,7 +20,17 @@ export default async function DashboardLayout({
   // Subscription Stopper Logic
   const { data: profile } = await supabase
     .from('users')
-    .select('coaching_center_id')
+    .select(`
+      coaching_center_id,
+      coaching_centers (
+        is_active,
+        account_status,
+        end_date,
+        features,
+        logo_url,
+        plan_type
+      )
+    `)
     .eq('id', user.id)
     .single()
 
@@ -30,12 +40,11 @@ export default async function DashboardLayout({
   let daysRemaining = 100 // default safe
   let planType = 'Standard'
 
-  if (profile?.coaching_center_id) {
-    const { data: center } = await supabase
-      .from('coaching_centers')
-      .select('is_active, account_status, end_date, features, logo_url, plan_type')
-      .eq('id', profile.coaching_center_id)
-      .single()
+  if (profile?.coaching_center_id && profile.coaching_centers) {
+    // Handle array or single object depending on PostgREST relation inference
+    const center = Array.isArray(profile.coaching_centers) 
+      ? profile.coaching_centers[0] 
+      : profile.coaching_centers
 
     if (center) {
       features = center.features
