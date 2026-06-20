@@ -103,7 +103,7 @@ export default function QuickFeeEntryPage({ params }: { params: Promise<{ classI
         .select('id, name, roll_no, batch')
         .eq('coaching_center_id', profile.coaching_center_id)
         .or(`name.ilike.%${query}%,roll_no.ilike.%${query}%`)
-        .limit(8)
+        .limit(50)
 
       // Filter by class using the standard column (same as the main students API)
       // DO NOT use batch name pattern — batches like "CET A", "JEE" don't contain "12"
@@ -115,7 +115,25 @@ export default function QuickFeeEntryPage({ params }: { params: Promise<{ classI
 
       const { data } = await studentQuery
 
-      setSearchResults(data || [])
+      let results = data || []
+      
+      // Sort exact matches to the top, then startsWith
+      const q = query.toLowerCase()
+      results.sort((a, b) => {
+        const aExact = a.roll_no.toLowerCase() === q || a.name.toLowerCase() === q
+        const bExact = b.roll_no.toLowerCase() === q || b.name.toLowerCase() === q
+        if (aExact && !bExact) return -1
+        if (!aExact && bExact) return 1
+        
+        const aStarts = a.roll_no.toLowerCase().startsWith(q) || a.name.toLowerCase().startsWith(q)
+        const bStarts = b.roll_no.toLowerCase().startsWith(q) || b.name.toLowerCase().startsWith(q)
+        if (aStarts && !bStarts) return -1
+        if (!aStarts && bStarts) return 1
+        
+        return 0
+      })
+
+      setSearchResults(results.slice(0, 8))
       setShowDropdown(true)
       setSearching(false)
     }, 250)

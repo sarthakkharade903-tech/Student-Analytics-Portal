@@ -130,15 +130,19 @@ function ImportStudentsForm() {
   // Fetch coaching_center_id on mount
   useEffect(() => {
     const load = async () => {
-      const supabase = createClient()
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
-      const { data: profile } = await supabase
-        .from('users')
-        .select('coaching_center_id')
-        .eq('id', user.id)
-        .single()
-      if (profile?.coaching_center_id) setCoachingCenterId(profile.coaching_center_id)
+      try {
+        const supabase = createClient()
+        const { data: { user } } = await supabase.auth.getUser()
+        if (!user) return
+        const { data: profile } = await supabase
+          .from('users')
+          .select('coaching_center_id')
+          .eq('id', user.id)
+          .single()
+        if (profile?.coaching_center_id) setCoachingCenterId(profile.coaching_center_id)
+      } catch (err) {
+        console.error('Error fetching user or profile:', err)
+      }
     }
     load()
   }, [])
