@@ -2,7 +2,7 @@ import { Suspense } from 'react'
 import DashboardClient from './DashboardClient'
 
 export const metadata = {
-  title: 'Dashboard – Coaching Analytics Portal',
+  title: 'Dashboard',
   description: 'Overview of your coaching center performance.',
 }
 

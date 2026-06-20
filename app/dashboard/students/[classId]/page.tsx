@@ -3,7 +3,7 @@ import StudentTable from '@/components/dashboard/StudentTable'
 import { Users } from 'lucide-react'
 
 export const metadata = {
-  title: 'Students – Parent Analytics Portal',
+  title: 'Students',
   description: 'Manage your student roster.',
 }
 

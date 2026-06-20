@@ -8,7 +8,10 @@ const geist = Geist({subsets:['latin'],variable:'--font-sans'});
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'Coaching Analytics Portal – Keep Parents Informed Automatically',
+  title: {
+    template: '%s | StudentIQ',
+    default: 'StudentIQ | Coaching Analytics Portal',
+  },
   description:
     'Help coaching institutes track student performance and keep parents updated without manual calls. Built for JEE, NEET, MHT-CET and more.',
   keywords: 'coaching institute, student analytics, parent portal, JEE, NEET',

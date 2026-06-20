@@ -2,8 +2,8 @@ import { Suspense } from 'react'
 import StudentsClient from './StudentsClient'
 
 export const metadata = {
-  title: 'Students – Coaching Analytics Portal',
-  description: 'Manage your student roster.',
+  title: 'Students',
+  description: 'Manage students, batches, and view profiles.',
 }
 
 export default function StudentsPage() {

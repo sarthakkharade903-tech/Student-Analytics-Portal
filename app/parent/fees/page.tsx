@@ -5,7 +5,8 @@ import { createServerClient } from '@supabase/ssr'
 import FeeDashboardClient from './FeeDashboardClient'
 
 export const metadata = {
-  title: 'Fees - Parent Portal'
+  title: 'Fees',
+  description: 'View your fee summary, installments, and payment history.'
 }
 
 export default async function ParentFeesPage() {

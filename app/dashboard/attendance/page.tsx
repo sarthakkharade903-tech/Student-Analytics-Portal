@@ -3,7 +3,8 @@ import { redirect } from 'next/navigation'
 import AttendanceClient from './AttendanceClient'
 
 export const metadata = {
-  title: 'Attendance | Student Analytics Portal',
+  title: 'Attendance',
+  description: 'Track and manage student attendance.',
 }
 
 export default async function AttendancePage({
