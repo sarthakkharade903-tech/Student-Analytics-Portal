@@ -1,7 +1,7 @@
 'use client'
 
 import { 
-  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer 
+  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Brush 
 } from 'recharts'
 
 interface ChartData {
@@ -15,6 +15,9 @@ export default function PerformanceChart({ data }: { data: ChartData[] }) {
   if (!data || data.length === 0) {
     return <div className="h-full flex items-center justify-center text-slate-500 text-sm">No data available</div>
   }
+
+  const startIndex = Math.max(0, data.length - 6)
+  const endIndex = Math.max(0, data.length - 1)
 
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
@@ -75,8 +78,20 @@ export default function PerformanceChart({ data }: { data: ChartData[] }) {
           strokeWidth={3}
           fillOpacity={1} 
           fill="url(#colorPerc)" 
+          dot={{ r: 4, fill: '#0f1729', stroke: '#3b82f6', strokeWidth: 2 }}
           activeDot={{ r: 6, fill: '#3b82f6', stroke: '#fff', strokeWidth: 2 }}
         />
+        {data.length > 1 && (
+          <Brush 
+            dataKey="name" 
+            height={30} 
+            stroke="#475569" 
+            fill="#0f1729"
+            travellerWidth={10}
+            startIndex={startIndex}
+            endIndex={endIndex}
+          />
+        )}
       </AreaChart>
     </ResponsiveContainer>
   )

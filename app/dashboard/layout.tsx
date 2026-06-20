@@ -26,17 +26,19 @@ export default async function DashboardLayout({
 
   let isBlocked = false
   let features = null
+  let logoUrl: string | null = null
   let daysRemaining = 100 // default safe
 
   if (profile?.coaching_center_id) {
     const { data: center } = await supabase
       .from('coaching_centers')
-      .select('is_active, account_status, end_date, features')
+      .select('is_active, account_status, end_date, features, logo_url')
       .eq('id', profile.coaching_center_id)
       .single()
 
     if (center) {
       features = center.features
+      logoUrl = center.logo_url
       const endDate = center.end_date ? new Date(center.end_date) : null
       const isExpired = endDate ? endDate < new Date() : false
       
@@ -62,7 +64,7 @@ const ExpirationBanner = (await import('@/components/ui/ExpirationBanner')).defa
 
 return (
     <div className="flex min-h-screen bg-[var(--background)]">
-      <Sidebar features={features} />
+      <Sidebar features={features} logoUrl={logoUrl} />
       <main className="flex-1 overflow-y-auto relative flex flex-col">
         <ExpirationBanner daysRemaining={daysRemaining} />
         <div className="absolute top-6 left-6 z-50 lg:hidden mt-12">

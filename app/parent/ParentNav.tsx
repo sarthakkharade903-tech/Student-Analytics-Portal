@@ -5,8 +5,9 @@ import Link from 'next/link'
 import { useRouter, usePathname } from 'next/navigation'
 import { BarChart3, Bell, LogOut, Loader2, AlertCircle, ArrowLeft, BookOpen, AlertTriangle, Trophy } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
+import Image from 'next/image'
 
-export default function ParentNav({ studentId }: { studentId: string | null }) {
+export default function ParentNav({ studentId, logoUrl }: { studentId: string | null, logoUrl?: string | null }) {
   const router = useRouter()
   const pathname = usePathname()
   
@@ -165,9 +166,21 @@ export default function ParentNav({ studentId }: { studentId: string | null }) {
           </button>
 
           <Link href="/parent" className="flex items-center gap-2.5 group">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-500/20 group-hover:shadow-blue-500/40 transition-all">
-              <BarChart3 className="w-4 h-4 text-white" />
-            </div>
+            {logoUrl ? (
+              <div className="relative w-8 h-8 rounded-full overflow-hidden border border-slate-700 flex items-center justify-center bg-white shadow-lg shadow-white/5 flex-shrink-0 group-hover:shadow-white/10 transition-all">
+                <Image
+                  src={logoUrl}
+                  alt="Academy Logo"
+                  fill
+                  className="object-cover"
+                  unoptimized
+                />
+              </div>
+            ) : (
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-500/20 group-hover:shadow-blue-500/40 transition-all">
+                <BarChart3 className="w-4 h-4 text-white" />
+              </div>
+            )}
             <span className="font-semibold tracking-tight text-white transition-colors">
               Student Portal
             </span>

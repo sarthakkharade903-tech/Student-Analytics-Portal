@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { EditProfileDialog } from './EditProfileDialog'
 import { FeatureManagement } from './FeatureManagement'
+import LogoUploader from '@/components/dashboard/LogoUploader'
 import {
   Building2,
   Mail,
@@ -247,6 +248,9 @@ export default async function SettingsPage() {
               label="Phone Number"
               value={coachingCenter?.phone ?? '—'}
             />
+            <div className="mt-4">
+              <LogoUploader currentLogoUrl={coachingCenter?.logo_url} />
+            </div>
           </div>
         </SectionCard>
 

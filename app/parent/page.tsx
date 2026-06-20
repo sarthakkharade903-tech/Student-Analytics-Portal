@@ -122,7 +122,7 @@ export default async function ParentDashboard() {
     }
   }
 
-  const radius = 28
+  const radius = 22
   const circumference = 2 * Math.PI * radius
   const strokeDashoffset = circumference - (dailyAttendancePercentage / 100) * circumference
 
@@ -289,173 +289,84 @@ export default async function ParentDashboard() {
       ) : (
         <>
           {/* SUMMARY CARDS */}
-          <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             {/* Latest Score */}
-            <div className="bg-[#1a2540] border border-slate-800 rounded-2xl p-5 hover:border-blue-500 hover:shadow-md transition-all duration-300 group shadow-sm">
-              <div className="flex items-center gap-3 mb-3">
-                <div className="p-2 rounded-lg bg-blue-500/10 text-blue-400 group-hover:bg-blue-600 group-hover:text-white transition-colors">
+            <div className="bg-[#1a2540] border border-slate-800 rounded-2xl p-4 hover:border-blue-500 hover:shadow-md transition-all duration-300 group shadow-sm flex flex-col justify-between">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="p-1.5 rounded-lg bg-blue-500/10 text-blue-400 group-hover:bg-blue-600 group-hover:text-white transition-colors">
                   <Target className="w-4 h-4" />
                 </div>
                 <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Latest Score</h3>
               </div>
-              <div className="flex items-baseline gap-1">
-                <span className="text-2xl font-bold text-white">{latestScore.is_absent ? '0' : latestScore.total}</span>
-                <span className="text-sm text-slate-400">/ {latestScore.tests?.max_marks || '-'}</span>
-              </div>
-            </div>
-
-            {/* Last Attendance (replaces Percentage) */}
-            <div className="bg-[#1a2540] border border-slate-800 rounded-2xl p-5 hover:border-teal-500 hover:shadow-md transition-all duration-300 group shadow-sm">
-              <div className="flex items-center gap-3 mb-3">
-                <div className="p-2 rounded-lg bg-teal-500/10 text-teal-400 group-hover:bg-teal-600 group-hover:text-white transition-colors">
-                  <Calendar className="w-4 h-4" />
-                </div>
-                <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Last Attendance</h3>
-              </div>
-              <div className="flex items-baseline gap-1 mb-2">
-                <span className="text-2xl font-bold text-white">{dailyAttendancePercentage}</span>
-                <span className="text-sm text-slate-400">%</span>
-              </div>
-              <div className="flex items-center gap-2 text-[10px] font-semibold">
-                <span className="px-1.5 py-0.5 rounded bg-green-500/10 text-green-400 border border-green-500/20">{presentDays}P</span>
-                <span className="px-1.5 py-0.5 rounded bg-red-500/10 text-red-400 border border-red-500/20">{absentDays}A</span>
-                <span className="text-slate-500">/ {totalDays}D</span>
+              <div className="flex items-baseline justify-center gap-1.5 mt-1">
+                <span className="text-3xl font-bold text-white">{latestScore.is_absent ? '0' : latestScore.total}</span>
+                <span className="text-sm text-slate-400 font-medium">/ {latestScore.tests?.max_marks || '-'}</span>
               </div>
             </div>
 
             {/* Latest Rank */}
-            <div className="bg-[#1a2540] border border-slate-800 rounded-2xl p-5 hover:border-purple-500 hover:shadow-md transition-all duration-300 group shadow-sm">
-              <div className="flex items-center gap-3 mb-3">
-                <div className="p-2 rounded-lg bg-purple-500/10 text-purple-400 group-hover:bg-purple-600 group-hover:text-white transition-colors">
+            <div className="bg-[#1a2540] border border-slate-800 rounded-2xl p-4 hover:border-purple-500 hover:shadow-md transition-all duration-300 group shadow-sm flex flex-col justify-between">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="p-1.5 rounded-lg bg-purple-500/10 text-purple-400 group-hover:bg-purple-600 group-hover:text-white transition-colors">
                   <Award className="w-4 h-4" />
                 </div>
                 <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Latest Rank</h3>
               </div>
-              <div className="flex items-baseline gap-1">
-                <span className="text-2xl font-bold text-white">{latestScore.rank || '-'}</span>
+              <div className="flex items-baseline justify-center gap-1.5 mt-1">
+                <span className="text-3xl font-bold text-white">{latestScore.rank || '-'}</span>
+                <span className="text-sm text-slate-400 font-medium">/ {latestTestScores.length}</span>
               </div>
             </div>
 
-            {/* Total Percentile */}
-            <div className="bg-[#1a2540] border border-slate-800 rounded-2xl p-5 hover:border-pink-500 hover:shadow-md transition-all duration-300 group shadow-sm">
-              <div className="flex items-center gap-3 mb-3">
-                <div className="p-2 rounded-lg bg-pink-500/10 text-pink-400 group-hover:bg-pink-600 group-hover:text-white transition-colors">
+            {/* Latest Total Percentile */}
+            <div className="bg-[#1a2540] border border-slate-800 rounded-2xl p-4 hover:border-pink-500 hover:shadow-md transition-all duration-300 group shadow-sm flex flex-col justify-between">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="p-1.5 rounded-lg bg-pink-500/10 text-pink-400 group-hover:bg-pink-600 group-hover:text-white transition-colors">
                   <Activity className="w-4 h-4" />
                 </div>
-                <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Total Percentile</h3>
+                <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Latest Total Percentile</h3>
               </div>
-              <div className="flex items-baseline gap-1">
-                <span className="text-2xl font-bold text-white">{latestScore.is_absent ? '0' : totalPercentile}</span>
-                <span className="text-sm text-slate-400">PR</span>
+              <div className="flex items-baseline justify-center gap-1.5 mt-1">
+                <span className="text-3xl font-bold text-white">{latestScore.is_absent ? '0' : totalPercentile}</span>
+                <span className="text-sm text-slate-400 font-medium">PR</span>
               </div>
             </div>
 
-            {/* Attendance Ring */}
-            <div className="bg-[#1a2540] border border-slate-800 rounded-2xl p-5 hover:border-emerald-500 hover:shadow-md transition-all duration-300 flex items-center justify-between shadow-sm">
-              <div>
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="p-2 rounded-lg bg-emerald-500/10">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+            {/* Attendance (Merged) */}
+            <div className="bg-[#1a2540] border border-slate-800 rounded-2xl p-4 hover:border-emerald-500 hover:shadow-md transition-all duration-300 group shadow-sm flex flex-col justify-between">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-400 group-hover:bg-emerald-600 group-hover:text-white transition-colors">
+                  <Calendar className="w-4 h-4" />
+                </div>
+                <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Attendance</h3>
+              </div>
+              
+              <div className="flex items-center justify-between mt-1">
+                <div className="flex flex-col gap-1.5">
+                  <div className="flex items-center gap-2 text-[10px] font-semibold">
+                    <span className="px-1.5 py-0.5 rounded bg-green-500/10 text-green-400 border border-green-500/20">{presentDays} Present</span>
                   </div>
-                  <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Status</h3>
+                  <div className="flex items-center gap-2 text-[10px] font-semibold">
+                    <span className="px-1.5 py-0.5 rounded bg-red-500/10 text-red-400 border border-red-500/20">{absentDays} Absent</span>
+                  </div>
+                  <div className="text-[9px] text-slate-500 mt-0.5 font-medium">Out of {totalDays} days</div>
                 </div>
-                <div className="flex items-baseline gap-1">
-                  <span className={`text-xs font-bold px-2 py-1 rounded-lg border ${attBadge} ${attColor}`}>
-                    {attStatus}
-                  </span>
+
+                <div className="relative w-12 h-12 flex items-center justify-center flex-shrink-0">
+                  <svg className="transform -rotate-90 w-12 h-12">
+                    <circle cx="24" cy="24" r="22" stroke="currentColor" strokeWidth="4" fill="transparent" className="text-slate-800" />
+                    <circle cx="24" cy="24" r="22" stroke="currentColor" strokeWidth="4" fill="transparent" strokeDasharray={circumference} strokeDashoffset={strokeDashoffset} className={`transition-all duration-1000 ease-out ${circleColor}`} />
+                  </svg>
+                  <span className="absolute text-xs font-bold text-white">{dailyAttendancePercentage}%</span>
                 </div>
-              </div>
-              <div className="relative w-16 h-16 flex items-center justify-center">
-                <svg className="transform -rotate-90 w-16 h-16">
-                  <circle cx="32" cy="32" r="28" stroke="currentColor" strokeWidth="6" fill="transparent" className="text-slate-800" />
-                  <circle cx="32" cy="32" r="28" stroke="currentColor" strokeWidth="6" fill="transparent" strokeDasharray={circumference} strokeDashoffset={strokeDashoffset} className={`transition-all duration-1000 ease-out ${circleColor}`} />
-                </svg>
-                <span className="absolute text-sm font-bold text-white">{dailyAttendancePercentage}%</span>
               </div>
             </div>
           </div>
 
-          {/* ALERTS & STATUS */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Status Badge */}
-            {latestScore && (
-              <div className={`flex items-center gap-4 px-6 py-4 rounded-2xl backdrop-blur-md border shadow-sm transition-all duration-300 ${
-                statusColor === 'text-green-500' ? 'bg-green-500/10 border-green-500/20' :
-                statusColor === 'text-red-500' ? 'bg-red-500/10 border-red-500/20' :
-                statusColor === 'text-amber-500' ? 'bg-amber-500/10 border-amber-500/20' :
-                statusColor === 'text-blue-500' ? 'bg-blue-500/10 border-blue-500/20' :
-                'bg-slate-800 border-slate-700'
-              }`}>
-                <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
-                  statusColor === 'text-green-500' ? 'bg-green-500/20' :
-                  statusColor === 'text-red-500' ? 'bg-red-500/20' :
-                  statusColor === 'text-amber-500' ? 'bg-amber-500/20' :
-                  statusColor === 'text-blue-500' ? 'bg-blue-500/20' :
-                  'bg-slate-700'
-                }`}>
-                  <StatusIcon className={`w-6 h-6 ${statusColor}`} />
-                </div>
-                <div>
-                  <p className="text-[11px] uppercase tracking-[0.15em] font-bold text-slate-400">Current Academic Status</p>
-                  <p className={`text-base font-bold mt-0.5 ${statusColor}`}>{status}</p>
-                </div>
-              </div>
-            )}
-
-            {/* ALERTS */}
-            {dailyAttendancePercentage < 75 && totalDays > 0 && (
-              <div className="bg-red-500/10 border border-red-500/20 rounded-2xl p-4 flex items-center gap-4">
-                <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-red-500/20 flex-shrink-0">
-                  <AlertTriangle className="w-6 h-6 text-red-500" />
-                </div>
-                <div>
-                  <h3 className="text-sm font-semibold text-red-400">Attendance Alert</h3>
-                  <p className="text-sm text-red-300 mt-0.5">
-                    Currently at {dailyAttendancePercentage}%. Needs improvement.
-                  </p>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* AI PERFORMANCE SUMMARY */}
-          <PerformanceSummary studentId={studentId} />
-
-          {/* SUBJECT PERFORMANCE WIDGET */}
-          <SubjectPerformance scores={validScores} />
-
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-2 space-y-6">
-              {/* PERFORMANCE TREND */}
-              <div className="bg-[#1a2540] border border-slate-800 rounded-3xl p-6 relative overflow-hidden shadow-sm">
-                <div className="absolute top-0 right-0 w-64 h-64 bg-blue-900/20 rounded-full blur-[80px]" />
-                <h2 className="text-lg font-bold mb-6 relative z-10 text-white">Performance Trend</h2>
-                <div className="h-[300px] w-full relative z-10">
-                  <PerformanceChart data={chartData} />
-                </div>
-              </div>
-
-            {/* DAILY ATTENDANCE SUMMARY */}
-            <div className="bg-[#1a2540] border border-slate-800 rounded-3xl p-6 flex flex-col items-center shadow-sm">
-              <h2 className="text-lg font-bold mb-4 w-full text-left text-white">Attendance Calendar</h2>
-              <AttendanceCalendar records={attendanceRecords} />
-              <div className="w-full grid grid-cols-2 gap-4 mt-6">
-                <div className="bg-slate-800/50 border border-slate-700 rounded-xl p-3 text-center">
-                  <div className="text-2xl font-bold text-green-400">{presentDays}</div>
-                  <div className="text-xs text-slate-400 uppercase tracking-wider mt-1">Present</div>
-                </div>
-                <div className="bg-slate-800/50 border border-slate-700 rounded-xl p-3 text-center">
-                  <div className="text-2xl font-bold text-red-400">{absentDays}</div>
-                  <div className="text-xs text-slate-400 uppercase tracking-wider mt-1">Absent</div>
-                </div>
-              </div>
-            </div>
-
-            </div>
-
-            <div className="lg:col-span-1">
-              {/* SUBJECT BREAKDOWN */}
-              <div className="bg-[#1a2540] border border-slate-800 rounded-3xl p-6 shadow-sm">
+          {/* TOP GRID: SUBJECT BREAKDOWN + ALERTS */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* SUBJECT BREAKDOWN */}
+            <div className="bg-[#1a2540] border border-slate-800 rounded-3xl p-6 shadow-sm flex flex-col justify-center">
               <h2 className="text-lg font-bold mb-1 text-white">Subject Breakdown</h2>
               <p className="text-xs text-slate-400 mb-5">Latest test performance</p>
               {latestScore.is_absent ? (
@@ -470,7 +381,6 @@ export default async function ParentDashboard() {
                 <div className="space-y-5">
                   {latestSubjects.map((sub) => {
                     const score = latestScore.subject_scores?.[sub.name] ?? 0
-                    // Use the actual per-subject max_marks for accurate percentage
                     const subMax = sub.max_marks > 0 ? sub.max_marks : latestScore.tests?.max_marks / latestSubjects.length
                     const perc = subMax > 0 ? Math.min(100, Math.round((score / subMax) * 100)) : 0
                     
@@ -515,6 +425,81 @@ export default async function ParentDashboard() {
                 </div>
               )}
             </div>
+
+            {/* ALERTS & STATUS */}
+            <div className="flex flex-col gap-4 justify-center">
+              {/* Status Badge */}
+              {latestScore && (
+                <div className={`flex items-center gap-4 px-6 py-4 rounded-2xl backdrop-blur-md border shadow-sm transition-all duration-300 ${
+                  statusColor === 'text-green-500' ? 'bg-green-500/10 border-green-500/20' :
+                  statusColor === 'text-red-500' ? 'bg-red-500/10 border-red-500/20' :
+                  statusColor === 'text-amber-500' ? 'bg-amber-500/10 border-amber-500/20' :
+                  statusColor === 'text-blue-500' ? 'bg-blue-500/10 border-blue-500/20' :
+                  'bg-slate-800 border-slate-700'
+                }`}>
+                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
+                    statusColor === 'text-green-500' ? 'bg-green-500/20' :
+                    statusColor === 'text-red-500' ? 'bg-red-500/20' :
+                    statusColor === 'text-amber-500' ? 'bg-amber-500/20' :
+                    statusColor === 'text-blue-500' ? 'bg-blue-500/20' :
+                    'bg-slate-700'
+                  }`}>
+                    <StatusIcon className={`w-6 h-6 ${statusColor}`} />
+                  </div>
+                  <div>
+                    <p className="text-[11px] uppercase tracking-[0.15em] font-bold text-slate-400">Current Academic Status</p>
+                    <p className={`text-base font-bold mt-0.5 ${statusColor}`}>{status}</p>
+                  </div>
+                </div>
+              )}
+
+              {/* Attendance Alert */}
+              {dailyAttendancePercentage < 75 && totalDays > 0 && (
+                <div className="bg-red-500/10 border border-red-500/20 rounded-2xl p-4 flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-red-500/20 flex-shrink-0">
+                    <AlertTriangle className="w-6 h-6 text-red-500" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-semibold text-red-400">Attendance Alert</h3>
+                    <p className="text-sm text-red-300 mt-0.5">
+                      Currently at {dailyAttendancePercentage}%. Needs improvement.
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* AI PERFORMANCE SUMMARY */}
+          <PerformanceSummary studentId={studentId} />
+
+          {/* SUBJECT PERFORMANCE WIDGET */}
+          <SubjectPerformance scores={validScores} />
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* PERFORMANCE TREND */}
+            <div className="bg-[#1a2540] border border-slate-800 rounded-3xl p-6 relative overflow-hidden shadow-sm">
+              <div className="absolute top-0 right-0 w-64 h-64 bg-blue-900/20 rounded-full blur-[80px]" />
+              <h2 className="text-lg font-bold mb-6 relative z-10 text-white">Performance Trend</h2>
+              <div className="h-[300px] w-full relative z-10">
+                <PerformanceChart data={chartData} />
+              </div>
+            </div>
+
+            {/* DAILY ATTENDANCE SUMMARY */}
+            <div className="bg-[#1a2540] border border-slate-800 rounded-3xl p-6 flex flex-col items-center shadow-sm">
+              <h2 className="text-lg font-bold mb-4 w-full text-left text-white">Attendance Calendar</h2>
+              <AttendanceCalendar records={attendanceRecords} />
+              <div className="w-full grid grid-cols-2 gap-4 mt-6">
+                <div className="bg-slate-800/50 border border-slate-700 rounded-xl p-3 text-center">
+                  <div className="text-2xl font-bold text-green-400">{presentDays}</div>
+                  <div className="text-xs text-slate-400 uppercase tracking-wider mt-1">Present</div>
+                </div>
+                <div className="bg-slate-800/50 border border-slate-700 rounded-xl p-3 text-center">
+                  <div className="text-2xl font-bold text-red-400">{absentDays}</div>
+                  <div className="text-xs text-slate-400 uppercase tracking-wider mt-1">Absent</div>
+                </div>
+              </div>
             </div>
           </div>
 

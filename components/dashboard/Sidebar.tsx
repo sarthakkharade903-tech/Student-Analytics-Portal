@@ -4,6 +4,7 @@ import React, { Suspense } from 'react'
 import Link from 'next/link'
 import { usePathname, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import Image from 'next/image'
 import {
   BarChart3,
   Users,
@@ -37,7 +38,7 @@ const baseNavItems: NavItem[] = [
   { href: '/dashboard/settings', label: 'Settings', icon: Settings, active: true },
 ]
 
-function SidebarInner({ features }: { features?: any }) {
+function SidebarInner({ features, logoUrl }: { features?: any, logoUrl?: string | null }) {
   const pathname = usePathname()
   const searchParams = useSearchParams()
   const standard = searchParams.get('std') === '12th' ? '12th' : '11th'
@@ -76,9 +77,21 @@ function SidebarInner({ features }: { features?: any }) {
     <aside className="w-64 flex-shrink-0 h-screen sticky top-0 flex flex-col border-r border-[var(--border)] bg-[var(--sidebar)]">
       {/* Logo */}
       <div className="h-16 flex items-center gap-2.5 px-5 border-b border-[var(--border)]">
-        <div className="w-8 h-8 rounded-lg bg-[var(--primary)] flex items-center justify-center flex-shrink-0">
-          <BarChart3 className="w-4.5 h-4.5 text-white w-[18px] h-[18px]" />
-        </div>
+        {logoUrl ? (
+          <div className="relative w-8 h-8 rounded-full overflow-hidden border border-[var(--border)] flex items-center justify-center bg-white flex-shrink-0">
+            <Image
+              src={logoUrl}
+              alt="Academy Logo"
+              fill
+              className="object-cover"
+              unoptimized
+            />
+          </div>
+        ) : (
+          <div className="w-8 h-8 rounded-lg bg-[var(--primary)] flex items-center justify-center flex-shrink-0">
+            <BarChart3 className="w-4.5 h-4.5 text-white w-[18px] h-[18px]" />
+          </div>
+        )}
         <span className="font-semibold text-sm leading-tight">
           Coaching Analytics<br />
           <span className="text-[9px] font-bold tracking-widest text-[var(--primary)] uppercase bg-[var(--primary)]/10 px-1.5 py-0.5 rounded-sm">Portal</span>
@@ -149,12 +162,12 @@ function SidebarInner({ features }: { features?: any }) {
   )
 }
 
-export default function Sidebar({ features }: { features?: any }) {
+export default function Sidebar({ features, logoUrl }: { features?: any, logoUrl?: string | null }) {
   return (
     <Suspense fallback={
       <aside className="w-64 flex-shrink-0 h-screen sticky top-0 flex flex-col border-r border-[var(--border)] bg-[var(--sidebar)]" />
     }>
-      <SidebarInner features={features} />
+      <SidebarInner features={features} logoUrl={logoUrl} />
     </Suspense>
   )
 }

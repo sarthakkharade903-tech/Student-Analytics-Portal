@@ -21,6 +21,7 @@ export default async function ParentLayout({ children }: { children: ReactNode }
   }
 
   let isBlocked = false
+  let logoUrl: string | null = null
   if (studentId) {
     const { createClient } = await import('@/lib/supabase/server')
     const supabase = await createClient()
@@ -31,14 +32,15 @@ export default async function ParentLayout({ children }: { children: ReactNode }
       .eq('id', studentId)
       .single()
 
-    if (student?.coaching_center_id) {
-      const { data: center } = await supabase
-        .from('coaching_centers')
-        .select('is_active, account_status, end_date')
-        .eq('id', student.coaching_center_id)
-        .single()
+      if (student?.coaching_center_id) {
+        const { data: center } = await supabase
+          .from('coaching_centers')
+          .select('is_active, account_status, end_date, logo_url')
+          .eq('id', student.coaching_center_id)
+          .single()
 
       if (center) {
+        logoUrl = center.logo_url
         const isExpired = center.end_date ? new Date(center.end_date) < new Date() : false
         if (center.is_active === false || center.account_status === 'Suspended' || center.account_status === 'Expired' || isExpired) {
           isBlocked = true
@@ -54,8 +56,8 @@ export default async function ParentLayout({ children }: { children: ReactNode }
 
   return (
     <div className="min-h-screen bg-[#0f1729] text-slate-100 font-sans selection:bg-blue-500/30">
-      <ParentNav studentId={studentId} />
-      <main className="max-w-5xl mx-auto px-4 py-8 lg:px-8">
+      <ParentNav studentId={studentId} logoUrl={logoUrl} />
+      <main className="max-w-5xl mx-auto px-4 py-8 lg:px-8 relative z-10">
         {children}
       </main>
     </div>
