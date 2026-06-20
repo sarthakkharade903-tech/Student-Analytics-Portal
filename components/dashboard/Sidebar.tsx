@@ -157,7 +157,7 @@ function SidebarInner({ features, logoUrl }: { features?: any, logoUrl?: string 
           }
 
           const Icon = item.icon
-          const isActive = pathname === item.href
+          const isActive = item.href === '/dashboard' ? pathname === '/dashboard' : pathname.startsWith(item.href)
 
           if (!item.active) {
             return (
