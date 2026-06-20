@@ -119,7 +119,7 @@ export default function QuickFeeEntryPage({ params }: { params: Promise<{ classI
       
       // Sort exact matches to the top, then startsWith
       const q = query.toLowerCase()
-      results.sort((a, b) => {
+      results.sort((a: any, b: any) => {
         const aExact = a.roll_no.toLowerCase() === q || a.name.toLowerCase() === q
         const bExact = b.roll_no.toLowerCase() === q || b.name.toLowerCase() === q
         if (aExact && !bExact) return -1
