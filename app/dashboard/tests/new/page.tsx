@@ -126,10 +126,12 @@ function CreateTestForm() {
   }
 
   const updateSubjectMarks = (name: string, value: string) => {
-    const num = parseInt(value, 10)
+    // Strip non-digits, allow empty string while typing
+    const cleaned = value.replace(/[^0-9]/g, '')
+    const num = cleaned === '' ? 0 : Math.min(9999, parseInt(cleaned, 10))
     setSubjects((prev) =>
       prev.map((s) =>
-        s.name === name ? { ...s, max_marks: isNaN(num) ? 0 : Math.max(0, num) } : s
+        s.name === name ? { ...s, max_marks: num } : s
       )
     )
   }
@@ -426,22 +428,14 @@ function CreateTestForm() {
                         <div className="relative">
                           <input
                             id={`subject-marks-${s.name}`}
-                            key={`${s.name}-${s.max_marks}`}
-                            type="number"
-                            min={1}
-                            max={1000}
+                            type="text"
+                            inputMode="numeric"
+                            pattern="[0-9]*"
                             placeholder="100"
-                            defaultValue={s.max_marks === 0 ? '' : s.max_marks}
-                            onBlur={(e) => {
+                            value={s.max_marks === 0 ? '' : String(s.max_marks)}
+                            onChange={(e) => {
                               updateSubjectMarks(s.name, e.target.value)
                               setError(null)
-                            }}
-                            onKeyDown={(e) => {
-                              // Commit on Enter key too
-                              if (e.key === 'Enter') {
-                                e.preventDefault()
-                                updateSubjectMarks(s.name, (e.target as HTMLInputElement).value)
-                              }
                             }}
                             className={smallInputCls}
                           />
