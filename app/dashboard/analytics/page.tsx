@@ -2,6 +2,10 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import AnalyticsClient from './AnalyticsClient'
 
+export const metadata = {
+  title: 'Analytics',
+}
+
 export default async function AnalyticsPage({
   searchParams,
 }: {

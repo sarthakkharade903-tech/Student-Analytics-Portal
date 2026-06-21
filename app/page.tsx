@@ -134,7 +134,7 @@ export default function LandingPage() {
             <div className="sap-logo-icon">
               <BarChart3 size={18} color="#fff" />
             </div>
-            <span className="sap-logo-text">Student Analytics Portal</span>
+            <span className="sap-logo-text">StudentIQ</span>
           </Link>
 
           <div className="sap-nav-links">
@@ -259,7 +259,7 @@ export default function LandingPage() {
         <div className="sap-container">
           <div className="sap-section-header">
             <span className="sap-section-tag">Why Institutes Choose Us</span>
-            <h2 className="sap-section-h2">Why Coaching Institutes Use Student Analytics Portal</h2>
+            <h2 className="sap-section-h2">Why Coaching Institutes Use StudentIQ</h2>
           </div>
 
           <div className="sap-value-grid">
@@ -330,12 +330,12 @@ export default function LandingPage() {
                 <span /><span /><span />
               </div>
               <div className="sap-chrome-bar">
-                <span>Student Analytics Portal — Dashboard</span>
+                <span>StudentIQ — Dashboard</span>
               </div>
             </div>
             <Image
               src="/dashboard_preview.png"
-              alt="Student Analytics Portal admin dashboard showing performance charts and student data"
+              alt="StudentIQ admin dashboard showing performance charts and student data"
               width={1200}
               height={680}
               className="sap-dashboard-img"
@@ -403,8 +403,8 @@ export default function LandingPage() {
               </div>
               <div>
                 <div className="sap-contact-label">Email</div>
-                <a href="mailto:contact@studentanalyticsportal.com" className="sap-contact-value">
-                  contact@studentanalyticsportal.com
+                <a href="mailto:studentiqteam@gmail.com" className="sap-contact-value">
+                  studentiqteam@gmail.com
                 </a>
               </div>
             </div>
@@ -420,7 +420,7 @@ export default function LandingPage() {
               <div className="sap-logo-icon">
                 <BarChart3 size={16} color="#fff" />
               </div>
-              <span className="sap-logo-text sap-logo-text-light">Student Analytics Portal</span>
+              <span className="sap-logo-text sap-logo-text-light">StudentIQ</span>
             </Link>
             <p className="sap-footer-tagline">
               Helping coaching institutes track performance and keep parents informed.
@@ -448,8 +448,8 @@ export default function LandingPage() {
         </div>
 
         <div className="sap-container sap-footer-bottom">
-          <p>© {new Date().getFullYear()} Student Analytics Portal. All rights reserved.</p>
-          <p>contact@studentanalyticsportal.com</p>
+          <p>© {new Date().getFullYear()} StudentIQ. All rights reserved.</p>
+          <p>studentiqteam@gmail.com</p>
         </div>
       </footer>
 

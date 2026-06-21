@@ -3,6 +3,10 @@ import { createClient } from '@/lib/supabase/server'
 import ResourcesClient from './ResourcesClient'
 import StandardTabs from '@/components/dashboard/StandardTabs'
 
+export const metadata = {
+  title: 'Resources',
+}
+
 export default async function ResourcesPage({
   searchParams,
 }: {

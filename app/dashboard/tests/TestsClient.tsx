@@ -1,13 +1,15 @@
 'use client'
 
+import { useState } from 'react'
 import useSWR from 'swr'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
-import { ClipboardList, Plus, Trophy, Users, TrendingUp, Calendar, Loader2 } from 'lucide-react'
+import { ClipboardList, Plus, Trophy, Users, TrendingUp, Calendar, Loader2, ChevronLeft, ChevronRight } from 'lucide-react'
 import StandardTabs from '@/components/dashboard/StandardTabs'
 import type { Test, SubjectConfig } from '@/lib/types'
 import { normaliseSubjects } from '@/lib/subjects'
 
+const PAGE_SIZE = 20
 const fetcher = (url: string) => fetch(url).then(r => r.json())
 
 function SubjectPill({ subject }: { subject: SubjectConfig }) {
@@ -32,16 +34,20 @@ function formatDate(dateStr: string) {
 export default function TestsClient() {
   const searchParams = useSearchParams()
   const standard = searchParams.get('std') === '12th' ? '12th' : '11th'
+  const [page, setPage] = useState(1)
 
-  const { data, isLoading, error } = useSWR<{ tests: Test[]; error?: string }>(
-    `/api/std-data/tests?std=${standard}`,
+  // Reset to page 1 when standard changes
+  const key = `/api/std-data/tests?std=${standard}&page=${page}`
+
+  const { data, isLoading, error } = useSWR<{ tests: Test[]; total: number; error?: string }>(
+    key,
     fetcher,
-    {
-      revalidateOnFocus: false,
-    }
+    { revalidateOnFocus: false }
   )
 
   const tests = data?.tests ?? []
+  const total = data?.total ?? 0
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
   const errorMsg = data?.error ?? (error ? 'Failed to load tests.' : null)
 
   return (
@@ -172,6 +178,58 @@ export default function TestsClient() {
               </div>
             </Link>
           ))}
+        </div>
+      )}
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between mt-8 pt-6 border-t border-[var(--border)]">
+          <p className="text-sm text-[var(--muted-foreground)]">
+            Showing {((page - 1) * PAGE_SIZE) + 1}–{Math.min(page * PAGE_SIZE, total)} of {total} tests
+          </p>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => setPage(p => Math.max(1, p - 1))}
+              disabled={page === 1}
+              className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm font-medium border border-[var(--border)] text-[var(--muted-foreground)] hover:bg-[var(--sidebar-accent)] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            >
+              <ChevronLeft className="w-4 h-4" /> Prev
+            </button>
+
+            {Array.from({ length: totalPages }, (_, i) => i + 1)
+              .filter(p => p === 1 || p === totalPages || Math.abs(p - page) <= 1)
+              .reduce<(number | 'ellipsis')[]>((acc, p, idx, arr) => {
+                if (idx > 0 && p - (arr[idx - 1] as number) > 1) acc.push('ellipsis')
+                acc.push(p)
+                return acc
+              }, [])
+              .map((item, idx) =>
+                item === 'ellipsis' ? (
+                  <span key={`e-${idx}`} className="px-2 text-[var(--muted-foreground)] text-sm">…</span>
+                ) : (
+                  <button
+                    key={item}
+                    onClick={() => setPage(item as number)}
+                    className={`w-9 h-9 rounded-lg text-sm font-medium transition-colors ${
+                      page === item
+                        ? 'bg-[var(--primary)] text-white shadow-md'
+                        : 'border border-[var(--border)] text-[var(--muted-foreground)] hover:bg-[var(--sidebar-accent)]'
+                    }`}
+                  >
+                    {item}
+                  </button>
+                )
+              )
+            }
+
+            <button
+              onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+              disabled={page === totalPages}
+              className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm font-medium border border-[var(--border)] text-[var(--muted-foreground)] hover:bg-[var(--sidebar-accent)] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            >
+              Next <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
         </div>
       )}
     </div>

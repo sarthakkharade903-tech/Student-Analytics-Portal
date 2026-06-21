@@ -20,6 +20,10 @@ import {
   Lock,
 } from 'lucide-react'
 
+export const metadata = {
+  title: 'Settings',
+}
+
 /* ─────────────────────────────────────────────────────
    TYPES
 ───────────────────────────────────────────────────── */

@@ -2,7 +2,9 @@
 
 import { useState, useEffect, useMemo } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { FileText, Play, Link as LinkIcon, ClipboardList, Trophy, Trash2, Search, Loader2, AlertCircle, Plus, FileQuestion, Cloud, ExternalLink } from 'lucide-react'
+import { FileText, Play, Link as LinkIcon, ClipboardList, Trophy, Trash2, Search, Loader2, AlertCircle, Plus, FileQuestion, Cloud, ExternalLink, ChevronLeft, ChevronRight } from 'lucide-react'
+
+const PAGE_SIZE = 20
 
 interface Resource {
   id: string
@@ -26,6 +28,7 @@ export default function ResourcesClient({ coachingCenterId, batches, standard }:
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
   const [activeBatchTab, setActiveBatchTab] = useState('All')
+  const [resourcePage, setResourcePage] = useState(1)
 
   // Form state
   const [title, setTitle] = useState('')
@@ -108,6 +111,12 @@ export default function ResourcesClient({ coachingCenterId, batches, standard }:
     if (activeBatchTab === 'All') return true
     return r.target_batches.includes(activeBatchTab) || r.target_batches.includes('All Batches')
   })
+
+  // Reset to page 1 whenever filter or batch changes
+  useEffect(() => { setResourcePage(1) }, [searchTerm, activeBatchTab])
+
+  const totalResPages = Math.max(1, Math.ceil(filteredResources.length / PAGE_SIZE))
+  const pagedResources = filteredResources.slice((resourcePage - 1) * PAGE_SIZE, resourcePage * PAGE_SIZE)
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -233,7 +242,7 @@ export default function ResourcesClient({ coachingCenterId, batches, standard }:
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {filteredResources.map(resource => (
+            {pagedResources.map(resource => (
               <div key={resource.id} className="glass-card rounded-xl p-4 flex flex-col gap-3 hover:border-[var(--primary)]/50 transition-colors">
                 <div className="flex justify-between items-start">
                   <div className="flex items-center gap-3">
@@ -270,6 +279,58 @@ export default function ResourcesClient({ coachingCenterId, batches, standard }:
                 </div>
               </div>
             ))}
+          </div>
+        )}
+
+        {/* Pagination */}
+        {totalResPages > 1 && (
+          <div className="flex items-center justify-between mt-6 pt-5 border-t border-[var(--border)]">
+            <p className="text-sm text-[var(--muted-foreground)]">
+              Showing {((resourcePage - 1) * PAGE_SIZE) + 1}–{Math.min(resourcePage * PAGE_SIZE, filteredResources.length)} of {filteredResources.length} resources
+            </p>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => setResourcePage(p => Math.max(1, p - 1))}
+                disabled={resourcePage === 1}
+                className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm font-medium border border-[var(--border)] text-[var(--muted-foreground)] hover:bg-[var(--sidebar-accent)] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              >
+                <ChevronLeft className="w-4 h-4" /> Prev
+              </button>
+
+              {Array.from({ length: totalResPages }, (_, i) => i + 1)
+                .filter(p => p === 1 || p === totalResPages || Math.abs(p - resourcePage) <= 1)
+                .reduce<(number | 'ellipsis')[]>((acc, p, idx, arr) => {
+                  if (idx > 0 && p - (arr[idx - 1] as number) > 1) acc.push('ellipsis')
+                  acc.push(p)
+                  return acc
+                }, [])
+                .map((item, idx) =>
+                  item === 'ellipsis' ? (
+                    <span key={`e-${idx}`} className="px-2 text-[var(--muted-foreground)] text-sm">…</span>
+                  ) : (
+                    <button
+                      key={item}
+                      onClick={() => setResourcePage(item as number)}
+                      className={`w-9 h-9 rounded-lg text-sm font-medium transition-colors ${
+                        resourcePage === item
+                          ? 'bg-[var(--primary)] text-white shadow-md'
+                          : 'border border-[var(--border)] text-[var(--muted-foreground)] hover:bg-[var(--sidebar-accent)]'
+                      }`}
+                    >
+                      {item}
+                    </button>
+                  )
+                )
+              }
+
+              <button
+                onClick={() => setResourcePage(p => Math.min(totalResPages, p + 1))}
+                disabled={resourcePage === totalResPages}
+                className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm font-medium border border-[var(--border)] text-[var(--muted-foreground)] hover:bg-[var(--sidebar-accent)] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              >
+                Next <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
           </div>
         )}
       </div>

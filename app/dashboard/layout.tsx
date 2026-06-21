@@ -80,19 +80,20 @@ const ExpirationBanner = (await import('@/components/ui/ExpirationBanner')).defa
 return (
     <div className="flex min-h-screen bg-[var(--background)]">
       <Sidebar features={features} logoUrl={logoUrl} />
-      <main className="flex-1 overflow-y-auto relative flex flex-col">
-        <ExpirationBanner daysRemaining={daysRemaining} />
-        <div className="absolute top-6 left-6 z-50 lg:hidden mt-12">
-          {/* Show on mobile if sidebar is hidden, though sidebar is currently sticky */}
-          <BackButton className="bg-[var(--sidebar)]/80 backdrop-blur-xl shadow-lg border-[var(--border)]" />
+      <div className="flex-1 relative flex flex-col min-w-0">
+        <div className="absolute top-6 left-6 z-50 lg:hidden mt-12 pointer-events-none">
+          <BackButton className="bg-[var(--sidebar)]/80 backdrop-blur-xl shadow-lg border-[var(--border)] pointer-events-auto" />
         </div>
-        <div className="hidden lg:block absolute top-6 left-6 z-50 mt-12">
-           <BackButton className="bg-[var(--sidebar)]/80 backdrop-blur-xl shadow-lg border-[var(--border)] text-[var(--foreground)] hover:bg-black/5" />
+        <div className="hidden lg:block absolute top-6 left-6 z-50 mt-12 pointer-events-none">
+           <BackButton className="bg-[var(--sidebar)]/80 backdrop-blur-xl shadow-lg border-[var(--border)] text-[var(--foreground)] hover:bg-black/5 pointer-events-auto" />
         </div>
-        <div className="flex-1 relative">
-          {children}
-        </div>
-      </main>
+        <main className="flex-1 overflow-y-auto relative flex flex-col">
+          <ExpirationBanner daysRemaining={daysRemaining} />
+          <div className="flex-1 relative">
+            {children}
+          </div>
+        </main>
+      </div>
     </div>
   )
 }
