@@ -426,14 +426,22 @@ function CreateTestForm() {
                         <div className="relative">
                           <input
                             id={`subject-marks-${s.name}`}
+                            key={`${s.name}-${s.max_marks}`}
                             type="number"
                             min={1}
                             max={1000}
                             placeholder="100"
-                            value={s.max_marks === 0 ? '' : s.max_marks}
-                            onChange={(e) => {
+                            defaultValue={s.max_marks === 0 ? '' : s.max_marks}
+                            onBlur={(e) => {
                               updateSubjectMarks(s.name, e.target.value)
                               setError(null)
+                            }}
+                            onKeyDown={(e) => {
+                              // Commit on Enter key too
+                              if (e.key === 'Enter') {
+                                e.preventDefault()
+                                updateSubjectMarks(s.name, (e.target as HTMLInputElement).value)
+                              }
                             }}
                             className={smallInputCls}
                           />

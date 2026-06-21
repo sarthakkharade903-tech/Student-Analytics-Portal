@@ -27,7 +27,7 @@ export async function POST(request: Request) {
     // 1. Get Coaching Details for audit log
     const { data: center } = await supabase
       .from('coaching_centers')
-      .select('name, logo_url')
+      .select('name, logo_url, email')
       .eq('id', id)
       .single()
 
@@ -101,7 +101,16 @@ export async function POST(request: Request) {
       }
     }
 
-    // 6. Audit Log
+    // 7. Revert demo lead status back to Pending
+    if (center.email) {
+      await supabase
+        .from('demo_leads')
+        .update({ status: 'Pending' })
+        .eq('email', center.email)
+        .eq('status', 'Converted')
+    }
+
+    // 8. Audit Log
     await supabase.from('audit_logs').insert({
       event_type: 'INSTITUTE_DELETED',
       description: `Super Admin permanently deleted coaching institute: ${center.name}`

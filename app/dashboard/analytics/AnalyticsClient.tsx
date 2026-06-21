@@ -116,9 +116,11 @@ export default function AnalyticsClient({ atRiskStudents }: Props) {
   }, [atRiskStudents])
 
   const groupedStudents = useMemo(() => {
-    const groups: Record<PriorityLevel, AtRiskStudent[]> = { High: [], Medium: [], Low: [] }
-    sortedAtRisk.forEach(s => groups[getPriorityLevel(s)].push(s))
-    return groups
+    return {
+      consecutive_absent: sortedAtRisk.filter(s => s.risk_types?.includes('consecutive_absent')),
+      attendance:         sortedAtRisk.filter(s => s.risk_types?.includes('attendance')),
+      low_percentile:     sortedAtRisk.filter(s => s.risk_types?.includes('low_percentile')),
+    }
   }, [sortedAtRisk])
 
   const handleCopyMessage = (student: AtRiskStudent) => {
@@ -277,59 +279,70 @@ export default function AnalyticsClient({ atRiskStudents }: Props) {
         </div>
       ) : (
         <div className="space-y-12">
-          {/* High Priority Group */}
-          {groupedStudents.High.length > 0 && (
+
+          {/* Section 1 — Missed 3+ Consecutive Tests */}
+          {groupedStudents.consecutive_absent.length > 0 && (
             <section className="space-y-5 animate-in fade-in slide-in-from-bottom-4 duration-500">
               <div className="flex items-center gap-3 px-2">
-                <div className="p-2 rounded-lg bg-rose-100 border border-rose-200">
-                  <ShieldAlert className="w-5 h-5 text-rose-600 drop-shadow-md" />
+                <div className="p-2 rounded-lg bg-orange-100 border border-orange-200">
+                  <AlertTriangle className="w-5 h-5 text-orange-600 drop-shadow-md" />
                 </div>
-                <h2 className="text-xl font-extrabold text-gray-900 tracking-wide">Needs Immediate Action</h2>
-                <span className="bg-rose-100 text-rose-600 text-sm font-black px-3 py-0.5 rounded-full border border-rose-200 shadow-[0_0_10px_rgba(244,63,94,0.1)] ml-2">
-                  {groupedStudents.High.length}
+                <div>
+                  <h2 className="text-xl font-extrabold text-gray-900 tracking-wide">Missed 3+ Consecutive Tests</h2>
+                  <p className="text-xs text-gray-500 mt-0.5">Students who have not appeared in the last 3 or more tests in a row</p>
+                </div>
+                <span className="bg-orange-100 text-orange-600 text-sm font-black px-3 py-0.5 rounded-full border border-orange-200 ml-2">
+                  {groupedStudents.consecutive_absent.length}
                 </span>
               </div>
               <div className="grid gap-4 pl-2 md:pl-4">
-                {groupedStudents.High.map(renderStudentRow)}
+                {groupedStudents.consecutive_absent.map(renderStudentRow)}
               </div>
             </section>
           )}
 
-          {/* Medium Priority Group */}
-          {groupedStudents.Medium.length > 0 && (
+          {/* Section 2 — Low Attendance (< 50% this month) */}
+          {groupedStudents.attendance.length > 0 && (
             <section className="space-y-5 animate-in fade-in slide-in-from-bottom-4 duration-700">
               <div className="flex items-center gap-3 px-2">
-                <div className="p-2 rounded-lg bg-amber-100 border border-amber-200">
-                  <AlertTriangle className="w-5 h-5 text-amber-600 drop-shadow-md" />
+                <div className="p-2 rounded-lg bg-rose-100 border border-rose-200">
+                  <CalendarX className="w-5 h-5 text-rose-600 drop-shadow-md" />
                 </div>
-                <h2 className="text-xl font-extrabold text-gray-900 tracking-wide">Needs Attention</h2>
-                <span className="bg-amber-100 text-amber-600 text-sm font-black px-3 py-0.5 rounded-full border border-amber-200 shadow-[0_0_10px_rgba(245,158,11,0.1)] ml-2">
-                  {groupedStudents.Medium.length}
+                <div>
+                  <h2 className="text-xl font-extrabold text-gray-900 tracking-wide">Low Attendance This Month</h2>
+                  <p className="text-xs text-gray-500 mt-0.5">Students with less than 50% attendance in the last 30 days</p>
+                </div>
+                <span className="bg-rose-100 text-rose-600 text-sm font-black px-3 py-0.5 rounded-full border border-rose-200 ml-2">
+                  {groupedStudents.attendance.length}
                 </span>
               </div>
               <div className="grid gap-4 pl-2 md:pl-4">
-                {groupedStudents.Medium.map(renderStudentRow)}
+                {groupedStudents.attendance.map(renderStudentRow)}
               </div>
             </section>
           )}
 
-          {/* Low Priority Group */}
-          {groupedStudents.Low.length > 0 && (
+          {/* Section 3 — Consistently Low Percentile */}
+          {groupedStudents.low_percentile.length > 0 && (
             <section className="space-y-5 animate-in fade-in slide-in-from-bottom-4 duration-1000">
               <div className="flex items-center gap-3 px-2">
-                <div className="p-2 rounded-lg bg-emerald-100 border border-emerald-200">
-                  <CheckCircle2 className="w-5 h-5 text-emerald-600 drop-shadow-md" />
+                <div className="p-2 rounded-lg bg-amber-100 border border-amber-200">
+                  <TrendingDown className="w-5 h-5 text-amber-600 drop-shadow-md" />
                 </div>
-                <h2 className="text-xl font-extrabold text-gray-900 tracking-wide">Under Observation</h2>
-                <span className="bg-emerald-100 text-emerald-600 text-sm font-black px-3 py-0.5 rounded-full border border-emerald-200 shadow-[0_0_10px_rgba(16,185,129,0.1)] ml-2">
-                  {groupedStudents.Low.length}
+                <div>
+                  <h2 className="text-xl font-extrabold text-gray-900 tracking-wide">Consistently Below 20th Percentile</h2>
+                  <p className="text-xs text-gray-500 mt-0.5">Students scoring in the bottom 20% repeatedly across recent tests</p>
+                </div>
+                <span className="bg-amber-100 text-amber-600 text-sm font-black px-3 py-0.5 rounded-full border border-amber-200 ml-2">
+                  {groupedStudents.low_percentile.length}
                 </span>
               </div>
               <div className="grid gap-4 pl-2 md:pl-4">
-                {groupedStudents.Low.map(renderStudentRow)}
+                {groupedStudents.low_percentile.map(renderStudentRow)}
               </div>
             </section>
           )}
+
         </div>
       )}
     </div>
