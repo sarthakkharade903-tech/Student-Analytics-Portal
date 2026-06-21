@@ -37,7 +37,8 @@ export default async function StudentResourcesPage() {
     .single()
 
   if (!student) {
-    redirect('/parent/login')
+    const BlockedAccess = (await import('@/components/ui/BlockedAccess')).default
+    return <BlockedAccess message="Your student profile has been deleted or is no longer accessible." showLogout={true} />
   }
 
   return (

@@ -1,12 +1,22 @@
+'use client'
 import { ShieldAlert, Clock, Phone, Mail } from 'lucide-react'
 
 export default function BlockedAccess({
   message = 'Platform Access Suspended',
   isTrialExpired = false,
+  showLogout = false,
 }: {
   message?: string
   isTrialExpired?: boolean
+  showLogout?: boolean
 }) {
+  const handleLogout = async () => {
+    // Attempt both parent and standard admin logouts
+    await fetch('/api/parent/logout', { method: 'POST' }).catch(() => {})
+    await fetch('/api/auth/logout', { method: 'POST' }).catch(() => {})
+    window.location.href = '/'
+  }
+
   return (
     <div className="min-h-screen bg-[var(--background)] flex items-center justify-center p-4">
       <div className="max-w-md w-full bg-[var(--sidebar)] border border-[var(--border)] rounded-2xl p-8 shadow-xl text-center">
@@ -51,6 +61,17 @@ export default function BlockedAccess({
           <p className="text-sm text-[var(--muted-foreground)]">
             Please contact your administrator for more information.
           </p>
+        )}
+
+        {showLogout && (
+          <div className="mt-8 pt-6 border-t border-[var(--border)]">
+            <button
+              onClick={handleLogout}
+              className="text-sm font-medium text-red-500 hover:text-red-400 transition-colors"
+            >
+              Sign out & Clear Session
+            </button>
+          </div>
         )}
       </div>
     </div>

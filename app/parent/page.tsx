@@ -47,7 +47,8 @@ export default async function ParentDashboard() {
     .single()
 
   if (!student) {
-    redirect('/parent/login')
+    const BlockedAccess = (await import('@/components/ui/BlockedAccess')).default
+    return <BlockedAccess message="Your student profile has been deleted or is no longer accessible." showLogout={true} />
   }
 
   // Fetch all scores for this student (joining tests to get subjects/dates)

@@ -39,7 +39,10 @@ export default async function ParentFeesPage() {
     .eq('id', studentId)
     .single()
 
-  if (!student) redirect('/parent/login')
+  if (!student) {
+    const BlockedAccess = (await import('@/components/ui/BlockedAccess')).default
+    return <BlockedAccess message="Your student profile has been deleted or is no longer accessible." showLogout={true} />
+  }
 
   // coaching_center_id points to the coaching_centers table — NOT users.name
   // Same pattern used by dashboard API and tests pages
