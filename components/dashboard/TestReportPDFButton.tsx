@@ -209,31 +209,47 @@ export default function TestReportPDFButton({
         didParseCell: (data) => {
           if (data.section !== 'body') return
           const rankVal = rows[data.row.index]?.rank
+          const colKey = data.column.dataKey
 
-          // Top 3: subtle background only, dark text — no colored text to avoid looking like errors
+          // 1. Base row backgrounds
           if (rankVal === 1) {
-            data.cell.styles.fillColor = [255, 249, 219]  // very light gold tint
-            data.cell.styles.textColor = [15, 23, 42]     // same dark navy as rest
-            data.cell.styles.fontStyle = 'bold'
+            data.cell.styles.fillColor = [255, 250, 240]  // Cream/Gold tint
           } else if (rankVal === 2) {
-            data.cell.styles.fillColor = [244, 246, 250]  // very light silver-blue
-            data.cell.styles.textColor = [15, 23, 42]
-            data.cell.styles.fontStyle = 'bold'
+            data.cell.styles.fillColor = [248, 250, 252]  // Silver/Slate tint
           } else if (rankVal === 3) {
-            data.cell.styles.fillColor = [255, 245, 235]  // very light peach/bronze
-            data.cell.styles.textColor = [15, 23, 42]
-            data.cell.styles.fontStyle = 'bold'
+            data.cell.styles.fillColor = [255, 247, 237]  // Bronze/Orange tint
           } else if (data.row.index % 2 === 0) {
-            data.cell.styles.fillColor = [255, 255, 255]
+            data.cell.styles.fillColor = [255, 255, 255]  // White
           } else {
-            data.cell.styles.fillColor = [248, 250, 252]
+            data.cell.styles.fillColor = [248, 250, 252]  // Light gray alternate
           }
 
-          // AB cells override row color → light red
+          // 2. Selective Bold text for specific columns across ALL rows
+          if (['rank', 'roll_no', 'name', 'total'].includes(colKey as string)) {
+            data.cell.styles.fontStyle = 'bold'
+          } else {
+            data.cell.styles.fontStyle = 'normal'
+          }
+
+          // 3. Colored Rank Numbers for Top 3 (only in the Rank column)
+          if (colKey === 'rank') {
+            if (rankVal === 1) {
+              data.cell.styles.textColor = [180, 83, 9]    // Amber-700 (Dark Gold)
+              data.cell.styles.fontSize  = 9.5
+            } else if (rankVal === 2) {
+              data.cell.styles.textColor = [71, 85, 105]   // Slate-600 (Dark Silver)
+              data.cell.styles.fontSize  = 9.5
+            } else if (rankVal === 3) {
+              data.cell.styles.textColor = [154, 52, 18]   // Orange-800 (Dark Bronze)
+              data.cell.styles.fontSize  = 9.5
+            }
+          }
+
+          // 4. AB cells override everything → light red background & bold red text
           if (data.cell.text[0] === 'AB') {
-            data.cell.styles.textColor  = [185, 28, 28]
-            data.cell.styles.fillColor  = [254, 226, 226]
-            data.cell.styles.fontStyle  = 'bold'
+            data.cell.styles.textColor = [185, 28, 28]
+            data.cell.styles.fillColor = [254, 226, 226]
+            data.cell.styles.fontStyle = 'bold'
           }
         },
         margin: { left: 14, right: 14 },
