@@ -316,7 +316,7 @@ export default async function TestDetailsPage({ params }: { params: Promise<{ id
           testName={test.test_name}
           standard={test.standard || '11th'}
           coachingName={coachingName}
-          portalUrl={`${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/parent/login`}
+          portalUrl="https://studentiq.vercel.app/parent/login"
           initialTemplate={whatsappTemplate}
         />
       </div>
