@@ -211,36 +211,32 @@ export default function TestReportPDFButton({
           const rankVal = rows[data.row.index]?.rank
           const colKey = data.column.dataKey
 
-          // 1. Base row backgrounds
-          if (rankVal === 1) {
-            data.cell.styles.fillColor = [255, 250, 240]  // Cream/Gold tint
-          } else if (rankVal === 2) {
-            data.cell.styles.fillColor = [248, 250, 252]  // Silver/Slate tint
-          } else if (rankVal === 3) {
-            data.cell.styles.fillColor = [255, 247, 237]  // Bronze/Orange tint
-          } else if (data.row.index % 2 === 0) {
+          // 1. Base row backgrounds (Clean Zebra Striping for all)
+          if (data.row.index % 2 === 0) {
             data.cell.styles.fillColor = [255, 255, 255]  // White
           } else {
             data.cell.styles.fillColor = [248, 250, 252]  // Light gray alternate
           }
 
-          // 2. Selective Bold text for specific columns across ALL rows
-          if (['rank', 'roll_no', 'name', 'total'].includes(colKey as string)) {
+          // 2. Selective Bold text for Rank, Roll No, Name, and Total Marks
+          // Note: body is passed as arrays, so colKey is the column index (number)
+          const totalColIndex = columns.length - 2
+          if (colKey === 0 || colKey === 1 || colKey === 2 || colKey === totalColIndex) {
             data.cell.styles.fontStyle = 'bold'
           } else {
             data.cell.styles.fontStyle = 'normal'
           }
 
-          // 3. Colored Rank Numbers for Top 3 (only in the Rank column)
-          if (colKey === 'rank') {
+          // 3. Colored Rank Numbers for Top 3 (only in the Rank column / index 0)
+          if (colKey === 0) {
             if (rankVal === 1) {
-              data.cell.styles.textColor = [180, 83, 9]    // Amber-700 (Dark Gold)
+              data.cell.styles.textColor = [217, 119, 6]   // Amber-600 (Vibrant Gold)
               data.cell.styles.fontSize  = 9.5
             } else if (rankVal === 2) {
-              data.cell.styles.textColor = [71, 85, 105]   // Slate-600 (Dark Silver)
+              data.cell.styles.textColor = [100, 116, 139] // Slate-500 (Vibrant Silver)
               data.cell.styles.fontSize  = 9.5
             } else if (rankVal === 3) {
-              data.cell.styles.textColor = [154, 52, 18]   // Orange-800 (Dark Bronze)
+              data.cell.styles.textColor = [194, 65, 12]   // Orange-700 (Vibrant Bronze)
               data.cell.styles.fontSize  = 9.5
             }
           }
