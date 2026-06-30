@@ -28,11 +28,6 @@ interface TestReportPDFButtonProps {
   targetBatches?: string[]
 }
 
-// Colours for medal rows
-const GOLD   = { fill: [255, 243, 196] as [number, number, number], text: [120, 80, 0]   as [number, number, number] }
-const SILVER = { fill: [241, 245, 249] as [number, number, number], text: [71,  85, 105]  as [number, number, number] }
-const BRONZE = { fill: [254, 237, 226] as [number, number, number], text: [154, 72, 19]   as [number, number, number] }
-
 export default function TestReportPDFButton({
   testName,
   testDate,
@@ -99,7 +94,8 @@ export default function TestReportPDFButton({
         },
         {
           label: 'Students Appeared',
-          value: studentsAppeared != null ? `${presentStudents} / ${studentsAppeared}` : String(presentStudents),
+          // Use scores.length as total — every student in the test has a score row
+          value: `${presentStudents} / ${scores.length}`,
         },
         {
           label: 'Highest Score',
@@ -156,9 +152,9 @@ export default function TestReportPDFButton({
 
         let pr = '—'
         if (!s.is_absent && n >= 1) {
-          // Standard formula: topper always gets 100, bottom present gets lowest PR
+          // Standard formula: topper always gets 100, matching parent portal
           const prVal = ((n - s.rank + 1) / n) * 100
-          pr = Math.min(100, Math.round(prVal)).toString()
+          pr = Math.min(100, prVal).toFixed(2)  // 2 decimals e.g. 88.89
         }
 
         const row: Record<string, string | number> = {
@@ -214,21 +210,20 @@ export default function TestReportPDFButton({
           if (data.section !== 'body') return
           const rankVal = rows[data.row.index]?.rank
 
-          // Medal row highlights (full row)
+          // Top 3: subtle background only, dark text — no colored text to avoid looking like errors
           if (rankVal === 1) {
-            data.cell.styles.fillColor = GOLD.fill
-            data.cell.styles.textColor = GOLD.text
+            data.cell.styles.fillColor = [255, 249, 219]  // very light gold tint
+            data.cell.styles.textColor = [15, 23, 42]     // same dark navy as rest
             data.cell.styles.fontStyle = 'bold'
           } else if (rankVal === 2) {
-            data.cell.styles.fillColor = SILVER.fill
-            data.cell.styles.textColor = SILVER.text
+            data.cell.styles.fillColor = [244, 246, 250]  // very light silver-blue
+            data.cell.styles.textColor = [15, 23, 42]
             data.cell.styles.fontStyle = 'bold'
           } else if (rankVal === 3) {
-            data.cell.styles.fillColor = BRONZE.fill
-            data.cell.styles.textColor = BRONZE.text
+            data.cell.styles.fillColor = [255, 245, 235]  // very light peach/bronze
+            data.cell.styles.textColor = [15, 23, 42]
             data.cell.styles.fontStyle = 'bold'
           } else if (data.row.index % 2 === 0) {
-            // Subtle zebra for other rows
             data.cell.styles.fillColor = [255, 255, 255]
           } else {
             data.cell.styles.fillColor = [248, 250, 252]
