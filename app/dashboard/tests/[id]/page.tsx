@@ -16,6 +16,7 @@ import TestResultsTable from '@/components/dashboard/TestResultsTable'
 import type { ScoreRecord } from '@/components/dashboard/TestResultsTable'
 import DeleteTestButton from '@/components/dashboard/DeleteTestButton'
 import WhatsAppShareButton from '@/components/dashboard/WhatsAppShareButton'
+import TestReportPDFButton from '@/components/dashboard/TestReportPDFButton'
 import { normaliseSubjects } from '@/lib/subjects'
 
 export const dynamic = 'force-dynamic'
@@ -283,7 +284,33 @@ export default async function TestDetailsPage({ params }: { params: Promise<{ id
       )}
 
       {/* Share Section at the bottom */}
-      <div className="mt-8">
+      <div className="mt-8 bg-[#0f1729] rounded-xl border border-slate-800 p-6 shadow-lg">
+        {/* PDF Download Row */}
+        <div className="flex items-center justify-between mb-5 pb-5 border-b border-slate-700">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center">
+              <span className="text-slate-300 text-xs font-bold">PDF</span>
+            </div>
+            <div>
+              <h3 className="font-semibold text-white text-sm">Download Rank List</h3>
+              <p className="text-xs text-slate-500">Master rank list for all students — attach to WhatsApp group</p>
+            </div>
+          </div>
+          <TestReportPDFButton
+            testName={test.test_name}
+            testDate={test.test_date}
+            standard={test.standard || '11th'}
+            maxMarks={test.max_marks}
+            coachingName={coachingName}
+            subjects={subjects}
+            scores={normalisedScores as any}
+            studentsAppeared={test.students_appeared ?? null}
+            highestScore={test.highest_score ?? null}
+            averageScore={test.average_score ?? null}
+          />
+        </div>
+
+        {/* WhatsApp Message Section */}
         <WhatsAppShareButton
           testName={test.test_name}
           standard={test.standard || '11th'}

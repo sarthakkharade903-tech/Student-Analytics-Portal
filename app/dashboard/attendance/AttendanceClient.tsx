@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { Calendar, Upload, AlertTriangle, Loader2, CheckCircle2, FileSpreadsheet, LayoutGrid, Clock, BarChart, History, ChevronDown, ChevronRight } from 'lucide-react'
+import { Calendar, Upload, AlertTriangle, Loader2, CheckCircle2, FileSpreadsheet, LayoutGrid, Clock, BarChart, History, ChevronDown, ChevronRight, MessageCircle, Save, RotateCcw, Copy, Check } from 'lucide-react'
 import StandardTabs from '@/components/dashboard/StandardTabs'
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts'
 
@@ -21,9 +21,24 @@ interface AttendanceRecord {
   is_present: boolean
 }
 
-export default function AttendanceClient({ coachingCenterId, standard }: { coachingCenterId: string, standard: string }) {
+export default function AttendanceClient({
+  coachingCenterId,
+  standard,
+  coachingName = 'Your Institute',
+  initialAbsenceTemplate = null,
+}: {
+  coachingCenterId: string
+  standard: string
+  coachingName?: string
+  initialAbsenceTemplate?: string | null
+}) {
   const supabase = useMemo(() => createClient(), [])
   const todayStr = useMemo(() => new Date().toISOString().split('T')[0], [])
+
+  const PORTAL_URL = 'https://studentiq.vercel.app/parent/login'
+
+  const buildDefaultAbsenceTemplate = () =>
+    `*📋 Attendance Alert / उपस्थिती अहवाल*\nDate: {{DATE}} | Batch: {{BATCH}}\n\nDear Parents, the following students are ABSENT today:\nपालकांनो, खालील विद्यार्थी आज अनुपस्थित आहेत:\n\n{{ABSENT_LIST}}\n\nCheck details on the portal / अधिक माहितीसाठी पोर्टलवर लॉग इन करा:\n🔗 ${PORTAL_URL}\n\n– {{ACADEMY_NAME}}`
 
   // State
   const [activeTab, setActiveTab] = useState<'daily' | 'history' | 'analytics'>('daily')
@@ -44,6 +59,13 @@ export default function AttendanceClient({ coachingCenterId, standard }: { coach
   // Quick entry state
   const [quickAbsents, setQuickAbsents] = useState('')
   const [csvContent, setCsvContent] = useState('')
+
+  // WhatsApp absence template state
+  const [absenceTemplate, setAbsenceTemplate] = useState(
+    initialAbsenceTemplate || buildDefaultAbsenceTemplate()
+  )
+  const [absenceIsCopied, setAbsenceIsCopied] = useState(false)
+  const [absenceIsSaving, setAbsenceIsSaving] = useState(false)
 
   // Derived state
   const batches = useMemo(() => {
@@ -148,6 +170,65 @@ export default function AttendanceClient({ coachingCenterId, standard }: { coach
     fetchHistory()
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedBatch, students, activeTab])
+
+  // ===========================================================================
+  // WhatsApp Absence Helpers
+  // ===========================================================================
+
+  const absentStudents = useMemo(() => {
+    return currentBatchStudents.filter(s => attendance[s.id] === false)
+  }, [currentBatchStudents, attendance])
+
+  const compileAbsenceMessage = (tmpl: string) => {
+    const formattedDate = new Date(selectedDate + 'T12:00:00').toLocaleDateString('en-IN', {
+      day: 'numeric', month: 'long', year: 'numeric'
+    })
+    const batchLabel = selectedBatch === 'All' ? 'All Batches' : selectedBatch
+    const absentList = absentStudents.length === 0
+      ? '(Nobody is absent today!)'
+      : absentStudents.map((s, i) => `${i + 1}. ${s.name} (Roll: ${s.roll_no})`).join('\n')
+    return tmpl
+      .replace(/{{DATE}}/g, formattedDate)
+      .replace(/{{BATCH}}/g, batchLabel)
+      .replace(/{{ABSENT_LIST}}/g, absentList)
+      .replace(/{{ACADEMY_NAME}}/g, coachingName)
+  }
+
+  const handleSaveAbsenceTemplate = async () => {
+    setAbsenceIsSaving(true)
+    try {
+      const res = await fetch('/api/coaching/absence-template', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ template: absenceTemplate }),
+      })
+      if (!res.ok) throw new Error('Failed')
+      displaySuccess('Absence template saved!')
+    } catch {
+      setError('Failed to save template.')
+    } finally {
+      setAbsenceIsSaving(false)
+    }
+  }
+
+  const handleResetAbsenceTemplate = () => {
+    if (confirm('Reset to the default bilingual template?')) {
+      setAbsenceTemplate(buildDefaultAbsenceTemplate())
+    }
+  }
+
+  const handleCopyAbsenceMessage = async () => {
+    try {
+      await navigator.clipboard.writeText(compileAbsenceMessage(absenceTemplate))
+      setAbsenceIsCopied(true)
+      setTimeout(() => setAbsenceIsCopied(false), 2000)
+    } catch {}
+  }
+
+  const handleSendAbsenceWhatsApp = () => {
+    const msg = compileAbsenceMessage(absenceTemplate)
+    window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank')
+  }
 
   // ===========================================================================
   // Handlers
@@ -505,7 +586,8 @@ export default function AttendanceClient({ coachingCenterId, standard }: { coach
       ) : (
         <>
           {activeTab === 'daily' && (
-            <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+            <>
+              <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
               
               {/* Left Column: Quick Entry & CSV */}
               <div className="xl:col-span-1 space-y-6">
@@ -632,6 +714,79 @@ export default function AttendanceClient({ coachingCenterId, standard }: { coach
               </div>
 
             </div>
+
+            <div className="mt-6 bg-[#0f1729] rounded-xl border border-slate-800 p-6 shadow-lg">
+              <div className="flex flex-col md:flex-row gap-6">
+                <div className="flex-1">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-full bg-green-500/10 flex items-center justify-center">
+                        <MessageCircle className="w-4 h-4 text-green-400" />
+                      </div>
+                      <h3 className="font-semibold text-white">Share Absence Report</h3>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={handleResetAbsenceTemplate}
+                        className="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-slate-800 rounded-md transition-colors flex items-center gap-1.5 text-sm"
+                        title="Reset to Default"
+                      >
+                        <RotateCcw className="w-4 h-4" />
+                        <span className="hidden sm:inline">Reset Default</span>
+                      </button>
+                      <button
+                        onClick={handleCopyAbsenceMessage}
+                        className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-md transition-colors flex items-center gap-1.5 text-sm"
+                      >
+                        {absenceIsCopied ? (
+                          <><Check className="w-4 h-4 text-green-400" /><span className="text-green-400">Copied</span></>
+                        ) : (
+                          <><Copy className="w-4 h-4" /><span>Copy text</span></>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+
+                  {absentStudents.length === 0 ? (
+                    <div className="w-full min-h-[120px] bg-slate-900/50 border border-slate-700 rounded-lg p-4 flex flex-col items-center justify-center gap-2">
+                      <CheckCircle2 className="w-8 h-8 text-green-400" />
+                      <p className="text-green-400 font-semibold text-sm">All students are present today! 🎉</p>
+                      <p className="text-slate-500 text-xs">No WhatsApp message needed.</p>
+                    </div>
+                  ) : (
+                    <textarea
+                      value={absenceTemplate}
+                      onChange={e => setAbsenceTemplate(e.target.value)}
+                      className="w-full min-h-[220px] bg-slate-900/50 border border-slate-700 rounded-lg p-3 text-sm text-slate-300 resize-y focus:outline-none focus:border-green-500/50 transition-colors"
+                      spellCheck={false}
+                    />
+                  )}
+                </div>
+
+                <div className="w-full md:w-56 flex flex-col justify-end gap-3">
+                  <button
+                    onClick={handleSaveAbsenceTemplate}
+                    disabled={absenceIsSaving}
+                    className="w-full flex items-center justify-center gap-2 bg-slate-800 hover:bg-slate-700 text-white py-3.5 rounded-lg text-sm font-bold transition-colors border border-slate-600 disabled:opacity-50"
+                  >
+                    {absenceIsSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                    Save Template
+                  </button>
+                  <button
+                    onClick={handleSendAbsenceWhatsApp}
+                    disabled={absentStudents.length === 0}
+                    className="w-full flex items-center justify-center gap-2 bg-[#25D366] hover:bg-[#20bd5a] text-white py-3.5 rounded-lg text-sm font-bold transition-colors shadow-lg shadow-[#25D366]/20 disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    <MessageCircle className="w-5 h-5" />
+                    Send via WhatsApp
+                  </button>
+                  <p className="text-xs text-slate-500 text-center">
+                    {absentStudents.length === 0 ? 'No absentees to report' : 'Opens WhatsApp Web or App'}
+                  </p>
+                </div>
+              </div>
+            </div>
+            </>
           )}
 
           {activeTab === 'history' && (
@@ -641,14 +796,30 @@ export default function AttendanceClient({ coachingCenterId, standard }: { coach
                   No attendance history found.
                 </div>
               ) : (
-                Object.keys(groupedHistory).map(date => (
+                Object.keys(groupedHistory).map(date => {
+                  // Compute summary for this date across all batches
+                  const allRecordsForDate = Object.values(groupedHistory[date]).flat() as { is_present: boolean }[]
+                  const totalCount = allRecordsForDate.length
+                  const presentCount = allRecordsForDate.filter(r => r.is_present).length
+                  const absentCount = totalCount - presentCount
+                  const pct = totalCount > 0 ? Math.round((presentCount / totalCount) * 100) : 0
+                  const chipColor = pct >= 75 ? 'bg-green-500/10 text-green-400 border-green-500/20' : pct >= 50 ? 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20' : 'bg-red-500/10 text-red-400 border-red-500/20'
+
+                  return (
                   <div key={date} className="glass-card rounded-2xl border border-[var(--border)] overflow-hidden">
                     <div
                       onClick={() => setExpandedDate(expandedDate === date ? null : date)}
                       className="w-full px-5 py-4 flex items-center justify-between bg-black/5 hover:bg-black/10 transition-colors cursor-pointer"
                     >
-                      <div className="flex items-center gap-3">
-                        <h2 className="font-semibold text-sm">Date: {new Date(date + 'T12:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}</h2>
+                      <div className="flex items-center gap-3 flex-wrap">
+                        <h2 className="font-semibold text-sm">{new Date(date + 'T12:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}</h2>
+                        {/* Attendance summary chip */}
+                        {totalCount > 0 && (
+                          <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full border text-xs font-semibold ${chipColor}`}>
+                            {presentCount}/{totalCount} · {pct}%
+                            {absentCount > 0 && <span className="text-red-400 font-bold">({absentCount} absent)</span>}
+                          </span>
+                        )}
                         <button
                           onClick={(e) => { e.stopPropagation(); setActiveTab('daily'); setSelectedDate(date); }}
                           className="px-2.5 py-1 rounded-lg bg-[var(--primary)]/10 text-[var(--primary)] text-xs font-medium hover:bg-[var(--primary)]/20 transition-colors"
@@ -695,7 +866,8 @@ export default function AttendanceClient({ coachingCenterId, standard }: { coach
                       </div>
                     )}
                   </div>
-                ))
+                  )
+                })
               )}
             </div>
           )}

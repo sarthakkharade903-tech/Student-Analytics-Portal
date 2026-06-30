@@ -22,7 +22,7 @@ export default async function AttendancePage({
 
   const { data: profile } = await supabase
     .from('users')
-    .select('coaching_center_id')
+    .select('coaching_center_id, coaching_centers(name, whatsapp_absence_template)')
     .eq('id', user.id)
     .single()
 
@@ -30,5 +30,17 @@ export default async function AttendancePage({
     redirect('/login')
   }
 
-  return <AttendanceClient coachingCenterId={profile.coaching_center_id} standard={standard} />
+  // @ts-ignore
+  const coachingName: string = profile?.coaching_centers?.name ?? 'Your Institute'
+  // @ts-ignore
+  const absenceTemplate: string | null = profile?.coaching_centers?.whatsapp_absence_template ?? null
+
+  return (
+    <AttendanceClient
+      coachingCenterId={profile.coaching_center_id}
+      standard={standard}
+      coachingName={coachingName}
+      initialAbsenceTemplate={absenceTemplate}
+    />
+  )
 }
