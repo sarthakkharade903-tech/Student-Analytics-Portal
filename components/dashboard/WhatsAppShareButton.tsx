@@ -21,8 +21,7 @@ Dear Parents / प्रिय पालकांनो,
 
 The results for the latest test are now available.
 
-*Test / चाचणी:*
-{{TEST_NAME}}
+*Test / चाचणी:* {{TEST_NAME}}
 
 View detailed marks, rank, and performance on the Parent Portal.
 
@@ -48,6 +47,7 @@ export default function WhatsAppShareButton({
       .replace(/{{TEST_NAME}}/g, testName)
       .replace(/{{STANDARD}}/g, standard)
       .replace(/{{ACADEMY_NAME}}/g, coachingName)
+      .replace(/{{PORTAL_URL}}/g, portalUrl)
   }
 
   const handleSave = async () => {
