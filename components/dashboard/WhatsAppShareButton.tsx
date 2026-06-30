@@ -18,13 +18,11 @@ const DEFAULT_RAW_TEMPLATE = `================================
 ================================
 
 Dear Parents / प्रिय पालकांनो,
-
 The results for the latest test are now available.
 
 *Test / चाचणी:* {{TEST_NAME}}
 
 View detailed marks, rank, and performance on the Parent Portal.
-
 गुण, रँक आणि सविस्तर कामगिरी पाहण्यासाठी पालक पोर्टलला भेट द्या.
 
 {{PORTAL_URL}}
