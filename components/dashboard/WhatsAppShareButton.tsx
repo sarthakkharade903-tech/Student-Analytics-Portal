@@ -13,36 +13,24 @@ interface WhatsAppShareButtonProps {
 }
 
 const DEFAULT_RAW_TEMPLATE = `================================
-*STUDENT PERFORMANCE UPDATE*
-विद्यार्थी प्रगती अहवाल
+*TEST RESULT PUBLISHED*
+चाचणी निकाल प्रकाशित
 ================================
 
-Dear Parent / पालकांनो,
+Dear Parents / प्रिय पालकांनो,
 
-The latest test results have been published.
-नवीन चाचणीचे निकाल जाहीर करण्यात आले आहेत.
+The results for the latest test are now available.
 
-Test / चाचणी:
-*{{TEST_NAME}} ({{STANDARD}})*
+*Test / चाचणी:*
+{{TEST_NAME}}
 
-View:
-- Marks / गुण
-- Rank / रँक
-- Performance Analysis / कामगिरी विश्लेषण
+View detailed marks, rank, and performance on the Parent Portal.
 
-https://studentiq.vercel.app/parent/login
+गुण, रँक आणि सविस्तर कामगिरी पाहण्यासाठी पालक पोर्टलला भेट द्या.
 
-================================
-*LOGIN DETAILS / लॉगिन माहिती*
+{{PORTAL_URL}}
 
-Parent Phone Number + 4 digit pin
-पालकांचा मोबाईल नंबर + ४-अंकी पिन
-================================
-
-Thank you.
-धन्यवाद.
-
-- *{{ACADEMY_NAME}}*`
+– *{{ACADEMY_NAME}}*`
 
 export default function WhatsAppShareButton({
   testName,
