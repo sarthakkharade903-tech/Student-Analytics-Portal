@@ -307,6 +307,7 @@ export default async function TestDetailsPage({ params }: { params: Promise<{ id
             studentsAppeared={test.students_appeared ?? null}
             highestScore={test.highest_score ?? null}
             averageScore={test.average_score ?? null}
+            targetBatches={test.target_batches ?? []}
           />
         </div>
 

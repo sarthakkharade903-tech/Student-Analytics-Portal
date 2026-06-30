@@ -38,7 +38,7 @@ export default function AttendanceClient({
   const PORTAL_URL = 'https://studentiq.vercel.app/parent/login'
 
   const buildDefaultAbsenceTemplate = () =>
-    `*📋 Attendance Alert / उपस्थिती अहवाल*\nDate: {{DATE}} | Batch: {{BATCH}}\n\nDear Parents, the following students are ABSENT today:\nपालकांनो, खालील विद्यार्थी आज अनुपस्थित आहेत:\n\n{{ABSENT_LIST}}\n\nCheck details on the portal / अधिक माहितीसाठी पोर्टलवर लॉग इन करा:\n🔗 ${PORTAL_URL}\n\n– {{ACADEMY_NAME}}`
+    `*Daily Attendance / दैनिक उपस्थिती ⭐*\nDate: {{DATE}} | Batch: {{BATCH}}\n\nAbsent Students / अनुपस्थित विद्यार्थी:\n\n{{ABSENT_LIST}}\n\nView more details on the Parent Portal.\nअधिक माहितीसाठी पालक पोर्टलला भेट द्या.\n${PORTAL_URL}\n\n– {{ACADEMY_NAME}}`
 
   // State
   const [activeTab, setActiveTab] = useState<'daily' | 'history' | 'analytics'>('daily')
