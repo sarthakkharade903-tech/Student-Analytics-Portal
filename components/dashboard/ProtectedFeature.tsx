@@ -1,8 +1,8 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { usePathname } from 'next/navigation'
-import { Lock, ShieldAlert } from 'lucide-react'
+import { usePathname, useRouter } from 'next/navigation'
+import { Lock, ShieldAlert, Loader2 } from 'lucide-react'
 
 // Map route prefixes to feature keys
 const ROUTE_TO_FEATURE: Record<string, string> = {
@@ -25,10 +25,11 @@ function getFeatureKeyForPath(pathname: string): string | null {
 
 interface ProtectedFeatureProps {
   children: React.ReactNode
-  lockedModules: Record<string, string | false>
+  lockedModules: Record<string, boolean>
 }
 
 export function ProtectedFeature({ children, lockedModules }: ProtectedFeatureProps) {
+  const router = useRouter()
   const pathname = usePathname()
   const currentFeatureKey = getFeatureKeyForPath(pathname)
 
@@ -37,11 +38,10 @@ export function ProtectedFeature({ children, lockedModules }: ProtectedFeaturePr
 
   const [enteredPin, setEnteredPin] = useState('')
   const [error, setError] = useState('')
+  const [isVerifying, setIsVerifying] = useState(false)
 
-  // Determine lock status based on props passed directly from the server
-  // This eliminates the client-side fetch glitch
-  const actualPinForFeature = currentFeatureKey ? lockedModules[currentFeatureKey] : false
-  const isLocked = !!actualPinForFeature
+  // Determine lock status based on boolean props passed from the server
+  const isLocked = currentFeatureKey ? lockedModules[currentFeatureKey] === true : false
   const isUnlockedThisSession = currentFeatureKey ? unlockedInSession[currentFeatureKey] === true : false
   const showProtection = isLocked && !isUnlockedThisSession
 
@@ -51,16 +51,33 @@ export function ProtectedFeature({ children, lockedModules }: ProtectedFeaturePr
     setEnteredPin('')
   }, [pathname])
 
-  const handleVerify = (e: React.FormEvent) => {
+  const handleVerify = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!currentFeatureKey || !actualPinForFeature) return
+    if (!currentFeatureKey) return
 
-    if (enteredPin === actualPinForFeature) {
-      setUnlockedInSession(prev => ({ ...prev, [currentFeatureKey]: true }))
-      setEnteredPin('')
-      setError('')
-    } else {
-      setError('Incorrect PIN')
+    setIsVerifying(true)
+    setError('')
+
+    try {
+      const res = await fetch('/api/coaching/verify-pin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ featureKey: currentFeatureKey, pin: enteredPin }),
+      })
+
+      const data = await res.json()
+
+      if (data.success) {
+        setUnlockedInSession(prev => ({ ...prev, [currentFeatureKey]: true }))
+        setEnteredPin('')
+        router.refresh() // Tell Next.js to re-fetch Server Components (which will read the new cookie)
+      } else {
+        setError(data.message || 'Incorrect PIN')
+      }
+    } catch (err) {
+      setError('An error occurred. Please try again.')
+    } finally {
+      setIsVerifying(false)
     }
   }
 
@@ -118,10 +135,14 @@ export function ProtectedFeature({ children, lockedModules }: ProtectedFeaturePr
               id="protected-feature-submit"
               type="submit"
               className="w-full py-3 px-4 bg-slate-800 hover:bg-slate-900 active:scale-[0.98] text-white rounded-xl text-sm font-semibold transition-all flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
-              disabled={enteredPin.length !== 4}
+              disabled={enteredPin.length !== 4 || isVerifying}
             >
-              <Lock className="w-4 h-4" />
-              Unlock Feature
+              {isVerifying ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Lock className="w-4 h-4" />
+              )}
+              {isVerifying ? 'Verifying...' : 'Unlock Feature'}
             </button>
           </form>
         </div>

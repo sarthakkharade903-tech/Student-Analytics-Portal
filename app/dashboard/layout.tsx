@@ -1,4 +1,5 @@
 import { redirect } from 'next/navigation'
+import { cookies } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
 import Sidebar from '@/components/dashboard/Sidebar'
 import BackButton from '@/components/ui/BackButton'
@@ -80,6 +81,19 @@ if (isBlocked) {
 
 const ExpirationBanner = (await import('@/components/ui/ExpirationBanner')).default
 
+// Mask locked modules to prevent client-side PIN exposure
+const rawLockedModules = (features as any)?.locked_modules || {}
+const clientLockedModules: Record<string, boolean> = {}
+const cookieStore = await cookies()
+
+for (const key in rawLockedModules) {
+  if (rawLockedModules[key]) {
+    // It has a PIN, but check if it's already unlocked via session cookie
+    const isUnlocked = cookieStore.get(`unlocked_${key}`)?.value === 'true'
+    clientLockedModules[key] = !isUnlocked // true if locked, false if already unlocked
+  }
+}
+
 return (
     <div className="flex min-h-screen bg-[var(--background)]">
       <Sidebar features={features} logoUrl={logoUrl} />
@@ -93,7 +107,7 @@ return (
         <main className="flex-1 overflow-y-auto relative flex flex-col">
           <ExpirationBanner daysRemaining={daysRemaining} />
           <div className="flex-1 relative">
-            <ProtectedFeatureWrapper lockedModules={(features as any)?.locked_modules || {}}>
+            <ProtectedFeatureWrapper lockedModules={clientLockedModules}>
               {children}
             </ProtectedFeatureWrapper>
           </div>

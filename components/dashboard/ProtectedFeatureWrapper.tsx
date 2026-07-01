@@ -4,7 +4,7 @@ import { ProtectedFeature } from '@/components/dashboard/ProtectedFeature'
 
 interface ProtectedFeatureWrapperProps {
   children: React.ReactNode
-  lockedModules: Record<string, string | false>
+  lockedModules: Record<string, boolean>
 }
 
 export default function ProtectedFeatureWrapper({ children, lockedModules }: ProtectedFeatureWrapperProps) {

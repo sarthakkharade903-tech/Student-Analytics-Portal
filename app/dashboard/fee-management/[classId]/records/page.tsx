@@ -131,7 +131,7 @@ export default function StudentFeeRecordsPage({ params }: { params: Promise<{ cl
 
     if (!students || students.length === 0) {
       setRecords([])
-      setStats({ total: 0, paid: 0, pending: 0, totalCollected: 0 })
+      setStats({ total: 0, paid: 0, pending: 0, totalCollected: 0, totalDiscount: 0 })
       setBatches([])
       setLoading(false)
       return
@@ -414,10 +414,10 @@ export default function StudentFeeRecordsPage({ params }: { params: Promise<{ cl
       startY: yPos,
       body: [
         ['Total Course Fee', `Rs. ${(discount > 0 ? baseClassFee : adjustedFee).toLocaleString()}`],
-        ...(discount > 0 ? [[{ content: 'Discount Applied', styles: { textColor: [184, 134, 11], fontStyle: 'bold' } }, { content: `Rs. ${discount.toLocaleString()}`, styles: { textColor: [184, 134, 11], fontStyle: 'bold' } }]] : []),
+        ...(discount > 0 ? [[{ content: 'Discount Applied', styles: { textColor: [184, 134, 11] as [number, number, number], fontStyle: 'bold' as const } }, { content: `Rs. ${discount.toLocaleString()}`, styles: { textColor: [184, 134, 11] as [number, number, number], fontStyle: 'bold' as const } }]] : []),
         ['Adjusted Total Fee', `Rs. ${adjustedFee.toLocaleString()}`],
-        [{ content: 'Total Paid to Date', styles: { textColor: [0, 128, 0], fontStyle: 'bold' } }, { content: `Rs. ${Number(student.amount_paid).toLocaleString()}`, styles: { textColor: [0, 128, 0], fontStyle: 'bold' } }],
-        [{ content: 'Remaining Balance', styles: { textColor: student.remaining > 0 ? [220, 38, 38] : [0, 128, 0], fontStyle: 'bold' } }, { content: `Rs. ${Number(student.remaining).toLocaleString()}`, styles: { textColor: student.remaining > 0 ? [220, 38, 38] : [0, 128, 0], fontStyle: 'bold' } }]
+        [{ content: 'Total Paid to Date', styles: { textColor: [0, 128, 0] as [number, number, number], fontStyle: 'bold' as const } }, { content: `Rs. ${Number(student.amount_paid).toLocaleString()}`, styles: { textColor: [0, 128, 0] as [number, number, number], fontStyle: 'bold' as const } }],
+        [{ content: 'Remaining Balance', styles: { textColor: (student.remaining > 0 ? [220, 38, 38] : [0, 128, 0]) as [number, number, number], fontStyle: 'bold' as const } }, { content: `Rs. ${Number(student.remaining).toLocaleString()}`, styles: { textColor: (student.remaining > 0 ? [220, 38, 38] : [0, 128, 0]) as [number, number, number], fontStyle: 'bold' as const } }]
       ],
       theme: 'plain',
       styles: { fontSize: 11, cellPadding: 5 },
