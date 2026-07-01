@@ -5,8 +5,10 @@ import { createClient } from '@/lib/supabase/client'
 import {
   Search, Users, IndianRupee, TrendingUp, AlertCircle,
   X, History, Calendar, CheckCircle, Clock, Edit2, Save,
-  Loader2, Settings, ChevronDown, ChevronUp, Plus, Trash2
+  Loader2, Settings, ChevronDown, ChevronUp, Plus, Trash2, Download
 } from 'lucide-react'
+import { jsPDF } from 'jspdf'
+import autoTable from 'jspdf-autotable'
 
 type StudentFee = {
   student_id: string
@@ -61,7 +63,8 @@ export default function StudentFeeRecordsPage({ params }: { params: Promise<{ cl
   const [search, setSearch] = useState('')
   const [filterBatch, setFilterBatch] = useState('All')
   const [batches, setBatches] = useState<string[]>([])
-  const [stats, setStats] = useState({ total: 0, paid: 0, pending: 0, totalCollected: 0 })
+  const [stats, setStats] = useState({ total: 0, paid: 0, pending: 0, totalCollected: 0, totalDiscount: 0 })
+  const [coachingName, setCoachingName] = useState('')
 
   // Class-level fee settings
   const [showFeeSettings, setShowFeeSettings] = useState(false)
@@ -90,7 +93,7 @@ export default function StudentFeeRecordsPage({ params }: { params: Promise<{ cl
 
     const { data: profile, error: profileError } = await supabase
       .from('users')
-      .select('coaching_center_id')
+      .select('coaching_center_id, coaching_centers(name)')
       .eq('id', user.id)
       .single()
 
@@ -100,6 +103,8 @@ export default function StudentFeeRecordsPage({ params }: { params: Promise<{ cl
       return
     }
     const centerId = profile.coaching_center_id
+    const cName = Array.isArray(profile.coaching_centers) ? profile.coaching_centers[0]?.name : (profile.coaching_centers as any)?.name
+    setCoachingName(cName || 'Coaching Center')
 
     // Fetch students based on batch name pattern:
     // Class 12 = batches containing '12'
@@ -204,7 +209,13 @@ export default function StudentFeeRecordsPage({ params }: { params: Promise<{ cl
     // Compute stats
     const totalCollected = Math.round(mapped.reduce((sum, r) => sum + r.amount_paid, 0) * 100) / 100
     const paidCount = mapped.filter(r => r.has_payment).length
-    setStats({ total: mapped.length, paid: paidCount, pending: mapped.length - paidCount, totalCollected })
+    const classFallbackFee = classFeeSettings?.total_fee || 0
+    const totalDiscount = Math.round(mapped.reduce((sum, r) => {
+      const discount = classFallbackFee > r.total_fee && r.total_fee > 0 ? classFallbackFee - r.total_fee : 0
+      return sum + discount
+    }, 0) * 100) / 100
+
+    setStats({ total: mapped.length, paid: paidCount, pending: mapped.length - paidCount, totalCollected, totalDiscount })
 
     setLoading(false)
   }
@@ -283,6 +294,145 @@ export default function StudentFeeRecordsPage({ params }: { params: Promise<{ cl
     setSelectedStudent(prev => prev ? { ...prev, total_fee: feeVal, remaining: feeVal - prev.amount_paid } : null)
     setEditingTotalFee(false)
     setSavingStudentFee(false)
+  }
+
+  const downloadAuditReport = () => {
+    const doc = new jsPDF()
+    doc.setFontSize(18)
+    doc.text(`Fee Audit Report - Class ${classId}`, 14, 22)
+    
+    doc.setFontSize(11)
+    doc.text(`Date: ${new Date().toLocaleDateString('en-IN')}`, 14, 32)
+    doc.text(`Filter: ${filterBatch === 'All' ? 'All Batches' : filterBatch}`, 14, 38)
+    
+    // Summary
+    doc.text(`Total Students: ${stats.total}`, 14, 48)
+    doc.text(`Students with Payment: ${stats.paid}`, 70, 48)
+    doc.text(`Students Pending: ${stats.pending}`, 140, 48)
+    doc.text(`Total Collected: Rs. ${stats.totalCollected.toLocaleString()}`, 14, 54)
+    doc.text(`Total Discount: Rs. ${stats.totalDiscount.toLocaleString()}`, 70, 54)
+    
+    const tableData = filtered.map(r => [
+      r.name,
+      r.roll_no,
+      r.batch || '-',
+      `Rs. ${r.total_fee}`,
+      `Rs. ${r.amount_paid}`,
+      `Rs. ${r.remaining}`,
+      r.last_payment_date ? new Date(r.last_payment_date).toLocaleDateString('en-IN') : '-'
+    ])
+
+    autoTable(doc, {
+      startY: 60,
+      head: [['Student', 'Roll No', 'Batch', 'Total Fee', 'Paid', 'Remaining', 'Last Payment']],
+      body: tableData,
+      theme: 'grid',
+      headStyles: { fillColor: [63, 131, 248] },
+    })
+
+    doc.save(`Fee_Audit_Report_Class_${classId}.pdf`)
+  }
+
+  const downloadReceipt = (student: StudentFee, payment: PaymentRecord) => {
+    const doc = new jsPDF()
+    let yPos = 20
+
+    // Coaching Name Header
+    doc.setFontSize(22)
+    doc.setTextColor(33, 37, 41)
+    doc.setFont('helvetica', 'bold')
+    doc.text(coachingName || 'FEE RECEIPT', 105, yPos, { align: 'center' })
+    yPos += 12
+
+    // Student Details
+    doc.setFontSize(11)
+    doc.setFont('helvetica', 'normal')
+    doc.text(`Student Name: ${student.name}`, 14, yPos)
+    doc.text(`Receipt No: ${payment.receipt_number || 'N/A'}`, 130, yPos)
+    yPos += 7
+    doc.text(`Roll No: ${student.roll_no}`, 14, yPos)
+    doc.text(`Date: ${new Date(payment.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}`, 130, yPos)
+    yPos += 7
+    doc.text(`Class: ${student.standard}`, 14, yPos)
+    doc.text(`Batch: ${student.batch || 'N/A'}`, 130, yPos)
+    yPos += 10
+
+    // Current Payment Table
+    autoTable(doc, {
+      startY: yPos,
+      body: [
+        ['Fee Payment', `Rs. ${Number(payment.amount).toLocaleString()}`],
+        [{ content: 'Amount Paid (This Receipt)', styles: { fontStyle: 'bold' } }, { content: `Rs. ${Number(payment.amount).toLocaleString()}`, styles: { fontStyle: 'bold' } }]
+      ],
+      theme: 'grid',
+      headStyles: { fillColor: [241, 245, 249], textColor: [0, 0, 0] },
+      styles: { fontSize: 11, cellPadding: 6 }
+    })
+    
+    yPos = (doc as any).lastAutoTable.finalY + 12
+
+    // Payment History Table
+    doc.setFontSize(12)
+    doc.setFont('helvetica', 'bold')
+    doc.text('Payment History (Cumulative)', 14, yPos)
+    yPos += 4
+
+    const sortedHistory = [...student.payment_history].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime() || (a.receipt_number || '').localeCompare(b.receipt_number || ''))
+    
+    let cumulative = 0
+    const historyBody = sortedHistory.map(p => {
+      cumulative += Number(p.amount)
+      return [
+        new Date(p.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }),
+        p.receipt_number || '-',
+        `Rs. ${Number(p.amount).toLocaleString()}`,
+        `Rs. ${cumulative.toLocaleString()}`
+      ]
+    })
+
+    autoTable(doc, {
+      startY: yPos,
+      head: [['Date', 'Receipt No.', 'Amount Paid', 'Cumulative Total']],
+      body: historyBody,
+      theme: 'grid',
+      headStyles: { fillColor: [51, 51, 51], textColor: [255, 255, 255] },
+      styles: { fontSize: 10, cellPadding: 5 }
+    })
+
+    yPos = (doc as any).lastAutoTable.finalY + 12
+
+    // Fee Summary Table
+    doc.setFontSize(12)
+    doc.setFont('helvetica', 'bold')
+    doc.text('Fee Summary (As on this receipt date)', 14, yPos)
+    yPos += 4
+
+    const discount = Math.max(0, baseClassFee - student.total_fee)
+    const adjustedFee = student.total_fee
+
+    autoTable(doc, {
+      startY: yPos,
+      body: [
+        ['Total Course Fee', `Rs. ${(discount > 0 ? baseClassFee : adjustedFee).toLocaleString()}`],
+        ...(discount > 0 ? [[{ content: 'Discount Applied', styles: { textColor: [184, 134, 11], fontStyle: 'bold' } }, { content: `Rs. ${discount.toLocaleString()}`, styles: { textColor: [184, 134, 11], fontStyle: 'bold' } }]] : []),
+        ['Adjusted Total Fee', `Rs. ${adjustedFee.toLocaleString()}`],
+        [{ content: 'Total Paid to Date', styles: { textColor: [0, 128, 0], fontStyle: 'bold' } }, { content: `Rs. ${Number(student.amount_paid).toLocaleString()}`, styles: { textColor: [0, 128, 0], fontStyle: 'bold' } }],
+        [{ content: 'Remaining Balance', styles: { textColor: student.remaining > 0 ? [220, 38, 38] : [0, 128, 0], fontStyle: 'bold' } }, { content: `Rs. ${Number(student.remaining).toLocaleString()}`, styles: { textColor: student.remaining > 0 ? [220, 38, 38] : [0, 128, 0], fontStyle: 'bold' } }]
+      ],
+      theme: 'plain',
+      styles: { fontSize: 11, cellPadding: 5 },
+      columnStyles: {
+        0: { cellWidth: 100 },
+        1: { fontStyle: 'bold' }
+      },
+      didParseCell: function(data) {
+        if (discount > 0 && data.row.index === 1) {
+          data.cell.styles.fillColor = [255, 253, 240]
+        }
+      }
+    })
+
+    doc.save(`Receipt_${student.name.replace(/\s+/g, '_')}_${payment.receipt_number || 'pdf'}.pdf`)
   }
 
   const handleDeletePayment = async (receiptNumber: string, amount: number) => {
@@ -414,7 +564,7 @@ export default function StudentFeeRecordsPage({ params }: { params: Promise<{ cl
       </div>
 
       {/* Stats Row */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
         <div className="bg-[var(--background)] border border-[var(--border)] rounded-xl p-4 shadow-sm">
           <div className="flex items-center gap-2 mb-1"><Users className="w-4 h-4 text-[var(--primary)]" /><p className="text-xs text-[var(--muted-foreground)] font-medium uppercase tracking-wider">Total Students</p></div>
           <p className="text-2xl font-bold text-[var(--foreground)]">{stats.total}</p>
@@ -428,8 +578,12 @@ export default function StudentFeeRecordsPage({ params }: { params: Promise<{ cl
           <p className="text-2xl font-bold text-orange-500">{stats.pending}</p>
         </div>
         <div className="bg-[var(--background)] border border-[var(--border)] rounded-xl p-4 shadow-sm">
-          <div className="flex items-center gap-2 mb-1"><IndianRupee className="w-4 h-4 text-blue-500" /><p className="text-xs text-[var(--muted-foreground)] font-medium uppercase tracking-wider">Total Collected</p></div>
+          <div className="flex items-center gap-2 mb-1"><IndianRupee className="w-4 h-4 text-blue-500" /><p className="text-xs text-[var(--muted-foreground)] font-medium uppercase tracking-wider">Collected</p></div>
           <p className="text-2xl font-bold text-blue-600">₹{stats.totalCollected.toLocaleString()}</p>
+        </div>
+        <div className="bg-[var(--background)] border border-[var(--border)] rounded-xl p-4 shadow-sm">
+          <div className="flex items-center gap-2 mb-1"><IndianRupee className="w-4 h-4 text-amber-500" /><p className="text-xs text-[var(--muted-foreground)] font-medium uppercase tracking-wider">Discount Given</p></div>
+          <p className="text-2xl font-bold text-amber-600">₹{stats.totalDiscount.toLocaleString()}</p>
         </div>
       </div>
 
@@ -439,7 +593,14 @@ export default function StudentFeeRecordsPage({ params }: { params: Promise<{ cl
           <h2 className="text-base font-bold">Class {classId} Students ({filtered.length})</h2>
           <p className="text-xs text-[var(--muted-foreground)] mt-0.5">Click a student to view or edit full fee history.</p>
         </div>
-        <div className="flex gap-2 flex-wrap">
+        <div className="flex gap-2 flex-wrap items-center">
+          <button 
+            onClick={downloadAuditReport}
+            className="flex items-center gap-2 bg-[var(--primary)] text-primary-foreground px-4 py-2 rounded-lg text-sm font-semibold hover:opacity-90 transition-opacity mr-2"
+          >
+            <Download className="w-4 h-4" />
+            Audit PDF
+          </button>
           <select value={filterBatch} onChange={e => setFilterBatch(e.target.value)} className="bg-[var(--sidebar)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[var(--primary)] transition-colors">
             <option value="All">All Batches</option>
             {batches.map(b => <option key={b} value={b}>{b}</option>)}
@@ -667,13 +828,22 @@ export default function StudentFeeRecordsPage({ params }: { params: Promise<{ cl
                             <div className="text-sm text-[var(--muted-foreground)] text-right">
                               {new Date(p.date).toLocaleDateString('en-IN', { dateStyle: 'medium' })}
                             </div>
-                            <button
-                              onClick={() => handleDeletePayment(p.receipt_number ?? '', Number(p.amount))}
-                              className="p-2 bg-red-500/10 text-red-500 rounded-lg hover:bg-red-500 hover:text-white transition-colors"
-                              title="Delete Payment"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
+                            <div className="flex items-center gap-2">
+                              <button
+                                onClick={() => downloadReceipt(selectedStudent, p)}
+                                className="p-2 bg-blue-500/10 text-blue-500 rounded-lg hover:bg-blue-500 hover:text-white transition-colors"
+                                title="Download Receipt"
+                              >
+                                <Download className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={() => handleDeletePayment(p.receipt_number ?? '', Number(p.amount))}
+                                className="p-2 bg-red-500/10 text-red-500 rounded-lg hover:bg-red-500 hover:text-white transition-colors"
+                                title="Delete Payment"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
                           </div>
                         </div>
                       ))}

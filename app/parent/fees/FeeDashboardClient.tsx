@@ -34,21 +34,15 @@ type FeeData = {
 export default function FeeDashboardClient({ data }: { data: FeeData }) {
   const progress = data.totalFee > 0 ? Math.min(100, Math.round((data.amountPaid / data.totalFee) * 100)) : 0
 
-  const handleDownloadReceipt = (payment: Payment & {
-    paid_to_date?: number
-    total_fee_at_time?: number
-    base_fee_at_time?: number
-    remaining_at_time?: number
-  }) => {
+  const handleDownloadReceipt = (payment: Payment) => {
     const doc = new jsPDF()
 
-    // ── FROZEN SNAPSHOT ─────────────────────────────────────
-    // Use values frozen at the moment this payment was recorded.
-    // Falls back to live totals only for old payments (before this fix was deployed).
-    const paidToDate    = payment.paid_to_date     ?? data.amountPaid
-    const totalFeeSnap  = payment.total_fee_at_time ?? data.totalFee
-    const baseFeeSnap   = payment.base_fee_at_time  ?? data.baseFee
-    const remainingSnap = payment.remaining_at_time ?? Math.max(0, data.totalFee - data.amountPaid)
+    // ── LIVE VALUES ─────────────────────────────────────
+    // Use live values so any recently added discounts appear correctly.
+    const paidToDate    = data.amountPaid
+    const totalFeeSnap  = data.totalFee
+    const baseFeeSnap   = data.baseFee
+    const remainingSnap = data.remainingFee
     
     const discountSnap  = Math.max(0, baseFeeSnap - totalFeeSnap)
 
@@ -176,8 +170,8 @@ export default function FeeDashboardClient({ data }: { data: FeeData }) {
 
     if (discountSnap > 0) {
       summaryBody.push([
-        { content: 'Discount Applied', styles: { fontStyle: 'bold', fillColor: [254, 252, 232], textColor: [161, 98, 7] } }, // Yellow highlight
-        { content: `Rs. ${Number(discountSnap).toLocaleString('en-IN')}`, styles: { fontStyle: 'bold', fillColor: [254, 252, 232], textColor: [161, 98, 7] } },
+        { content: 'Discount Applied', styles: { fontStyle: 'bold', textColor: [184, 134, 11] } },
+        { content: `Rs. ${Number(discountSnap).toLocaleString('en-IN')}`, styles: { fontStyle: 'bold', textColor: [184, 134, 11] } },
       ])
       
       summaryBody.push([
@@ -190,13 +184,13 @@ export default function FeeDashboardClient({ data }: { data: FeeData }) {
     }
 
     summaryBody.push([
-      { content: 'Total Paid to Date', styles: { fontStyle: 'bold', textColor: [0, 120, 60] } },
-      { content: `Rs. ${Number(paidToDate).toLocaleString('en-IN')}`, styles: { fontStyle: 'bold', textColor: [0, 120, 60] } },
+      { content: 'Total Paid to Date', styles: { fontStyle: 'bold', textColor: [0, 128, 0] } },
+      { content: `Rs. ${Number(paidToDate).toLocaleString('en-IN')}`, styles: { fontStyle: 'bold', textColor: [0, 128, 0] } },
     ])
     
     summaryBody.push([
-      { content: 'Remaining Balance', styles: { fontStyle: 'bold', textColor: totalFeeSnap > 0 ? (remainingSnap > 0 ? [180, 60, 0] : [0, 120, 60]) : [120, 120, 120] } },
-      { content: totalFeeSnap > 0 ? `Rs. ${Number(remainingSnap).toLocaleString('en-IN')}` : '—', styles: { fontStyle: 'bold', textColor: totalFeeSnap > 0 ? (remainingSnap > 0 ? [180, 60, 0] : [0, 120, 60]) : [120, 120, 120] } },
+      { content: 'Remaining Balance', styles: { fontStyle: 'bold', textColor: totalFeeSnap > 0 ? (remainingSnap > 0 ? [220, 38, 38] : [0, 128, 0]) : [120, 120, 120] } },
+      { content: totalFeeSnap > 0 ? `Rs. ${Number(remainingSnap).toLocaleString('en-IN')}` : '—', styles: { fontStyle: 'bold', textColor: totalFeeSnap > 0 ? (remainingSnap > 0 ? [220, 38, 38] : [0, 128, 0]) : [120, 120, 120] } },
     ])
 
     autoTable(doc, {
@@ -205,6 +199,11 @@ export default function FeeDashboardClient({ data }: { data: FeeData }) {
       styles: { fontSize: 10, cellPadding: 3 },
       body: summaryBody,
       columnStyles: { 0: { cellWidth: 120 } },
+      didParseCell: function(data) {
+        if (discountSnap > 0 && data.row.index === 1) {
+          data.cell.styles.fillColor = [255, 253, 240]
+        }
+      }
     })
 
     // ── FOOTER ───────────────────────────────────────────────
