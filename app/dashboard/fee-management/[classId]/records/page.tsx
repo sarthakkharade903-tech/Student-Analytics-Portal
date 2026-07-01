@@ -65,6 +65,7 @@ export default function StudentFeeRecordsPage({ params }: { params: Promise<{ cl
 
   // Class-level fee settings
   const [showFeeSettings, setShowFeeSettings] = useState(false)
+  const [baseClassFee, setBaseClassFee] = useState(0)
   const [classTotalFee, setClassTotalFee] = useState('')
   const [classInstallments, setClassInstallments] = useState<any[]>([])
   const [savingClassFee, setSavingClassFee] = useState(false)
@@ -77,6 +78,7 @@ export default function StudentFeeRecordsPage({ params }: { params: Promise<{ cl
   const [selectedStudent, setSelectedStudent] = useState<StudentFee | null>(null)
   const [editingTotalFee, setEditingTotalFee] = useState(false)
   const [newStudentTotalFee, setNewStudentTotalFee] = useState('')
+  const [newStudentDiscount, setNewStudentDiscount] = useState('')
   const [savingStudentFee, setSavingStudentFee] = useState(false)
 
   const fetchRecords = async () => {
@@ -149,6 +151,7 @@ export default function StudentFeeRecordsPage({ params }: { params: Promise<{ cl
       .maybeSingle()
 
     if (classFeeSettings) {
+      setBaseClassFee(classFeeSettings.total_fee || 0)
       setClassTotalFee(classFeeSettings.total_fee?.toString() || '')
       setClassInstallments(classFeeSettings.installments || [])
     }
@@ -474,6 +477,7 @@ export default function StudentFeeRecordsPage({ params }: { params: Promise<{ cl
                   <th className="px-5 py-4 font-semibold">Student</th>
                   <th className="px-5 py-4 font-semibold">Batch</th>
                   <th className="px-5 py-4 font-semibold">Total Fee</th>
+                  <th className="px-5 py-4 font-semibold">Discount</th>
                   <th className="px-5 py-4 font-semibold">Progress</th>
                   <th className="px-5 py-4 font-semibold">Paid</th>
                   <th className="px-5 py-4 font-semibold">Remaining</th>
@@ -484,7 +488,13 @@ export default function StudentFeeRecordsPage({ params }: { params: Promise<{ cl
                 {filtered.map(record => {
                   const progress = record.total_fee > 0 ? Math.min(100, Math.round((record.amount_paid / record.total_fee) * 100)) : 0
                   return (
-                    <tr key={record.student_id} onClick={() => { setSelectedStudent(record); setEditingTotalFee(false); setNewStudentTotalFee(record.total_fee.toString()) }} className="hover:bg-[var(--background)]/80 transition-all duration-150 group cursor-pointer">
+                    <tr key={record.student_id} onClick={() => { 
+                      setSelectedStudent(record)
+                      setEditingTotalFee(false)
+                      setNewStudentTotalFee(record.total_fee.toString())
+                      const disc = baseClassFee > record.total_fee ? baseClassFee - record.total_fee : 0
+                      setNewStudentDiscount(disc.toString())
+                    }} className="hover:bg-[var(--background)]/80 transition-all duration-150 group cursor-pointer">
                       <td className="px-5 py-4">
                         <p className="font-bold text-[var(--foreground)] group-hover:text-[var(--primary)] transition-colors">{record.name}</p>
                         <p className="text-xs text-[var(--muted-foreground)] mt-0.5">Roll: {record.roll_no}</p>
@@ -494,6 +504,13 @@ export default function StudentFeeRecordsPage({ params }: { params: Promise<{ cl
                       </td>
                       <td className="px-5 py-4 font-medium">
                         {record.total_fee > 0 ? `₹${Number(record.total_fee).toLocaleString()}` : <span className="text-orange-500 italic text-xs font-semibold">Not Set</span>}
+                      </td>
+                      <td className="px-5 py-4">
+                        {baseClassFee > record.total_fee && record.total_fee > 0 ? (
+                           <span className="text-emerald-600 font-bold bg-emerald-500/10 px-2 py-1 rounded-md border border-emerald-500/20 text-xs">₹{(baseClassFee - record.total_fee).toLocaleString()}</span>
+                        ) : (
+                           <span className="text-[var(--muted-foreground)] text-xs">—</span>
+                        )}
                       </td>
                       <td className="px-5 py-4 w-40">
                         {record.total_fee > 0 ? (
@@ -553,24 +570,65 @@ export default function StudentFeeRecordsPage({ params }: { params: Promise<{ cl
                   <div className="flex items-center justify-between mb-1">
                     <p className="text-xs text-[var(--muted-foreground)] font-medium">TOTAL FEE</p>
                     {!editingTotalFee && (
-                      <button onClick={() => setEditingTotalFee(true)} className="text-[var(--muted-foreground)] hover:text-[var(--primary)] opacity-0 group-hover:opacity-100 transition-opacity">
-                        <Edit2 className="w-3.5 h-3.5" />
+                      <button onClick={() => {
+                        setEditingTotalFee(true)
+                        const disc = baseClassFee > selectedStudent.total_fee ? baseClassFee - selectedStudent.total_fee : 0
+                        setNewStudentDiscount(disc.toString())
+                      }} className="text-[var(--primary)] hover:bg-[var(--primary)]/10 px-2 py-1 rounded-md text-xs font-bold flex items-center gap-1.5 transition-colors border border-[var(--primary)]/30 bg-[var(--primary)]/5">
+                        <Edit2 className="w-3.5 h-3.5" /> Adjust Fee / Discount
                       </button>
                     )}
                   </div>
                   {editingTotalFee ? (
-                    <div className="flex items-center gap-2 mt-1">
-                      <div className="relative flex-1">
-                        <IndianRupee className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--muted-foreground)]" />
-                        <input type="text" inputMode="numeric" autoComplete="off" value={newStudentTotalFee} onChange={e => setNewStudentTotalFee(e.target.value.replace(/[^0-9]/g, ''))} className="w-full bg-[var(--background)] border border-[var(--primary)] rounded-md pl-7 pr-2 py-1 text-sm font-bold focus:outline-none" autoFocus />
+                    <div className="flex flex-col gap-2 mt-2">
+                      <div className="flex items-center gap-2">
+                        <label className="text-xs text-[var(--muted-foreground)] w-16">Discount:</label>
+                        <div className="relative flex-1">
+                          <IndianRupee className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--muted-foreground)]" />
+                          <input type="text" inputMode="numeric" autoComplete="off" value={newStudentDiscount} 
+                            onChange={e => {
+                              const val = e.target.value.replace(/[^0-9]/g, '')
+                              setNewStudentDiscount(val)
+                              const discNum = parseFloat(val) || 0
+                              setNewStudentTotalFee(Math.max(0, baseClassFee - discNum).toString())
+                            }} 
+                            placeholder="e.g. 10000"
+                            className="w-full bg-[var(--background)] border border-[var(--border)] rounded-md pl-7 pr-2 py-1 text-sm focus:border-[var(--primary)] focus:outline-none" />
+                        </div>
                       </div>
-                      <button onClick={handleUpdateStudentFee} disabled={savingStudentFee} className="p-1.5 bg-[var(--primary)] text-primary-foreground rounded-md hover:opacity-90">
-                        {savingStudentFee ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
-                      </button>
-                      <button onClick={() => setEditingTotalFee(false)} className="p-1.5 text-[var(--muted-foreground)] hover:text-[var(--foreground)] rounded-md"><X className="w-3.5 h-3.5" /></button>
+                      <div className="flex items-center gap-2">
+                        <label className="text-xs text-[var(--muted-foreground)] w-16">Final Fee:</label>
+                        <div className="relative flex-1">
+                          <IndianRupee className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--muted-foreground)]" />
+                          <input type="text" inputMode="numeric" autoComplete="off" value={newStudentTotalFee} 
+                            onChange={e => {
+                              const val = e.target.value.replace(/[^0-9]/g, '')
+                              setNewStudentTotalFee(val)
+                              const feeNum = parseFloat(val) || 0
+                              setNewStudentDiscount(Math.max(0, baseClassFee - feeNum).toString())
+                            }} 
+                            className="w-full bg-[var(--background)] border border-[var(--primary)] rounded-md pl-7 pr-2 py-1 text-sm font-bold focus:outline-none" />
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 justify-end mt-1">
+                        <button onClick={handleUpdateStudentFee} disabled={savingStudentFee} className="px-3 py-1.5 text-xs bg-[var(--primary)] text-primary-foreground rounded-md hover:opacity-90 flex items-center gap-1">
+                          {savingStudentFee ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+                          Save
+                        </button>
+                        <button onClick={() => setEditingTotalFee(false)} className="px-3 py-1.5 text-xs bg-[var(--sidebar)] text-[var(--foreground)] border border-[var(--border)] rounded-md hover:bg-[var(--sidebar-accent)]">
+                          Cancel
+                        </button>
+                      </div>
                     </div>
                   ) : (
-                    <p className="text-xl font-bold">{selectedStudent.total_fee > 0 ? `₹${Number(selectedStudent.total_fee).toLocaleString()}` : <span className="text-orange-500 text-base">Not Set</span>}</p>
+                    <div>
+                      <p className="text-xl font-bold">{selectedStudent.total_fee > 0 ? `₹${Number(selectedStudent.total_fee).toLocaleString()}` : <span className="text-orange-500 text-base">Not Set</span>}</p>
+                      {baseClassFee > selectedStudent.total_fee && selectedStudent.total_fee > 0 && (
+                        <p className="text-xs text-emerald-600 font-semibold mt-1">
+                          (₹{(baseClassFee - selectedStudent.total_fee).toLocaleString()} Discount)
+                        </p>
+                      )}
+                    </div>
                   )}
                 </div>
                 <div className="bg-emerald-500/10 rounded-xl p-4 border border-emerald-500/20">

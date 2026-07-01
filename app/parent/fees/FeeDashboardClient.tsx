@@ -22,6 +22,7 @@ type FeeData = {
   rollNo: string
   standard: number
   batch: string
+  baseFee: number
   totalFee: number
   amountPaid: number
   remainingFee: number
@@ -36,6 +37,7 @@ export default function FeeDashboardClient({ data }: { data: FeeData }) {
   const handleDownloadReceipt = (payment: Payment & {
     paid_to_date?: number
     total_fee_at_time?: number
+    base_fee_at_time?: number
     remaining_at_time?: number
   }) => {
     const doc = new jsPDF()
@@ -45,7 +47,10 @@ export default function FeeDashboardClient({ data }: { data: FeeData }) {
     // Falls back to live totals only for old payments (before this fix was deployed).
     const paidToDate    = payment.paid_to_date     ?? data.amountPaid
     const totalFeeSnap  = payment.total_fee_at_time ?? data.totalFee
+    const baseFeeSnap   = payment.base_fee_at_time  ?? data.baseFee
     const remainingSnap = payment.remaining_at_time ?? Math.max(0, data.totalFee - data.amountPaid)
+    
+    const discountSnap  = Math.max(0, baseFeeSnap - totalFeeSnap)
 
     const paymentDate = new Date(payment.date).toLocaleDateString('en-IN', {
       day: '2-digit', month: 'long', year: 'numeric'
@@ -160,26 +165,45 @@ export default function FeeDashboardClient({ data }: { data: FeeData }) {
     doc.setTextColor(30, 30, 30)
     doc.text('Fee Summary (As on this receipt date)', 14, y3)
 
+    const summaryBody: any[] = []
+    
+    summaryBody.push([
+      'Total Course Fee',
+      baseFeeSnap > 0
+        ? `Rs. ${Number(baseFeeSnap).toLocaleString('en-IN')}`
+        : 'Not Set'
+    ])
+
+    if (discountSnap > 0) {
+      summaryBody.push([
+        { content: 'Discount Applied', styles: { fontStyle: 'bold', fillColor: [254, 252, 232], textColor: [161, 98, 7] } }, // Yellow highlight
+        { content: `Rs. ${Number(discountSnap).toLocaleString('en-IN')}`, styles: { fontStyle: 'bold', fillColor: [254, 252, 232], textColor: [161, 98, 7] } },
+      ])
+      
+      summaryBody.push([
+        { content: 'Adjusted Total Fee', styles: { fontStyle: 'bold', textColor: [60, 60, 60] } },
+        { content: `Rs. ${Number(totalFeeSnap).toLocaleString('en-IN')}`, styles: { fontStyle: 'bold', textColor: [60, 60, 60] } },
+      ])
+    } else if (baseFeeSnap === 0 && totalFeeSnap > 0) {
+      // Edge case: no base fee set, only adjusted fee exists
+      summaryBody[0][1] = `Rs. ${Number(totalFeeSnap).toLocaleString('en-IN')}`
+    }
+
+    summaryBody.push([
+      { content: 'Total Paid to Date', styles: { fontStyle: 'bold', textColor: [0, 120, 60] } },
+      { content: `Rs. ${Number(paidToDate).toLocaleString('en-IN')}`, styles: { fontStyle: 'bold', textColor: [0, 120, 60] } },
+    ])
+    
+    summaryBody.push([
+      { content: 'Remaining Balance', styles: { fontStyle: 'bold', textColor: totalFeeSnap > 0 ? (remainingSnap > 0 ? [180, 60, 0] : [0, 120, 60]) : [120, 120, 120] } },
+      { content: totalFeeSnap > 0 ? `Rs. ${Number(remainingSnap).toLocaleString('en-IN')}` : '—', styles: { fontStyle: 'bold', textColor: totalFeeSnap > 0 ? (remainingSnap > 0 ? [180, 60, 0] : [0, 120, 60]) : [120, 120, 120] } },
+    ])
+
     autoTable(doc, {
       startY: y3 + 4,
       theme: 'plain',
       styles: { fontSize: 10, cellPadding: 3 },
-      body: [
-        [
-          'Total Course Fee',
-          totalFeeSnap > 0
-            ? `Rs. ${Number(totalFeeSnap).toLocaleString('en-IN')}`
-            : 'Not Set'
-        ],
-        [
-          { content: 'Total Paid to Date', styles: { fontStyle: 'bold', textColor: [0, 120, 60] } },
-          { content: `Rs. ${Number(paidToDate).toLocaleString('en-IN')}`, styles: { fontStyle: 'bold', textColor: [0, 120, 60] } },
-        ],
-        [
-          { content: 'Remaining Balance', styles: { fontStyle: 'bold', textColor: totalFeeSnap > 0 ? (remainingSnap > 0 ? [180, 60, 0] : [0, 120, 60]) : [120, 120, 120] } },
-          { content: totalFeeSnap > 0 ? `Rs. ${Number(remainingSnap).toLocaleString('en-IN')}` : '—', styles: { fontStyle: 'bold', textColor: totalFeeSnap > 0 ? (remainingSnap > 0 ? [180, 60, 0] : [0, 120, 60]) : [120, 120, 120] } },
-        ],
-      ],
+      body: summaryBody,
       columnStyles: { 0: { cellWidth: 120 } },
     })
 

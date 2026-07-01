@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { EditProfileDialog } from './EditProfileDialog'
 import { FeatureManagement } from './FeatureManagement'
+import { FeatureLockSystem } from '@/components/dashboard/FeatureLockSystem'
 import LogoUploader from '@/components/dashboard/LogoUploader'
 import {
   Building2,
@@ -325,6 +326,9 @@ export default async function SettingsPage() {
 
         {/* ══ FEATURE MANAGEMENT ═══════════════════════════════════ */}
         <FeatureManagement initialFeatures={savedFeatures} />
+
+        {/* ══ FEATURE LOCK SYSTEM ══════════════════════════════════ */}
+        <FeatureLockSystem initialFeatures={savedFeatures} />
 
         {/* ══ SUBSCRIPTION DETAILS ════════════════════════════════ */}
         <SectionCard

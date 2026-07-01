@@ -2,6 +2,9 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import Sidebar from '@/components/dashboard/Sidebar'
 import BackButton from '@/components/ui/BackButton'
+import ProtectedFeatureWrapper from '@/components/dashboard/ProtectedFeatureWrapper'
+
+export const dynamic = 'force-dynamic'
 
 export default async function DashboardLayout({
   children,
@@ -90,7 +93,9 @@ return (
         <main className="flex-1 overflow-y-auto relative flex flex-col">
           <ExpirationBanner daysRemaining={daysRemaining} />
           <div className="flex-1 relative">
-            {children}
+            <ProtectedFeatureWrapper lockedModules={(features as any)?.locked_modules || {}}>
+              {children}
+            </ProtectedFeatureWrapper>
           </div>
         </main>
       </div>

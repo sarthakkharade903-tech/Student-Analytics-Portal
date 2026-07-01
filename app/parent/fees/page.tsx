@@ -74,6 +74,7 @@ export default async function ParentFeesPage() {
   const classFallbackInst = classFeeSettings?.installments || []
 
   const totalFee = (feeRecord?.total_fee && feeRecord.total_fee > 0) ? feeRecord.total_fee : classFallbackFee
+  const baseFee = classFallbackFee > 0 ? classFallbackFee : totalFee
   const amountPaid = feeRecord?.amount_paid || 0
   const installments: any[] = (feeRecord?.installments && feeRecord.installments.length > 0) ? feeRecord.installments : classFallbackInst
   
@@ -91,12 +92,14 @@ export default async function ParentFeesPage() {
   // Find current installment (first unpaid one)
   let cumulativePaid = amountPaid
   let currentInstallment = null
-  for (const inst of installments) {
-    if (cumulativePaid >= inst.amount) {
-      cumulativePaid -= inst.amount
-    } else {
-      currentInstallment = inst
-      break
+  if (amountPaid < totalFee) {
+    for (const inst of installments) {
+      if (cumulativePaid >= inst.amount) {
+        cumulativePaid -= inst.amount
+      } else {
+        currentInstallment = inst
+        break
+      }
     }
   }
 
@@ -106,6 +109,7 @@ export default async function ParentFeesPage() {
     rollNo: student.roll_no,
     standard: student.standard,
     batch: student.batch,
+    baseFee,
     totalFee,
     amountPaid,
     remainingFee: totalFee - amountPaid,

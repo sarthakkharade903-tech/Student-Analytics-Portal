@@ -10,6 +10,7 @@ type StudentSearch = {
   roll_no: string
   batch: string
   total_fee?: number
+  base_fee?: number
   amount_paid?: number
   fee_record_id?: string
   payment_history?: any[]
@@ -183,6 +184,7 @@ export default function QuickFeeEntryPage({ params }: { params: Promise<{ classI
     setSelectedStudent({
       ...student,
       fee_record_id: record?.id,
+      base_fee: classFallbackFee,
       total_fee: effectiveTotalFee,
       amount_paid: record?.amount_paid || 0,
       payment_history: record?.payment_history || []
@@ -216,6 +218,7 @@ export default function QuickFeeEntryPage({ params }: { params: Promise<{ classI
         receipt_number: string
         paid_to_date?: number
         total_fee_at_time?: number
+        base_fee_at_time?: number
         remaining_at_time?: number
       } = {
         amount,
@@ -234,6 +237,7 @@ export default function QuickFeeEntryPage({ params }: { params: Promise<{ classI
         // Freeze snapshot
         newPayment.paid_to_date = newTotalPaid
         newPayment.total_fee_at_time = totalFee
+        newPayment.base_fee_at_time = Number(selectedStudent.base_fee || 0)
         newPayment.remaining_at_time = Math.max(0, totalFee - newTotalPaid)
         const updatedHistoryWithSnapshot = [...(selectedStudent.payment_history || []), newPayment]
         
@@ -257,6 +261,7 @@ export default function QuickFeeEntryPage({ params }: { params: Promise<{ classI
         const effectiveTotalFee = Number(selectedStudent.total_fee || 0)
         newPayment.paid_to_date = amount
         newPayment.total_fee_at_time = effectiveTotalFee
+        newPayment.base_fee_at_time = Number(selectedStudent.base_fee || 0)
         newPayment.remaining_at_time = Math.max(0, effectiveTotalFee - amount)
 
         const { error } = await supabase
