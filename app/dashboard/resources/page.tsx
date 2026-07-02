@@ -53,6 +53,17 @@ export default async function ResourcesPage({
   })
   const batches = Array.from(batchSet).sort()
 
+  // Fetch Initial Resources (Limit 50)
+  const { data: initialResources } = await supabase
+    .from('resources')
+    .select('*')
+    .eq('coaching_center_id', coachingCenterId)
+    .eq('standard', standard)
+    .order('subject', { ascending: true })
+    .order('chapter_name', { ascending: true })
+    .order('created_at', { ascending: false })
+    .range(0, 49)
+
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6">
       <div>
@@ -60,7 +71,12 @@ export default async function ResourcesPage({
         <p className="text-[var(--muted-foreground)] text-sm mt-1">Upload and manage study materials for {standard} standard students.</p>
       </div>
       <StandardTabs />
-      <ResourcesClient coachingCenterId={coachingCenterId} batches={batches} standard={standard} />
+      <ResourcesClient 
+        coachingCenterId={coachingCenterId} 
+        batches={batches} 
+        standard={standard} 
+        initialResources={initialResources || []}
+      />
     </div>
   )
 }

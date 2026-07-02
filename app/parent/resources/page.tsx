@@ -41,6 +41,20 @@ export default async function StudentResourcesPage() {
     return <BlockedAccess message="Your student profile has been deleted or is no longer accessible." showLogout={true} />
   }
 
+  // Fetch Initial Resources (Limit 50)
+  const { data: initialResources } = await supabase
+    .from('resources')
+    .select('*')
+    .eq('coaching_center_id', student.coaching_center_id)
+    .eq('standard', student.standard)
+    .or(`target_batches.cs.{"${student.batch}"},target_batches.cs.{"All Batches"}`)
+    .order('subject', { ascending: true })
+    .order('chapter_name', { ascending: true })
+    .order('is_featured', { ascending: false })
+    .order('is_important', { ascending: false })
+    .order('created_at', { ascending: false })
+    .range(0, 49)
+
   return (
     <div className="space-y-6">
       <div>
@@ -52,6 +66,7 @@ export default async function StudentResourcesPage() {
         coachingCenterId={student.coaching_center_id} 
         studentBatch={student.batch}
         studentStandard={student.standard}
+        initialResources={initialResources || []}
       />
     </div>
   )

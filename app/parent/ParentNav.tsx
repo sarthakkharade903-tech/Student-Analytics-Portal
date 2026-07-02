@@ -135,7 +135,17 @@ export default function ParentNav({ studentId, logoUrl }: { studentId: string | 
 
       // Sort by date descending
       newNotifications.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-      setNotifications(newNotifications)
+      
+      // Filter out notifications cleared previously
+      const clearedTime = localStorage.getItem(`cleared_notifs_${studentId}`)
+      let finalNotifs = newNotifications
+      if (clearedTime) {
+        const clearTimestamp = parseInt(clearedTime, 10)
+        finalNotifs = finalNotifs.filter(n => new Date(n.date).getTime() > clearTimestamp)
+      }
+
+      // Limit to latest 5
+      setNotifications(finalNotifs.slice(0, 5))
     }
 
     fetchNotifications()
@@ -250,10 +260,13 @@ export default function ParentNav({ studentId, logoUrl }: { studentId: string | 
                     )}
                   </div>
                   {notifications.length > 0 && (
-                    <div className="px-4 py-2 bg-slate-800/30 border-t border-slate-800 text-center">
+                    <div className="px-4 py-3 bg-slate-800/30 border-t border-slate-800 text-center">
                       <button 
-                        onClick={() => setNotifications([])}
-                        className="text-[10px] font-semibold text-slate-400 hover:text-white uppercase tracking-wider"
+                        onClick={() => {
+                          setNotifications([])
+                          localStorage.setItem(`cleared_notifs_${studentId}`, Date.now().toString())
+                        }}
+                        className="bg-white hover:bg-gray-100 text-slate-900 px-4 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-colors shadow-sm"
                       >
                         Clear All
                       </button>
@@ -294,6 +307,7 @@ export default function ParentNav({ studentId, logoUrl }: { studentId: string | 
             <Link
               key={tab.label}
               href={tab.path}
+              prefetch={false}
               className={`py-3 text-sm font-medium whitespace-nowrap border-b-2 transition-colors flex items-center gap-2 ${
                 isActive 
                   ? 'border-[var(--primary)] text-[var(--primary)]' 

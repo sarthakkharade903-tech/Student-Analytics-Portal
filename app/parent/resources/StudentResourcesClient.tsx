@@ -184,40 +184,46 @@ export default function StudentResourcesClient({
   coachingCenterId,
   studentBatch,
   studentStandard,
+  initialResources,
 }: {
   studentId: string
   coachingCenterId: string
   studentBatch: string
   studentStandard: string
+  initialResources: Resource[]
 }) {
   const supabase = useMemo(() => createClient(), [])
-  const [resources, setResources] = useState<Resource[]>([])
-  const [loading, setLoading] = useState(true)
+  const [resources, setResources] = useState<Resource[]>(initialResources)
+  const [hasMore, setHasMore] = useState(initialResources.length === 50)
+  const [isLoadingMore, setIsLoadingMore] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
   const [activeSubject, setActiveSubject] = useState('All')
   const [expandedChapters, setExpandedChapters] = useState<Set<string>>(new Set())
   const [videoModal, setVideoModal] = useState<Resource | null>(null)
 
-  useEffect(() => {
-    const fetchResources = async () => {
-      setLoading(true)
-      const { data } = await supabase
-        .from('resources')
-        .select('*')
-        .eq('coaching_center_id', coachingCenterId)
-        .eq('standard', studentStandard)
-        .or(`target_batches.cs.{"${studentBatch}"},target_batches.cs.{"All Batches"}`)
-        .order('subject', { ascending: true })
-        .order('chapter_name', { ascending: true })
-        .order('is_featured', { ascending: false })
-        .order('is_important', { ascending: false })
-        .order('created_at', { ascending: false })
-        .range(0, 199)
-      if (data) setResources(data)
-      setLoading(false)
+  const loadMore = async () => {
+    setIsLoadingMore(true)
+    const { data } = await supabase
+      .from('resources')
+      .select('*')
+      .eq('coaching_center_id', coachingCenterId)
+      .eq('standard', studentStandard)
+      .or(`target_batches.cs.{"${studentBatch}"},target_batches.cs.{"All Batches"}`)
+      .order('subject', { ascending: true })
+      .order('chapter_name', { ascending: true })
+      .order('is_featured', { ascending: false })
+      .order('is_important', { ascending: false })
+      .order('created_at', { ascending: false })
+      .range(resources.length, resources.length + 49)
+    
+    if (data && data.length > 0) {
+      setResources(prev => [...prev, ...data])
+      if (data.length < 50) setHasMore(false)
+    } else {
+      setHasMore(false)
     }
-    fetchResources()
-  }, [coachingCenterId, studentBatch, studentStandard, supabase])
+    setIsLoadingMore(false)
+  }
 
   const toggleChapter = useCallback((key: string) => {
     setExpandedChapters(prev => {
@@ -303,14 +309,7 @@ export default function StudentResourcesClient({
     }
   }
 
-  if (loading) {
-    return (
-      <div className="py-20 flex flex-col items-center justify-center gap-3">
-        <Loader2 className="w-8 h-8 animate-spin text-[var(--primary)]" />
-        <p className="text-sm text-slate-400">Loading your learning hub...</p>
-      </div>
-    )
-  }
+  // Client-side loading removed since data is server-rendered
 
   return (
     <>
@@ -459,6 +458,20 @@ export default function StudentResourcesClient({
                 </div>
               </div>
             ))}
+          </div>
+        )}
+
+        {/* Load More Button */}
+        {hasMore && !isFiltering && activeSubject === 'All' && (
+          <div className="flex justify-center mt-8 pt-4">
+            <button
+              onClick={loadMore}
+              disabled={isLoadingMore}
+              className="flex items-center gap-2 px-6 py-2.5 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-sm font-medium transition-colors border border-slate-700 disabled:opacity-50"
+            >
+              {isLoadingMore ? <Loader2 className="w-4 h-4 animate-spin" /> : <FolderOpen className="w-4 h-4" />}
+              {isLoadingMore ? 'Loading more...' : 'Load Older Resources'}
+            </button>
           </div>
         )}
       </div>

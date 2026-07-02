@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import useSWR from 'swr'
 import StatCard from '@/components/dashboard/StatCard'
-import { Users, ClipboardList, MessageCircle, CalendarCheck, ArrowRight, Loader2, Building2, User, Bell } from 'lucide-react'
+import { Users, ClipboardList, CalendarCheck, ArrowRight, Loader2, Building2, User, Bell } from 'lucide-react'
 import Link from 'next/link'
 
 const fetcher = (url: string) => fetch(url).then(r => r.json())
@@ -17,32 +17,36 @@ interface DashboardData {
   activeBatches: number
 }
 
-export default function DashboardClient() {
+interface Props {
+  initialData: DashboardData
+  initialNotifications: any[]
+}
+
+export default function DashboardClient({ initialData, initialNotifications }: Props) {
   const [selectedClass, setSelectedClass] = useState('11')
   const [showNotifications, setShowNotifications] = useState(false)
 
-  const { data, isLoading } = useSWR<DashboardData>(
-    `/api/std-data/dashboard?class=${selectedClass}`,
+  // Only fetch from API when user switches to a different class tab.
+  // On initial render (selectedClass === '11') we use the server-prefetched data.
+  const { data: swrData, isLoading } = useSWR<DashboardData>(
+    selectedClass === '11' ? null : `/api/std-data/dashboard?class=${selectedClass}`,
     fetcher,
-    {
-      revalidateOnFocus: false,
-    }
+    { revalidateOnFocus: false }
   )
 
-  const { data: notifData } = useSWR<{ notifications: any[] }>(
-    `/api/std-data/notifications`,
-    fetcher
-  )
+  // Use SWR data if available (12th tab); otherwise fall back to server-prefetched data
+  const data = swrData ?? initialData
 
-  const notifications = notifData?.notifications ?? []
-  const unreadCount = notifications.filter((n: any) => !n.isRead).length
+  const displayName   = data.displayName
+  const centerName    = data.centerName
+  const studentCount  = data.studentCount
+  const testCount     = data.testCount
+  const attendanceRate = data.attendanceRate
+  const activeBatches = data.activeBatches
 
-  const displayName = data?.displayName ?? 'Rishiraj'
-  const centerName = data?.centerName ?? 'TEST ACADEMY'
-  const studentCount = data?.studentCount ?? 0
-  const testCount = data?.testCount ?? 0
-  const attendanceRate = data?.attendanceRate ?? '--'
-  const activeBatches = data?.activeBatches ?? 0
+  // Notifications come from server on first load — no separate client fetch needed
+  const notifications = initialNotifications
+  const unreadCount   = notifications.filter((n: any) => !n.isRead).length
 
   const gettingStartedSteps = [
     {
@@ -82,11 +86,7 @@ export default function DashboardClient() {
             </div>
             <h1 className="text-xl sm:text-2xl font-bold text-slate-800">
               Institute Name:{' '}
-              {isLoading && !data ? (
-                <span className="inline-block w-32 h-6 bg-slate-100 animate-pulse rounded align-middle" />
-              ) : (
-                <span className="text-indigo-600">{centerName}</span>
-              )}
+              <span className="text-indigo-600">{centerName}</span>
             </h1>
           </div>
           <div className="flex items-center gap-3 text-slate-600">
@@ -95,11 +95,7 @@ export default function DashboardClient() {
             </div>
             <p className="font-medium text-[15px]">
               Owner Name:{' '}
-              {isLoading && !data ? (
-                <span className="inline-block w-24 h-5 bg-slate-100 animate-pulse rounded align-middle" />
-              ) : (
-                <span className="text-slate-800">{displayName}</span>
-              )}
+              <span className="text-slate-800">{displayName}</span>
             </p>
           </div>
         </div>
@@ -185,28 +181,28 @@ export default function DashboardClient() {
       <section className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
         <StatCard
           title="Total Students"
-          value={isLoading && !data ? <Loader2 className="w-5 h-5 animate-spin" /> : studentCount}
+          value={isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : studentCount}
           icon={Users}
           description={studentCount ? `Students enrolled` : 'Add students to get started'}
           color="purple"
         />
         <StatCard
           title="Tests Uploaded"
-          value={isLoading && !data ? <Loader2 className="w-5 h-5 animate-spin" /> : testCount}
+          value={isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : testCount}
           icon={ClipboardList}
           description={testCount ? `Tests created` : 'Create your first test'}
           color="blue"
         />
         <StatCard
           title="Active Batches"
-          value={isLoading && !data ? <Loader2 className="w-5 h-5 animate-spin" /> : activeBatches}
+          value={isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : activeBatches}
           icon={Users}
           description="Running currently"
           color="green"
         />
         <StatCard
           title="Attendance Rate"
-          value={isLoading && !data ? <Loader2 className="w-5 h-5 animate-spin" /> : attendanceRate}
+          value={isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : attendanceRate}
           icon={CalendarCheck}
           description={`Average across batches`}
           color="orange"

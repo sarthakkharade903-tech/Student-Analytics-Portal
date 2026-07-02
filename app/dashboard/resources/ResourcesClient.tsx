@@ -50,10 +50,11 @@ function getTypeBadgeColor(type: string) {
   }
 }
 
-export default function ResourcesClient({ coachingCenterId, batches, standard }: { coachingCenterId: string, batches: string[], standard: string }) {
+export default function ResourcesClient({ coachingCenterId, batches, standard, initialResources }: { coachingCenterId: string, batches: string[], standard: string, initialResources: Resource[] }) {
   const supabase = useMemo(() => createClient(), [])
-  const [resources, setResources] = useState<Resource[]>([])
-  const [loading, setLoading] = useState(true)
+  const [resources, setResources] = useState<Resource[]>(initialResources)
+  const [hasMore, setHasMore] = useState(initialResources.length === 50)
+  const [isLoadingMore, setIsLoadingMore] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
   const [activeBatchTab, setActiveBatchTab] = useState('All')
   const [expandedChapters, setExpandedChapters] = useState<Set<string>>(new Set())
@@ -74,8 +75,8 @@ export default function ResourcesClient({ coachingCenterId, batches, standard }:
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
 
-  const fetchResources = async () => {
-    setLoading(true)
+  const loadMore = async () => {
+    setIsLoadingMore(true)
     const { data } = await supabase
       .from('resources')
       .select('*')
@@ -84,14 +85,16 @@ export default function ResourcesClient({ coachingCenterId, batches, standard }:
       .order('subject', { ascending: true })
       .order('chapter_name', { ascending: true })
       .order('created_at', { ascending: false })
-    if (data) setResources(data)
-    setLoading(false)
-  }
+      .range(resources.length, resources.length + 49)
 
-  useEffect(() => {
-    fetchResources()
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [coachingCenterId, standard])
+    if (data && data.length > 0) {
+      setResources(prev => [...prev, ...data])
+      if (data.length < 50) setHasMore(false)
+    } else {
+      setHasMore(false)
+    }
+    setIsLoadingMore(false)
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -111,14 +114,14 @@ export default function ResourcesClient({ coachingCenterId, batches, standard }:
       is_featured: isFeatured,
       standard
     }
-    const { error: insertError } = await supabase.from('resources').insert([newResource])
+    const { data: insertedData, error: insertError } = await supabase.from('resources').insert([newResource]).select()
     if (insertError) {
       setError(insertError.message)
     } else {
       setSuccess('Resource uploaded successfully!')
       setTitle(''); setExternalLink(''); setDescription('')
       setChapterName(''); setIsImportant(false); setIsFeatured(false)
-      fetchResources()
+      if (insertedData) setResources(prev => [insertedData[0], ...prev])
       setTimeout(() => setSuccess(null), 3000)
     }
     setIsSubmitting(false)
@@ -335,9 +338,7 @@ export default function ResourcesClient({ coachingCenterId, batches, standard }:
           <span className="text-sm text-[var(--muted-foreground)] shrink-0">{filteredResources.length} items</span>
         </div>
 
-        {loading ? (
-          <div className="py-12 flex justify-center"><Loader2 className="w-8 h-8 text-[var(--muted-foreground)] animate-spin" /></div>
-        ) : filteredResources.length === 0 ? (
+        {filteredResources.length === 0 ? (
           <div className="glass-card rounded-2xl py-12 text-center text-[var(--muted-foreground)]">
             No resources found{activeBatchTab !== 'All' ? ` for ${activeBatchTab}` : ''}.
           </div>
@@ -403,6 +404,20 @@ export default function ResourcesClient({ coachingCenterId, batches, standard }:
                 </div>
               </div>
             ))}
+          </div>
+        )}
+
+        {/* Load More Button */}
+        {hasMore && !isSearching && activeBatchTab === 'All' && (
+          <div className="flex justify-center mt-8 pt-4">
+            <button
+              onClick={loadMore}
+              disabled={isLoadingMore}
+              className="flex items-center gap-2 px-6 py-2.5 bg-[var(--card)] hover:bg-[var(--sidebar-accent)] text-[var(--foreground)] rounded-xl text-sm font-medium transition-colors border border-[var(--border)] disabled:opacity-50"
+            >
+              {isLoadingMore ? <Loader2 className="w-4 h-4 animate-spin" /> : <Folder className="w-4 h-4" />}
+              {isLoadingMore ? 'Loading more...' : 'Load Older Resources'}
+            </button>
           </div>
         )}
       </div>
