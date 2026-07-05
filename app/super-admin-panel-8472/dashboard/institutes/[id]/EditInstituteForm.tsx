@@ -19,7 +19,11 @@ export default function EditInstituteForm({ institute }: { institute: any }) {
     plan_type: institute.plan_type || 'Standard',
     account_status: institute.account_status || 'Trial',
     start_date: institute.start_date ? new Date(institute.start_date).toISOString().split('T')[0] : '',
-    end_date: institute.end_date ? new Date(institute.end_date).toISOString().split('T')[0] : ''
+    end_date: institute.end_date ? new Date(institute.end_date).toISOString().split('T')[0] : '',
+    services: {
+      exam_engine: institute.features?.services?.exam_engine || false,
+      coaching_management: institute.features?.services?.coaching_management || false,
+    }
   })
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -103,6 +107,30 @@ export default function EditInstituteForm({ institute }: { institute: any }) {
             <label className="block text-xs font-bold text-white/50 uppercase tracking-wider mb-2">End Date</label>
             <input type="date" value={formData.end_date} onChange={e => setFormData({...formData, end_date: e.target.value})} className="w-full bg-black/50 border border-white/10 rounded-xl py-3 px-4 text-white focus:border-red-500/50 transition-colors [color-scheme:dark]" />
           </div>
+        </div>
+      </div>
+
+      <div className="bg-black/50 border border-white/10 rounded-xl p-4 mt-6">
+        <label className="block text-xs font-bold text-white/50 uppercase tracking-wider mb-4">Enabled Services</label>
+        <div className="flex gap-6">
+          <label className="flex items-center cursor-pointer">
+            <input 
+              type="checkbox" 
+              checked={formData.services.exam_engine}
+              onChange={e => setFormData({ ...formData, services: { ...formData.services, exam_engine: e.target.checked } })}
+              className="w-4 h-4 rounded border-white/20 bg-black/50 text-red-500 focus:ring-red-500/50" 
+            />
+            <span className="ml-2 text-sm text-white">Exam Engine</span>
+          </label>
+          <label className="flex items-center cursor-pointer">
+            <input 
+              type="checkbox" 
+              checked={formData.services.coaching_management}
+              onChange={e => setFormData({ ...formData, services: { ...formData.services, coaching_management: e.target.checked } })}
+              className="w-4 h-4 rounded border-white/20 bg-black/50 text-red-500 focus:ring-red-500/50" 
+            />
+            <span className="ml-2 text-sm text-white">Coaching Management</span>
+          </label>
         </div>
       </div>
 

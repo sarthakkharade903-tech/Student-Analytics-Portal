@@ -41,6 +41,10 @@ export default function AddCoachingModal({ leadData, triggerButton }: AddCoachin
     phone: leadData?.mobile_number || '',
     city: leadData?.location || '',
     plan_type: isFromLead ? 'Trial' : 'Standard',
+    services: {
+      exam_engine: true,
+      coaching_management: true
+    }
   })
 
   // Re-sync if leadData changes (e.g., modal opened for different lead)
@@ -53,6 +57,10 @@ export default function AddCoachingModal({ leadData, triggerButton }: AddCoachin
         phone: leadData.mobile_number,
         city: leadData.location,
         plan_type: 'Trial',
+        services: {
+          exam_engine: true,
+          coaching_management: true
+        }
       })
     }
   }, [leadData])
@@ -125,7 +133,7 @@ export default function AddCoachingModal({ leadData, triggerButton }: AddCoachin
     setResult(null)
     setError('')
     if (!leadData) {
-      setFormData({ name: '', owner_name: '', email: '', phone: '', city: '', plan_type: 'Standard' })
+      setFormData({ name: '', owner_name: '', email: '', phone: '', city: '', plan_type: 'Standard', services: { exam_engine: true, coaching_management: true } })
     }
   }
 
@@ -314,6 +322,30 @@ export default function AddCoachingModal({ leadData, triggerButton }: AddCoachin
                       </div>
                     </div>
                   )}
+
+                  <div className="space-y-2 mt-4">
+                    <label className="text-xs font-bold text-white/50 uppercase tracking-widest mb-2 block">Enabled Services *</label>
+                    <div className="flex gap-6 p-4 bg-black/40 border border-white/10 rounded-xl">
+                      <label className="flex items-center cursor-pointer">
+                        <input 
+                          type="checkbox" 
+                          checked={formData.services.exam_engine}
+                          onChange={e => setFormData({ ...formData, services: { ...formData.services, exam_engine: e.target.checked } })}
+                          className="w-4 h-4 rounded border-white/20 bg-black/50 text-red-500 focus:ring-red-500/50" 
+                        />
+                        <span className="ml-2 text-sm text-white">Exam Engine</span>
+                      </label>
+                      <label className="flex items-center cursor-pointer">
+                        <input 
+                          type="checkbox" 
+                          checked={formData.services.coaching_management}
+                          onChange={e => setFormData({ ...formData, services: { ...formData.services, coaching_management: e.target.checked } })}
+                          className="w-4 h-4 rounded border-white/20 bg-black/50 text-red-500 focus:ring-red-500/50" 
+                        />
+                        <span className="ml-2 text-sm text-white">Coaching Management</span>
+                      </label>
+                    </div>
+                  </div>
 
                   {isFromLead && (
                     <div className="grid grid-cols-2 gap-4">

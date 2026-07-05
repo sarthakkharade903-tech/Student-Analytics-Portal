@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { Shield, LayoutDashboard, Key, LogOut } from 'lucide-react'
+import { Shield, LayoutDashboard, KeyRound, Users2, TrendingUp, LogOut } from 'lucide-react'
 
 export default async function SuperAdminLayout({
   children,
@@ -27,7 +27,15 @@ export default async function SuperAdminLayout({
             <LayoutDashboard className="w-5 h-5 mr-3 text-red-400 group-hover:scale-110 transition-transform" />
             Control Center
           </Link>
-          {/* Removed Access Codes standalone link as it will be integrated into the dashboard */}
+          <Link href="/super-admin-panel-8472/dashboard/leads" className="flex items-center px-4 py-3 text-sm font-medium rounded-xl text-white/60 hover:bg-white/5 hover:text-white transition-all group">
+            <TrendingUp className="w-5 h-5 mr-3 text-cyan-400 group-hover:scale-110 transition-transform" />
+            Leads
+          </Link>
+
+          <Link href="/super-admin-panel-8472/dashboard/institutes" className="flex items-center px-4 py-3 text-sm font-medium rounded-xl text-white/60 hover:bg-white/5 hover:text-white transition-all group">
+            <Users2 className="w-5 h-5 mr-3 text-purple-400 group-hover:scale-110 transition-transform" />
+            Institutes
+          </Link>
         </nav>
 
         <div className="p-4 border-t border-white/5">

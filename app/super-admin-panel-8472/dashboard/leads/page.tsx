@@ -107,9 +107,18 @@ export default async function LeadsPage() {
                           <Building2 className="w-4 h-4 text-blue-400" />
                         </div>
                         <div>
-                          <div className="font-semibold text-white group-hover:text-red-400 transition-colors">{lead.institute_name}</div>
+                          <div className="flex items-center gap-2">
+                            <div className="font-semibold text-white group-hover:text-red-400 transition-colors">{lead.institute_name}</div>
+                            {lead.remarks?.includes('[Source: EXAM ENGINE]') ? (
+                              <span className="px-2 py-0.5 rounded text-[9px] font-bold bg-cyan-500/20 text-cyan-400 border border-cyan-500/20 whitespace-nowrap">EXAM ENGINE</span>
+                            ) : (
+                              <span className="px-2 py-0.5 rounded text-[9px] font-bold bg-purple-500/20 text-purple-400 border border-purple-500/20 whitespace-nowrap">MAIN WEBSITE</span>
+                            )}
+                          </div>
                           {lead.remarks && (
-                            <div className="text-xs text-white/40 mt-0.5 max-w-[180px] truncate">{lead.remarks}</div>
+                            <div className="text-xs text-white/40 mt-0.5 max-w-[180px] truncate">
+                              {lead.remarks.replace('[Source: EXAM ENGINE] ', '').replace('[Source: EXAM ENGINE]', '')}
+                            </div>
                           )}
                         </div>
                       </div>
