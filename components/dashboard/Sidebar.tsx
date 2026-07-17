@@ -196,8 +196,22 @@ function SidebarInner({ features, logoUrl }: { features?: any, logoUrl?: string 
         })}
       </nav>
 
-      {/* Logout */}
-      <div className="p-3 border-t border-[var(--border)]">
+      {/* Exam Engine + Logout */}
+      <div className="p-3 border-t border-[var(--border)] space-y-1">
+        {/* Exam Engine SSO Link (Disabled - Coming Soon) */}
+        <div
+          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[var(--muted-foreground)] opacity-60 cursor-not-allowed transition-all duration-150 text-sm font-medium"
+          title="Exam Engine is launching soon!"
+        >
+          <svg className="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+            <path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2v-4M9 21H5a2 2 0 0 1-2-2v-4m0 0h18" />
+          </svg>
+          Exam Engine
+          <span className="ml-auto text-[10px] font-bold uppercase tracking-wider text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded-full">
+            Soon
+          </span>
+        </div>
+
         <button
           id="sidebar-logout"
           onClick={handleLogout}

@@ -226,6 +226,32 @@ export default async function PortalDashboardPage() {
           </p>
         </div>
 
+        {/* ── Mock Test CTA ───────────────────────────────────────── */}
+        <a
+          href="/api/sso/student"
+          className="group block rounded-2xl overflow-hidden border border-[oklch(0.62_0.22_265/0.3)] bg-gradient-to-r from-[oklch(0.62_0.22_265/0.12)] to-[oklch(0.65_0.18_300/0.08)] hover:border-[oklch(0.62_0.22_265/0.6)] transition-all duration-200 hover:shadow-lg hover:shadow-[oklch(0.62_0.22_265/0.1)]"
+        >
+          <div className="px-6 py-5 flex items-center justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-xl bg-[oklch(0.62_0.22_265/0.2)] border border-[oklch(0.62_0.22_265/0.3)] flex items-center justify-center flex-shrink-0">
+                <svg className="w-6 h-6 text-[var(--primary)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2v-4M9 21H5a2 2 0 0 1-2-2v-4m0 0h18" />
+                </svg>
+              </div>
+              <div>
+                <p className="font-bold text-base">Take an Online Mock Test</p>
+                <p className="text-sm text-[var(--muted-foreground)] mt-0.5">JEE Main · JEE Advanced · NEET · MHT-CET — NTA simulator with timer &amp; auto-grading</p>
+              </div>
+            </div>
+            <div className="flex-shrink-0 flex items-center gap-2 px-5 py-2.5 bg-[var(--primary)] text-white text-sm font-semibold rounded-xl group-hover:opacity-90 transition-all glow-primary whitespace-nowrap">
+              Start Test
+              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5}>
+                <path d="M7 17L17 7M17 7H7M17 7v10" />
+              </svg>
+            </div>
+          </div>
+        </a>
+
         {/* ── Overview Cards ─────────────────────────────────────────── */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {/* Latest Rank */}

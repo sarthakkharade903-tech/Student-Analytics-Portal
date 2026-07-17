@@ -279,6 +279,28 @@ export default async function ParentDashboard() {
         </div>
       </div>
 
+      {/* ── Exam Engine CTA Banner (Disabled - Coming Soon) ───────────────────────────────── */}
+      <div
+        className="block rounded-2xl overflow-hidden border border-slate-700/50 bg-gradient-to-r from-slate-800/40 to-slate-900/40 relative mt-6 mb-8 opacity-75 cursor-not-allowed"
+      >
+        <div className="px-6 py-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 relative">
+          <div className="flex items-center gap-4 opacity-50">
+            <div className="w-12 h-12 rounded-xl bg-slate-700/50 border border-slate-600/50 flex items-center justify-center flex-shrink-0">
+              <svg className="w-6 h-6 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                <path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2v-4M9 21H5a2 2 0 0 1-2-2v-4m0 0h18" />
+              </svg>
+            </div>
+            <div>
+              <p className="font-bold text-base text-slate-300">Take an Online Mock Test</p>
+              <p className="text-sm text-slate-500 mt-0.5">JEE Main · JEE Advanced · NEET · MHT-CET — NTA simulator with timer &amp; auto-grading</p>
+            </div>
+          </div>
+          <div className="flex-shrink-0 flex items-center justify-center gap-2 px-5 py-2.5 bg-slate-800 text-slate-400 text-sm font-semibold rounded-xl border border-slate-700 whitespace-nowrap w-full sm:w-auto cursor-not-allowed">
+            Coming Soon 🚀
+          </div>
+        </div>
+      </div>
+
       {!latestScore ? (
         <div className="rounded-2xl p-12 text-center border border-slate-800 bg-[#1a2540] shadow-sm">
           <div className="w-16 h-16 rounded-full bg-slate-800 flex items-center justify-center mx-auto mb-4">
