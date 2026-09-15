@@ -61,6 +61,7 @@ export async function POST(request: Request) {
       await supabase.from('fee_installments').delete().in('fee_id', feeIds)
     }
     await supabase.from('fees').delete().eq('coaching_center_id', id)
+    await supabase.from('fee_structures').delete().eq('coaching_center_id', id)
     await supabase.from('class_fee_settings').delete().eq('coaching_center_id', id)
     await supabase.from('batches').delete().eq('coaching_center_id', id)
     
@@ -75,6 +76,7 @@ export async function POST(request: Request) {
     }
 
     await supabase.from('students').delete().eq('coaching_center_id', id)
+    await supabase.from('student_insights').delete().eq('coaching_center_id', id)
     await supabase.from('institute_access_codes').delete().eq('coaching_center_id', id)
     await supabase.from('users').delete().eq('coaching_center_id', id)
     
@@ -110,7 +112,27 @@ export async function POST(request: Request) {
         .eq('status', 'Converted')
     }
 
-    // 8. Audit Log
+    // 8. Delete corresponding data from Exam Engine (Dual-DB Architecture)
+    try {
+      const examEngineUrl = process.env.NEXT_PUBLIC_EXAM_ENGINE_URL || 'http://localhost:3000'
+      const res = await fetch(`${examEngineUrl}/api/admin/superadmin/obliterate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          coaching_id: id,
+          security_code: envSecurityCode
+        })
+      })
+      
+      if (!res.ok) {
+        console.error('Exam Engine obliterate failed:', await res.text())
+        // We do not block the overall deletion if Exam Engine fails, but we log it.
+      }
+    } catch (examErr) {
+      console.error('Failed to connect to Exam Engine for deletion:', examErr)
+    }
+
+    // 9. Audit Log
     await supabase.from('audit_logs').insert({
       event_type: 'INSTITUTE_DELETED',
       description: `Super Admin permanently deleted coaching institute: ${center.name}`
