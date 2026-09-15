@@ -144,9 +144,17 @@ export default function LandingPage() {
           </div>
 
           <div className="sap-nav-ctas">
-            <RequestDemoModal />
-            <Link href="/login" className="sap-btn sap-btn-ghost">Admin Login</Link>
-            <Link href="/parent/login" className="sap-btn sap-btn-primary">Student Login</Link>
+            <Link href="/portal" className="sap-btn sap-btn-ghost">
+              Student Portal
+            </Link>
+            <Link href="/login" className="sap-btn sap-btn-ghost">
+              Admin Login
+            </Link>
+            <RequestDemoModal
+              buttonText="Request Demo"
+              className="sap-btn sap-btn-primary"
+              showSparkles={false}
+            />
           </div>
         </div>
       </nav>
@@ -160,34 +168,38 @@ export default function LandingPage() {
           <div className="sap-hero-copy">
             <div className="sap-badge">
               <span className="sap-badge-dot" />
-              Built for JEE, NEET, MHT-CET &amp; Competitive Exam Coaching Institutes
+              Built for JEE, NEET, MHT-CET &amp; Competitive Coaching Institutes
             </div>
 
             <h1 className="sap-hero-h1">
-              Student{' '}
-              <span className="sap-gradient-text">Performance Tracking</span>{' '}
-              Made Simple
+              Student Performance Tracking,{' '}
+              <span className="sap-gradient-text">Built for Coaching Institutes</span>
             </h1>
 
             <p className="sap-hero-sub">
-              Manage student records, upload test results, track attendance,
-              and help parents stay informed through a centralized analytics platform.
+              Upload test marks in seconds, generate automated student report cards, track attendance trends, and keep parents engaged through an instant analytics portal.
             </p>
 
             <div className="sap-hero-actions">
-              <Link href="/parent/login" className="sap-btn sap-btn-primary sap-btn-lg">
-                Student / Parent Login
+              <RequestDemoModal
+                buttonText="Request Free Demo"
+                className="sap-btn sap-btn-primary sap-btn-lg"
+              />
+              <Link href="/portal" className="sap-btn sap-btn-outline sap-btn-lg">
+                Access Student Portal
                 <ArrowRight size={16} />
-              </Link>
-              <Link href="/login" className="sap-btn sap-btn-outline sap-btn-lg">
-                Admin Login
               </Link>
             </div>
 
-            {/* Request Demo CTA */}
-            <div className="mt-4 flex items-center gap-3">
-              <RequestDemoModal />
-              <span className="text-sm text-[var(--muted-foreground,#6b7280)]">Get a free 3-day trial for your institute</span>
+            {/* Trust and quick-access bar */}
+            <div className="sap-hero-trust-bar">
+              <span className="sap-trust-pill">✓ Free 3-Day Institute Trial</span>
+              <span className="sap-trust-dot">&bull;</span>
+              <span className="sap-trust-pill">No Credit Card Required</span>
+              <span className="sap-trust-dot">&bull;</span>
+              <Link href="/login" className="sap-admin-inline-link">
+                Coaching Owner Login &rarr;
+              </Link>
             </div>
           </div>
 
@@ -356,12 +368,13 @@ export default function LandingPage() {
             Join coaching institutes simplifying analytics and parent communication.
           </p>
           <div className="sap-cta-actions">
-            <Link href="/parent/login" className="sap-btn sap-btn-white sap-btn-lg">
-              Student / Parent Login
-              <ArrowRight size={16} />
-            </Link>
+            <RequestDemoModal
+              buttonText="Get Started with a Free Demo"
+              className="sap-btn sap-btn-white sap-btn-lg"
+              showSparkles={false}
+            />
             <Link href="/login" className="sap-btn sap-btn-outline-white sap-btn-lg">
-              Admin Login
+              Coaching Admin Login
             </Link>
           </div>
         </div>
@@ -434,15 +447,15 @@ export default function LandingPage() {
               <Link href="#how-it-works" className="sap-footer-link">How It Works</Link>
             </div>
             <div className="sap-footer-col">
-              <h4 className="sap-footer-col-title">Access</h4>
-              <Link href="/login" className="sap-footer-link">Admin Login</Link>
-              <Link href="/parent/login" className="sap-footer-link">Student Login</Link>
+              <h4 className="sap-footer-col-title">Portals</h4>
+              <Link href="/portal" className="sap-footer-link">Student &amp; Parent Portal</Link>
+              <Link href="/login" className="sap-footer-link">Coaching Admin Login</Link>
             </div>
             <div className="sap-footer-col">
-              <h4 className="sap-footer-col-title">Legal</h4>
-              <Link href="#" className="sap-footer-link">Privacy Policy</Link>
-              <Link href="#" className="sap-footer-link">Terms</Link>
-              <Link href="#contact" className="sap-footer-link">Contact</Link>
+              <h4 className="sap-footer-col-title">Legal &amp; Compliance</h4>
+              <Link href="/privacy-policy" className="sap-footer-link">Privacy Policy</Link>
+              <Link href="/terms" className="sap-footer-link">Terms of Service</Link>
+              <Link href="#contact" className="sap-footer-link">Contact &amp; Support</Link>
             </div>
           </div>
         </div>
@@ -649,7 +662,7 @@ export default function LandingPage() {
           margin-bottom: 20px;
         }
         .sap-gradient-text {
-          background: linear-gradient(135deg, #2563eb 0%, #4f46e5 50%, #7c3aed 100%);
+          background: linear-gradient(135deg, #1d4ed8 0%, #2563eb 60%, #0284c7 100%);
           -webkit-background-clip: text;
           -webkit-text-fill-color: transparent;
           background-clip: text;
@@ -658,13 +671,39 @@ export default function LandingPage() {
           font-size: 17px;
           color: #475569;
           line-height: 1.75;
-          margin-bottom: 36px;
-          max-width: 490px;
+          margin-bottom: 32px;
+          max-width: 520px;
         }
         .sap-hero-actions {
           display: flex;
           gap: 14px;
           flex-wrap: wrap;
+        }
+        .sap-hero-trust-bar {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          flex-wrap: wrap;
+          margin-top: 18px;
+          font-size: 13px;
+          color: #64748b;
+        }
+        .sap-trust-pill {
+          font-weight: 500;
+          color: #475569;
+        }
+        .sap-trust-dot {
+          color: #cbd5e1;
+        }
+        .sap-admin-inline-link {
+          font-weight: 600;
+          color: #2563eb;
+          text-decoration: none;
+          transition: color 0.15s ease;
+        }
+        .sap-admin-inline-link:hover {
+          color: #1d4ed8;
+          text-decoration: underline;
         }
 
         /* ── Hero Visual ──────────────────────────────────── */
