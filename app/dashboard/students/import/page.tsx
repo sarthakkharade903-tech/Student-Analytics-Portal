@@ -372,10 +372,16 @@ function ImportStudentsForm() {
               <Upload className={`w-7 h-7 transition-colors ${isDragging ? 'text-[var(--primary)]' : 'text-[var(--muted-foreground)]'}`} />
             </div>
             <p className="font-semibold mb-1">
-              {isDragging ? 'Drop your CSV file here' : 'Drag & drop your CSV file'}
+              <span className="sm:hidden">
+                {isDragging ? 'Drop your CSV file here' : 'Tap to select your CSV file'}
+              </span>
+              <span className="hidden sm:inline">
+                {isDragging ? 'Drop your CSV file here' : 'Drag & drop your CSV file'}
+              </span>
             </p>
             <p className="text-sm text-[var(--muted-foreground)] mb-4">
-              or click to browse files
+              <span className="sm:hidden">or tap to browse files</span>
+              <span className="hidden sm:inline">or click to browse files</span>
             </p>
             <span className="text-xs px-3 py-1 rounded-full bg-[var(--secondary)] text-[var(--muted-foreground)] border border-[var(--border)]">
               .csv files only

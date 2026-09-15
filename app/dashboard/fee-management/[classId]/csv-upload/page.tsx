@@ -260,7 +260,12 @@ export default function CsvUploadPage({ params }: { params: Promise<{ classId: s
               <UploadCloud className="w-7 h-7 text-[var(--primary)]" />
             </div>
             <p className="font-semibold text-[var(--foreground)]">
-              {isDragging ? 'Drop your CSV here' : 'Drag & drop or click to browse'}
+              <span className="sm:hidden">
+                {isDragging ? 'Drop your CSV here' : 'Tap to select a CSV file'}
+              </span>
+              <span className="hidden sm:inline">
+                {isDragging ? 'Drop your CSV here' : 'Drag & drop or click to browse'}
+              </span>
             </p>
             <p className="text-sm text-[var(--muted-foreground)] mt-1">Only .csv files accepted</p>
           </>

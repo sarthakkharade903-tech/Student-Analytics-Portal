@@ -212,7 +212,8 @@ export default function LogoUploader({ currentLogoUrl, onUploadSuccess }: LogoUp
               </div>
               <div>
                 <p className="text-sm font-medium text-slate-200">
-                  Click to upload <span className="font-normal text-slate-400">or drag and drop</span>
+                  <span className="sm:hidden">Tap to upload</span>
+                  <span className="hidden sm:inline">Click to upload <span className="font-normal text-slate-400">or drag and drop</span></span>
                 </p>
                 <p className="text-xs text-slate-500 mt-1">PNG, JPG or SVG (max. 500KB)</p>
               </div>
