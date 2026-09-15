@@ -123,10 +123,11 @@ export default function ParentLogin() {
               <input
                 id="parent_phone"
                 type="tel"
+                inputMode="tel"
                 required
                 value={formData.parent_phone}
                 onChange={(e) => setFormData(prev => ({ ...prev, parent_phone: e.target.value }))}
-                className="w-full px-4 py-3 rounded-xl bg-white border border-slate-200 text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#5b21b6]/20 focus:border-[#5b21b6] transition-all text-sm shadow-sm"
+                className="w-full px-4 py-3 min-h-[48px] rounded-xl bg-white border border-slate-200 text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#5b21b6]/20 focus:border-[#5b21b6] transition-all text-base sm:text-sm shadow-sm"
                 placeholder="10-digit mobile number"
               />
             </div>
@@ -138,11 +139,12 @@ export default function ParentLogin() {
               <input
                 id="pin"
                 type="password"
+                inputMode="numeric"
                 required
                 maxLength={4}
                 value={formData.pin}
                 onChange={(e) => setFormData(prev => ({ ...prev, pin: e.target.value.replace(/\D/g, '').slice(0, 4) }))}
-                className="w-full px-4 py-3 rounded-xl bg-white border border-slate-200 text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#5b21b6]/20 focus:border-[#5b21b6] transition-all text-sm shadow-sm"
+                className="w-full px-4 py-3 min-h-[48px] rounded-xl bg-white border border-slate-200 text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#5b21b6]/20 focus:border-[#5b21b6] transition-all text-base sm:text-sm shadow-sm"
                 placeholder="e.g. 4827"
               />
             </div>
@@ -156,7 +158,7 @@ export default function ParentLogin() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3.5 bg-gradient-to-r from-[#6d28d9] to-[#5b21b6] text-white rounded-xl font-semibold hover:shadow-lg hover:shadow-purple-500/30 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed group text-sm mt-2"
+              className="w-full py-3.5 min-h-[48px] bg-gradient-to-r from-[#6d28d9] to-[#5b21b6] text-white rounded-xl font-semibold hover:shadow-lg hover:shadow-purple-500/30 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed group text-sm mt-2"
             >
               {loading ? (
                 <Loader2 className="w-5 h-5 animate-spin" />

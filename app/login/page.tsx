@@ -139,12 +139,13 @@ export default function LoginPage() {
                 id="email"
                 name="email"
                 type="email"
+                inputMode="email"
                 required
                 autoComplete="email"
                 placeholder="Enter your email"
                 value={email}
                 onChange={(e) => { setEmail(e.target.value); setError(null) }}
-                className="w-full px-4 py-3 rounded-xl bg-white border border-slate-200 text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#5b21b6]/20 focus:border-[#5b21b6] transition-all text-sm shadow-sm"
+                className="w-full px-4 py-3 min-h-[48px] rounded-xl bg-white border border-slate-200 text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#5b21b6]/20 focus:border-[#5b21b6] transition-all text-base sm:text-sm shadow-sm"
               />
             </div>
 
@@ -161,7 +162,7 @@ export default function LoginPage() {
                   placeholder="Enter your password"
                   value={password}
                   onChange={(e) => { setPassword(e.target.value); setError(null) }}
-                  className="w-full px-4 py-3 pr-11 rounded-xl bg-white border border-slate-200 text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#5b21b6]/20 focus:border-[#5b21b6] transition-all text-sm shadow-sm"
+                  className="w-full px-4 py-3 min-h-[48px] pr-11 rounded-xl bg-white border border-slate-200 text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#5b21b6]/20 focus:border-[#5b21b6] transition-all text-base sm:text-sm shadow-sm"
                 />
                 <button
                   type="button"
@@ -185,7 +186,7 @@ export default function LoginPage() {
               id="login-submit"
               type="submit"
               disabled={loading}
-              className="w-full py-3.5 px-4 bg-gradient-to-r from-[#6d28d9] to-[#5b21b6] text-white font-semibold rounded-xl hover:shadow-lg hover:shadow-purple-500/30 disabled:opacity-60 disabled:cursor-not-allowed transition-all duration-200 flex items-center justify-center gap-2 text-sm mt-2"
+              className="w-full py-3.5 min-h-[48px] px-4 bg-gradient-to-r from-[#6d28d9] to-[#5b21b6] text-white font-semibold rounded-xl hover:shadow-lg hover:shadow-purple-500/30 disabled:opacity-60 disabled:cursor-not-allowed transition-all duration-200 flex items-center justify-center gap-2 text-sm mt-2"
             >
               {loading ? (
                 <>

@@ -2,141 +2,187 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { GraduationCap, Phone, Hash, ArrowRight, Loader2, AlertCircle } from 'lucide-react'
+import Link from 'next/link'
+import { Loader2, ArrowRight } from 'lucide-react'
 
 export default function PortalLoginPage() {
   const router = useRouter()
-  const [rollNo, setRollNo] = useState('')
-  const [parentPhone, setParentPhone] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  
+  const [formData, setFormData] = useState({
+    parent_phone: '',
+    pin: ''
+  })
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setError(null)
     setLoading(true)
+    setError(null)
 
     try {
-      const res = await fetch('/api/portal/login', {
+      const res = await fetch('/api/parent/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ roll_no: rollNo, parent_phone: parentPhone }),
+        body: JSON.stringify(formData)
       })
+
       const data = await res.json()
 
       if (!res.ok) {
-        setError(data.error ?? 'Login failed. Please check your details.')
-        setLoading(false)
-        return
+        throw new Error(data.error || 'Failed to login')
       }
 
-      router.push('/portal/dashboard')
-    } catch {
-      setError('Something went wrong. Please try again.')
+      // Use window.location for a full page reload so the server reads the fresh cookie
+      window.location.href = '/parent'
+    } catch (err: any) {
+      setError(err.message)
       setLoading(false)
     }
   }
 
   return (
-    <div className="min-h-screen bg-[var(--background)] flex items-center justify-center p-4 relative overflow-hidden">
-      {/* Background grid */}
-      <div className="absolute inset-0 grid-pattern opacity-40 pointer-events-none" />
-
-      {/* Glow orbs */}
-      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[600px] h-[400px] rounded-full bg-[oklch(0.62_0.22_265/0.07)] blur-3xl pointer-events-none" />
-      <div className="absolute bottom-1/4 right-1/4 w-[300px] h-[300px] rounded-full bg-[oklch(0.65_0.18_300/0.05)] blur-3xl pointer-events-none" />
-
-      <div className="relative w-full max-w-md">
-        {/* Logo / Header */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-[oklch(0.62_0.22_265/0.15)] border border-[oklch(0.62_0.22_265/0.3)] mb-5 shadow-lg">
-            <GraduationCap className="w-8 h-8 text-[var(--primary)]" />
-          </div>
-          <h1 className="text-3xl font-bold tracking-tight mb-2">
-            Student <span className="gradient-text">Portal</span>
-          </h1>
-          <p className="text-[var(--muted-foreground)] text-sm">
-            View your test results and performance instantly.
-          </p>
+    <div className="min-h-screen flex bg-slate-50 text-slate-900 font-sans">
+      {/* Left Panel - Branding & Marketing */}
+      <div className="hidden lg:flex lg:w-[45%] relative bg-gradient-to-br from-[#4c1d95] via-[#5b21b6] to-[#3b0764] flex-col justify-between p-12 overflow-hidden text-white">
+        {/* Abstract Background Glows */}
+        <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
+          <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full bg-purple-500/30 blur-[120px]"></div>
+          <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] rounded-full bg-indigo-500/20 blur-[100px]"></div>
         </div>
 
-        {/* Card */}
-        <div className="glass-card rounded-2xl p-8 shadow-2xl">
-          <form onSubmit={handleLogin} className="space-y-5">
-            {/* Roll Number */}
-            <div className="space-y-2">
-              <label htmlFor="roll_no" className="text-sm font-medium text-[var(--foreground)]">
-                Roll Number
-              </label>
-              <div className="relative">
-                <Hash className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--muted-foreground)]" />
-                <input
-                  id="roll_no"
-                  type="text"
-                  value={rollNo}
-                  onChange={(e) => setRollNo(e.target.value)}
-                  placeholder="e.g. 1, 42, 101"
-                  required
-                  autoComplete="off"
-                  className="w-full pl-10 pr-4 py-3 rounded-xl bg-[var(--input)] border border-[var(--border)] text-[var(--foreground)] placeholder:text-[var(--muted-foreground)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--ring)] focus:border-transparent transition-all"
-                />
+        <div className="relative z-10 flex items-center gap-2">
+          <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center backdrop-blur-md border border-white/20">
+            <span className="font-black text-xl text-white tracking-tighter">SA</span>
+          </div>
+          <span className="font-bold text-xl tracking-tight">StudentAnalytics</span>
+        </div>
+
+        <div className="relative z-10 flex flex-col items-center text-center mt-12">
+          <div className="w-20 h-20 bg-white/10 rounded-2xl flex items-center justify-center backdrop-blur-md border border-white/20 mb-8 shadow-2xl">
+            <span className="text-4xl">🎓</span>
+          </div>
+          <h1 className="text-4xl font-extrabold mb-4 tracking-tight">Track Your Progress</h1>
+          <p className="text-purple-200 text-base max-w-sm mb-12 leading-relaxed">
+            AI-powered insights, instant results, and smart analytics to ace every exam.
+          </p>
+
+          <div className="w-full max-w-sm space-y-4">
+            {/* Stat Card 1 */}
+            <div className="bg-white/10 backdrop-blur-md border border-white/10 rounded-2xl p-4 flex items-center gap-4 text-left shadow-lg">
+              <div className="w-12 h-12 rounded-xl bg-purple-900/50 flex items-center justify-center text-2xl">
+                📊
+              </div>
+              <div>
+                <div className="font-bold text-xl">78.4%</div>
+                <div className="text-purple-200 text-xs font-medium">Average Score</div>
               </div>
             </div>
-
-            {/* Parent Phone */}
-            <div className="space-y-2">
-              <label htmlFor="parent_phone" className="text-sm font-medium text-[var(--foreground)]">
-                Parent&apos;s Phone Number
-              </label>
-              <div className="relative">
-                <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--muted-foreground)]" />
-                <input
-                  id="parent_phone"
-                  type="tel"
-                  value={parentPhone}
-                  onChange={(e) => setParentPhone(e.target.value)}
-                  placeholder="10-digit mobile number"
-                  required
-                  autoComplete="tel"
-                  className="w-full pl-10 pr-4 py-3 rounded-xl bg-[var(--input)] border border-[var(--border)] text-[var(--foreground)] placeholder:text-[var(--muted-foreground)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--ring)] focus:border-transparent transition-all"
-                />
+            {/* Stat Card 2 */}
+            <div className="bg-white/10 backdrop-blur-md border border-white/10 rounded-2xl p-4 flex items-center gap-4 text-left shadow-lg">
+              <div className="w-12 h-12 rounded-xl bg-purple-900/50 flex items-center justify-center text-2xl">
+                📝
+              </div>
+              <div>
+                <div className="font-bold text-xl">142</div>
+                <div className="text-purple-200 text-xs font-medium">Tests Completed</div>
               </div>
             </div>
+            {/* Stat Card 3 */}
+            <div className="bg-white/10 backdrop-blur-md border border-white/10 rounded-2xl p-4 flex items-center gap-4 text-left shadow-lg">
+              <div className="w-12 h-12 rounded-xl bg-purple-900/50 flex items-center justify-center text-2xl">
+                🏆
+              </div>
+              <div>
+                <div className="font-bold text-xl">#3</div>
+                <div className="text-purple-200 text-xs font-medium">Top Rank Achieved</div>
+              </div>
+            </div>
+          </div>
+        </div>
 
-            {/* Error */}
+        <div className="relative z-10 text-center mt-12">
+          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-purple-300/60">
+            Trusted by institutes across India
+          </p>
+        </div>
+      </div>
+
+      {/* Right Panel - Form */}
+      <div className="flex-1 flex items-center justify-center p-6 sm:p-12">
+        <div className="w-full max-w-[420px] bg-white rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 p-8 sm:p-10">
+          <div className="text-center mb-8">
+            <h2 className="text-2xl font-bold text-[#5b21b6]">Student &amp; Parent Login</h2>
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-5">
+            <div className="space-y-1.5">
+              <label htmlFor="parent_phone" className="text-sm font-semibold text-slate-700">
+                Registered Phone Number
+              </label>
+              <input
+                id="parent_phone"
+                type="tel"
+                inputMode="tel"
+                required
+                value={formData.parent_phone}
+                onChange={(e) => setFormData(prev => ({ ...prev, parent_phone: e.target.value }))}
+                className="w-full px-4 py-3 min-h-[48px] rounded-xl bg-white border border-slate-200 text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#5b21b6]/20 focus:border-[#5b21b6] transition-all text-base sm:text-sm shadow-sm"
+                placeholder="10-digit mobile number"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <label htmlFor="pin" className="text-sm font-semibold text-slate-700">
+                4-Digit PIN
+              </label>
+              <input
+                id="pin"
+                type="password"
+                inputMode="numeric"
+                required
+                maxLength={4}
+                value={formData.pin}
+                onChange={(e) => setFormData(prev => ({ ...prev, pin: e.target.value.replace(/\D/g, '').slice(0, 4) }))}
+                className="w-full px-4 py-3 min-h-[48px] rounded-xl bg-white border border-slate-200 text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#5b21b6]/20 focus:border-[#5b21b6] transition-all text-base sm:text-sm shadow-sm"
+                placeholder="e.g. 4827"
+              />
+            </div>
+
             {error && (
-              <div className="flex items-start gap-2.5 rounded-xl bg-red-500/10 border border-red-500/25 px-4 py-3 text-sm text-red-400">
-                <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
-                <span>{error}</span>
+              <div className="rounded-xl bg-red-50 border border-red-100 px-4 py-3 text-sm text-red-600">
+                {error}
               </div>
             )}
 
-            {/* Submit */}
             <button
               id="portal-login-btn"
               type="submit"
-              disabled={loading || !rollNo || !parentPhone}
-              className="w-full flex items-center justify-center gap-2 py-3 px-6 bg-[var(--primary)] text-white font-semibold rounded-xl hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-all glow-primary text-sm"
+              disabled={loading}
+              className="w-full py-3.5 min-h-[48px] bg-gradient-to-r from-[#6d28d9] to-[#5b21b6] text-white rounded-xl font-semibold hover:shadow-lg hover:shadow-purple-500/30 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed group text-sm mt-2"
             >
               {loading ? (
-                <><Loader2 className="w-4 h-4 animate-spin" /> Signing in…</>
+                <Loader2 className="w-5 h-5 animate-spin" />
               ) : (
-                <>View My Results <ArrowRight className="w-4 h-4" /></>
+                <>
+                  Access Dashboard
+                  <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                </>
               )}
             </button>
           </form>
 
-          {/* Hint */}
-          <p className="mt-6 text-center text-xs text-[var(--muted-foreground)]">
-            Use the roll number and parent phone number<br />registered with your coaching center.
-          </p>
+          <div className="mt-6 flex justify-center">
+            <p className="text-sm text-slate-500">
+              Are you an institute admin?{' '}
+              <Link href="/login" className="text-[#5b21b6] hover:underline font-medium">
+                Admin Login
+              </Link>
+            </p>
+          </div>
         </div>
-
-        {/* Footer */}
-        <p className="text-center text-xs text-[var(--muted-foreground)] mt-6 opacity-60">
-          Parent Analytics Portal · For students &amp; parents only
-        </p>
       </div>
     </div>
   )
 }
+
