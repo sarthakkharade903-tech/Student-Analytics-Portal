@@ -13,7 +13,7 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json()
-    const { id, name, owner_name, email, phone, city, plan_type, start_date, end_date, account_status, services } = body
+    const { id, name, owner_name, email, phone, city, plan_type, start_date, end_date, account_status } = body
 
     if (!id) {
       return NextResponse.json({ success: false, message: 'Institute ID required' }, { status: 400 })
@@ -25,7 +25,7 @@ export async function POST(request: Request) {
     const { data: existingCenter } = await supabase.from('coaching_centers').select('features').eq('id', id).single()
     const features = existingCenter?.features || {}
     const superAdminData = { ...(features.superAdminData || {}), name, owner_name }
-    const updatedFeatures = { ...features, superAdminData, services }
+    const updatedFeatures = { ...features, superAdminData }
 
     const { error } = await supabase
       .from('coaching_centers')

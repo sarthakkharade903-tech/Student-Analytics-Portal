@@ -22,7 +22,7 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json()
-    const { name, owner_name, email, phone, city, plan_type, start_date, end_date, account_status, trial_duration, lead_id, services } = body
+    const { name, owner_name, email, phone, city, plan_type, start_date, end_date, account_status, trial_duration, lead_id } = body
 
     if (!name || !owner_name || !email) {
       return NextResponse.json({ success: false, message: 'Missing required fields' }, { status: 400 })
@@ -53,7 +53,7 @@ export async function POST(request: Request) {
         end_date: endDate.toISOString(),
         account_status: account_status || 'Active',
         is_active: true,
-        features: { superAdminData: { name, owner_name }, services: services || { exam_engine: true, coaching_management: true } }
+        features: { superAdminData: { name, owner_name } }
       })
       .select('id')
       .single()

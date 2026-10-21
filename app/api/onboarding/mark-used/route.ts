@@ -11,45 +11,13 @@ export async function POST(request: Request) {
 
     const supabase = createAdminClient();
 
-    // Fetch the code to get associated center
-    const { data: codeData } = await supabase
-      .from('institute_access_codes')
-      .select('*, coaching_centers(*)')
-      .eq('code', code.trim())
-      .single();
+    const { error } = await supabase
+      .from('onboarding_codes')
+      .update({ is_used: true })
+      .eq('code', code.toUpperCase());
 
-    if (!codeData) {
-      return NextResponse.json({ success: false, message: 'Invalid code' }, { status: 400 });
-    }
-
-    const center = codeData.coaching_centers;
-    if (center) {
-      const features = center.features || {};
-      const usage = features.usage || {};
-      const services = features.services || {};
-
-      usage.exam_engine_used = true;
-
-      await supabase.from('coaching_centers').update({
-        features: { ...features, usage }
-      }).eq('id', center.id);
-
-      const hasCoachingManagement = services.coaching_management;
-      const coachingManagementUsed = usage.coaching_management_used;
-      const fullyConsumed = (!hasCoachingManagement) || (hasCoachingManagement && coachingManagementUsed);
-
-      if (fullyConsumed) {
-        await supabase
-          .from('institute_access_codes')
-          .update({ status: 'Used' })
-          .eq('code', code.trim());
-      }
-    } else {
-      // Legacy code without center
-      await supabase
-        .from('institute_access_codes')
-        .update({ status: 'Used' })
-        .eq('code', code.trim());
+    if (error) {
+      return NextResponse.json({ success: false, message: 'Failed to mark code as used.' }, { status: 500 });
     }
 
     return NextResponse.json({ success: true });

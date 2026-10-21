@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, useEffect, useMemo, useCallback } from 'react'
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { Calendar, Upload, AlertTriangle, Loader2, CheckCircle2, FileSpreadsheet, LayoutGrid, Clock, BarChart, History, ChevronDown, ChevronRight, MessageCircle, Save, RotateCcw, Copy, Check } from 'lucide-react'
+import { Calendar, Upload, AlertTriangle, Loader2, CheckCircle2, FileSpreadsheet, LayoutGrid, Clock, BarChart, History, ChevronDown, ChevronRight, MessageCircle, Save, RotateCcw, Copy, Check, Play, Square, UserCheck, UserX, Timer } from 'lucide-react'
 import StandardTabs from '@/components/dashboard/StandardTabs'
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts'
 
@@ -19,6 +19,7 @@ interface AttendanceRecord {
   coaching_center_id?: string
   date: string
   is_present: boolean
+  is_late?: boolean
 }
 
 export default function AttendanceClient({
@@ -66,6 +67,23 @@ export default function AttendanceClient({
   )
   const [absenceIsCopied, setAbsenceIsCopied] = useState(false)
   const [absenceIsSaving, setAbsenceIsSaving] = useState(false)
+
+  // ── Auto Attendance Session State ──────────────────────────────────────────
+  const [sessionActive, setSessionActive] = useState(false)
+  const [sessionCode, setSessionCode] = useState<string | null>(null)
+  const [sessionExpiresAt, setSessionExpiresAt] = useState<number | null>(null)
+  const [lateSessionActive, setLateSessionActive] = useState(false)
+  const [lateCode, setLateCode] = useState<string | null>(null)
+  const [lateExpiresAt, setLateExpiresAt] = useState<number | null>(null)
+  const [sessionLoading, setSessionLoading] = useState(false)
+  const [lateSessionLoading, setLateSessionLoading] = useState(false)
+  const [sessionCountdown, setSessionCountdown] = useState('')
+  const [lateCountdown, setLateCountdown] = useState('')
+  const [liveCheckedIn, setLiveCheckedIn] = useState(0)
+  const [liveLatecheckedIn, setLiveLatecheckedIn] = useState(0)
+  const [gpsEnabled, setGpsEnabled] = useState(false)
+  const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const lateCountdownRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   // Derived state
   const batches = useMemo(() => {
@@ -147,6 +165,38 @@ export default function AttendanceClient({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedDate, selectedBatch, students, activeTab])
 
+  // Poll attendance when session is active so teacher sees live updates
+  useEffect(() => {
+    if (!sessionActive && !lateSessionActive) return
+    
+    const id = setInterval(async () => {
+      const batchStudentIds = currentBatchStudents.map(s => s.id)
+      if (batchStudentIds.length === 0) return
+      
+      const { data } = await supabase
+        .from('attendance')
+        .select('student_id, is_present')
+        .eq('date', selectedDate)
+        .in('student_id', batchStudentIds)
+
+      if (data) {
+        setAttendance(prev => {
+          const newAtt = { ...prev }
+          let changed = false
+          data.forEach((r: any) => { 
+            if (newAtt[r.student_id] !== r.is_present) {
+              newAtt[r.student_id] = r.is_present
+              changed = true
+            }
+          })
+          return changed ? newAtt : prev
+        })
+      }
+    }, 5000)
+    
+    return () => clearInterval(id)
+  }, [sessionActive, lateSessionActive, selectedDate, currentBatchStudents, supabase])
+
   // Fetch history when history tab is active
   useEffect(() => {
     if (activeTab !== 'history' && activeTab !== 'analytics') return
@@ -159,7 +209,7 @@ export default function AttendanceClient({
       setLoading(true)
       const { data, error } = await supabase
         .from('attendance')
-        .select('student_id, date, is_present')
+        .select('student_id, date, is_present, is_late')
         .in('student_id', batchStudentIds)
       
       if (data) {
@@ -228,6 +278,167 @@ export default function AttendanceClient({
   const handleSendAbsenceWhatsApp = () => {
     const msg = compileAbsenceMessage(absenceTemplate)
     window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank')
+  }
+
+  // ===========================================================================
+  // Auto Attendance Session Handlers
+  // ===========================================================================
+
+  const startCountdown = (expiresAt: number) => {
+    if (countdownRef.current) clearInterval(countdownRef.current)
+    const tick = () => {
+      const diff = expiresAt - Date.now()
+      if (diff <= 0) {
+        setSessionCountdown('00:00')
+        setSessionActive(false)
+        setSessionCode(null)
+        setSessionExpiresAt(null)
+        if (countdownRef.current) clearInterval(countdownRef.current)
+        return
+      }
+      const m = Math.floor(diff / 60000)
+      const s = Math.floor((diff % 60000) / 1000)
+      setSessionCountdown(`${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`)
+    }
+    tick()
+    countdownRef.current = setInterval(tick, 1000)
+  }
+
+  const startLateCountdown = (expiresAt: number) => {
+    if (lateCountdownRef.current) clearInterval(lateCountdownRef.current)
+    const tick = () => {
+      const diff = expiresAt - Date.now()
+      if (diff <= 0) {
+        setLateCountdown('00:00')
+        setLateSessionActive(false)
+        setLateCode(null)
+        setLateExpiresAt(null)
+        if (lateCountdownRef.current) clearInterval(lateCountdownRef.current)
+        return
+      }
+      const m = Math.floor(diff / 60000)
+      const s = Math.floor((diff % 60000) / 1000)
+      setLateCountdown(`${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`)
+    }
+    tick()
+    lateCountdownRef.current = setInterval(tick, 1000)
+  }
+
+  const handleStartSession = async () => {
+    setSessionLoading(true)
+    setError(null)
+    try {
+      const res = await fetch('/api/attendance/session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ standard, date: selectedDate, durationMinutes: 10 }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error ?? 'Failed to start session')
+      setSessionCode(data.code)
+      setSessionExpiresAt(data.expiresAt)
+      setSessionActive(true)
+      setGpsEnabled(!!data.gpsEnabled)
+      setLiveCheckedIn(0)
+      setLiveLatecheckedIn(0)
+      startCountdown(data.expiresAt)
+    } catch (e: any) {
+      setError(e.message)
+    } finally {
+      setSessionLoading(false)
+    }
+  }
+
+  // Poll live check-in count from server every 4 seconds while session is active
+  useEffect(() => {
+    if (!sessionActive) return
+    const pollLive = async () => {
+      try {
+        const res = await fetch(
+          `/api/attendance/session?teacher=1&date=${selectedDate}`,
+          { cache: 'no-store' }
+        )
+        if (!res.ok) return
+        const data = await res.json()
+        if (data.active) {
+          setLiveCheckedIn(data.checkedInCount ?? 0)
+          setLiveLatecheckedIn(data.lateCheckedInCount ?? 0)
+        } else {
+          // Session expired on server
+          setSessionActive(false)
+          setLateSessionActive(false)
+        }
+      } catch {}
+    }
+    pollLive()
+    const id = setInterval(pollLive, 4000)
+    return () => clearInterval(id)
+  }, [sessionActive, selectedDate])
+
+  const handleEndSession = async () => {
+    if (!confirm('End the session? Students who have not submitted will be marked Absent.')) return
+    try {
+      // Mark all students who didn't check in as absent
+      const { data: checkedInRows } = await supabase
+        .from('attendance')
+        .select('student_id')
+        .eq('date', selectedDate)
+        .in('student_id', currentBatchStudents.map(s => s.id))
+
+      const checkedInIds = new Set((checkedInRows ?? []).map((r: any) => r.student_id))
+      const absentRecords: AttendanceRecord[] = currentBatchStudents
+        .filter(s => !checkedInIds.has(s.id))
+        .map(s => ({ student_id: s.id, date: selectedDate, is_present: false, coaching_center_id: coachingCenterId }))
+
+      if (absentRecords.length > 0) {
+        await supabase.from('attendance').upsert(absentRecords, { onConflict: 'student_id,date' })
+      }
+
+      await fetch('/api/attendance/session', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ standard, date: selectedDate }),
+      })
+
+      setSessionActive(false)
+      setSessionCode(null)
+      setSessionExpiresAt(null)
+      setLateSessionActive(false)
+      setLateCode(null)
+      setLateExpiresAt(null)
+      if (countdownRef.current) clearInterval(countdownRef.current)
+      if (lateCountdownRef.current) clearInterval(lateCountdownRef.current)
+
+      // Refresh attendance display
+      const newMap: Record<string, boolean> = {}
+      currentBatchStudents.forEach(s => { newMap[s.id] = checkedInIds.has(s.id) })
+      setAttendance(newMap)
+      displaySuccess(`Session ended. ${absentRecords.length} student(s) marked absent.`)
+    } catch (e: any) {
+      setError('Failed to end session: ' + e.message)
+    }
+  }
+
+  const handleStartLateSession = async () => {
+    setLateSessionLoading(true)
+    setError(null)
+    try {
+      const res = await fetch('/api/attendance/late-session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ standard, date: selectedDate, durationMinutes: 5 }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error ?? 'Failed to start late session')
+      setLateCode(data.lateCode)
+      setLateExpiresAt(data.lateExpiresAt)
+      setLateSessionActive(true)
+      startLateCountdown(data.lateExpiresAt)
+    } catch (e: any) {
+      setError(e.message)
+    } finally {
+      setLateSessionLoading(false)
+    }
   }
 
   // ===========================================================================
@@ -587,6 +798,111 @@ export default function AttendanceClient({
         <>
           {activeTab === 'daily' && (
             <>
+              {/* ── Auto Attendance Session Card ──────────────────────────── */}
+              <div className={`rounded-2xl p-5 border mb-6 transition-all ${
+                sessionActive
+                  ? 'border-[var(--primary)]/50 bg-[var(--primary)]/5 shadow-lg shadow-[var(--primary)]/10'
+                  : 'glass-card border-[var(--border)]'
+              }`}>
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2">
+                    <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${sessionActive ? 'bg-[var(--primary)]/15' : 'bg-green-500/10'}`}>
+                      <Timer className={`w-5 h-5 ${sessionActive ? 'text-[var(--primary)]' : 'text-green-400'}`} />
+                    </div>
+                    <div>
+                      <h2 className="font-bold text-sm">Auto Attendance</h2>
+                      <p className="text-xs text-[var(--muted-foreground)]">
+                        {sessionActive ? 'Session is live — students can mark themselves' : 'Click to start a session for students'}
+                      </p>
+                    </div>
+                  </div>
+                  {sessionActive && (
+                    <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[var(--primary)]/10 text-[var(--primary)] font-mono font-bold text-sm">
+                      <Clock className="w-4 h-4" /> {sessionCountdown}
+                    </div>
+                  )}
+                </div>
+
+                {/* Live stats bar — shows when session is active */}
+                {sessionActive && (
+                  <div className="flex items-center gap-3 mb-4 flex-wrap">
+                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-green-500/10 border border-green-500/20">
+                      <UserCheck className="w-4 h-4 text-green-400" />
+                      <span className="text-green-400 font-bold text-sm">{liveCheckedIn}</span>
+                      <span className="text-[var(--muted-foreground)] text-xs">Present</span>
+                    </div>
+                    {liveLatecheckedIn > 0 && (
+                      <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-orange-500/10 border border-orange-500/20">
+                        <UserCheck className="w-4 h-4 text-orange-400" />
+                        <span className="text-orange-400 font-bold text-sm">{liveLatecheckedIn}</span>
+                        <span className="text-[var(--muted-foreground)] text-xs">Late</span>
+                      </div>
+                    )}
+                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-red-500/10 border border-red-500/20">
+                      <UserX className="w-4 h-4 text-red-400" />
+                      <span className="text-red-400 font-bold text-sm">
+                        {Math.max(0, currentBatchStudents.length - liveCheckedIn - liveLatecheckedIn)}
+                      </span>
+                      <span className="text-[var(--muted-foreground)] text-xs">Not yet</span>
+                    </div>
+                    {gpsEnabled && (
+                      <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-blue-500/10 border border-blue-500/20">
+                        <span className="text-blue-400 text-xs font-semibold">📍 GPS Active</span>
+                      </div>
+                    )}
+                    <span className="text-[10px] text-[var(--muted-foreground)] ml-auto">Updates every 4s</span>
+                  </div>
+                )}
+
+                {/* Code Display */}
+                {sessionActive && sessionCode && (
+                  <div className="mb-4 p-4 rounded-xl bg-black/20 border border-[var(--primary)]/20 text-center">
+                    <p className="text-xs text-[var(--muted-foreground)] mb-1">Share this code with students</p>
+                    <p className="text-5xl font-mono font-black tracking-[0.3em] text-[var(--primary)]">{sessionCode}</p>
+                    {lateSessionActive && lateCode && (
+                      <div className="mt-3 pt-3 border-t border-[var(--border)]">
+                        <p className="text-xs text-orange-400 mb-1">Late Check-in Code</p>
+                        <p className="text-3xl font-mono font-bold tracking-[0.3em] text-orange-400">{lateCode}</p>
+                        <p className="text-xs text-[var(--muted-foreground)] mt-1">Expires in {lateCountdown}</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Action Buttons */}
+                <div className="flex items-center gap-3 flex-wrap">
+                  {!sessionActive ? (
+                    <button
+                      onClick={handleStartSession}
+                      disabled={sessionLoading}
+                      className="flex items-center gap-2 px-5 py-2.5 bg-[var(--primary)] text-white font-bold rounded-xl text-sm hover:opacity-90 transition-all disabled:opacity-50"
+                    >
+                      {sessionLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
+                      Take Attendance
+                    </button>
+                  ) : (
+                    <>
+                      {!lateSessionActive && (
+                        <button
+                          onClick={handleStartLateSession}
+                          disabled={lateSessionLoading}
+                          className="flex items-center gap-2 px-4 py-2.5 bg-orange-500/15 text-orange-400 border border-orange-500/30 font-semibold rounded-xl text-sm hover:bg-orange-500/20 transition-all disabled:opacity-50"
+                        >
+                          {lateSessionLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserCheck className="w-4 h-4" />}
+                          Late Check-in
+                        </button>
+                      )}
+                      <button
+                        onClick={handleEndSession}
+                        className="flex items-center gap-2 px-4 py-2.5 bg-red-500/10 text-red-400 border border-red-500/20 font-semibold rounded-xl text-sm hover:bg-red-500/20 transition-all"
+                      >
+                        <Square className="w-4 h-4" /> End Session & Mark Absent
+                      </button>
+                    </>
+                  )}
+                </div>
+              </div>
+
               <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
               
               {/* Left Column: Quick Entry & CSV */}
@@ -852,9 +1168,13 @@ export default function AttendanceClient({
                                         <div className="text-sm font-medium">{record.student.name}</div>
                                       </div>
                                       <span className={`px-2 py-1 rounded text-xs font-bold ${
-                                        record.is_present ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'
+                                        !record.is_present
+                                          ? 'bg-red-500/10 text-red-400'
+                                          : record.is_late
+                                          ? 'bg-orange-500/10 text-orange-400'
+                                          : 'bg-green-500/10 text-green-400'
                                       }`}>
-                                        {record.is_present ? 'Present' : 'Absent'}
+                                        {!record.is_present ? 'Absent' : record.is_late ? 'Late' : 'Present'}
                                       </span>
                                     </div>
                                   ))}

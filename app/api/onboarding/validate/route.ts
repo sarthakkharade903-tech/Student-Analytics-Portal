@@ -12,32 +12,24 @@ export async function POST(request: Request) {
     const supabase = createAdminClient();
 
     const { data, error } = await supabase
-      .from('institute_access_codes')
-      .select('*, coaching_centers(features)')
-      .eq('code', code.trim())
+      .from('onboarding_codes')
+      .select('*')
+      .eq('code', code.toUpperCase())
       .single();
 
     if (error || !data) {
       return NextResponse.json({ success: false, message: 'Invalid security code. Please check and try again.' }, { status: 400 });
     }
 
-    if (data.status === 'Used') {
+    if (data.is_used) {
       return NextResponse.json({ success: false, message: 'This security code has already been used.' }, { status: 400 });
     }
 
-    const services = data.coaching_centers?.features?.services;
-    const usage = data.coaching_centers?.features?.usage || {};
-    
-    // If we're checking for a specific service and it's explicitly set to false, reject
-    if (service && services && services[service] === false) {
+    if (!data.services.includes(service)) {
       return NextResponse.json(
         { success: false, message: `This code is not valid for ${service.replace('_', ' ')}. Please use the correct code for this service.` },
         { status: 403 }
       );
-    }
-
-    if (service === 'exam_engine' && usage.exam_engine_used) {
-      return NextResponse.json({ success: false, message: 'This code has already been used for Exam Engine.' }, { status: 403 });
     }
 
     return NextResponse.json({ success: true, message: 'Code is valid.' });

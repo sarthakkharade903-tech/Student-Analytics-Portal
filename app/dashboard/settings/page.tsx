@@ -19,7 +19,9 @@ import {
   Calendar,
   CheckCircle2,
   Lock,
+  MapPin,
 } from 'lucide-react'
+import GpsLocationSettings from './GpsLocationSettings'
 
 export const metadata = {
   title: 'Settings',
@@ -329,6 +331,21 @@ export default async function SettingsPage() {
 
         {/* ══ FEATURE LOCK SYSTEM ══════════════════════════════════ */}
         <FeatureLockSystem initialFeatures={savedFeatures} />
+
+        {/* ══ GPS LOCATION SETTINGS ════════════════════════════ */}
+        <SectionCard
+          title="Attendance Location (GPS)"
+          subtitle="Restrict attendance to students physically at your institute"
+          icon={<MapPin className="w-5 h-5 text-emerald-600" />}
+          iconBgClass="bg-emerald-50 border border-emerald-100"
+        >
+          <GpsLocationSettings
+            currentLat={coachingCenter?.gps_lat ?? null}
+            currentLon={coachingCenter?.gps_lon ?? null}
+            currentRadius={coachingCenter?.gps_radius_m ?? 150}
+            coachingCenterId={userProfile?.coaching_center_id ?? ''}
+          />
+        </SectionCard>
 
         {/* ══ SUBSCRIPTION DETAILS ════════════════════════════════ */}
         <SectionCard

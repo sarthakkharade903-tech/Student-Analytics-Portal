@@ -14,24 +14,13 @@ export async function POST(req: NextRequest) {
     // Step 0: Verify invite code against institute_access_codes table
     const { data: accessCodeRecord, error: accessCodeError } = await supabase
       .from('institute_access_codes')
-      .select('*, coaching_centers(features)')
+      .select('*')
       .eq('code', inviteCode.trim())
       .eq('status', 'Unused')
       .maybeSingle()
 
     if (!accessCodeRecord || accessCodeError) {
       return NextResponse.json({ error: 'Invalid or already used invite code. Please contact the administrator.' }, { status: 401 })
-    }
-
-    const services = accessCodeRecord.coaching_centers?.features?.services;
-    const usage = accessCodeRecord.coaching_centers?.features?.usage || {};
-
-    if (services && services.coaching_management === false) {
-      return NextResponse.json({ error: 'This code is not valid for Coaching Management. Please use a valid code for this service.' }, { status: 403 })
-    }
-
-    if (usage.coaching_management_used) {
-      return NextResponse.json({ error: 'This code has already been used for Coaching Management.' }, { status: 403 })
     }
 
     // Step 1: Check if email already has a complete account
@@ -124,31 +113,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Failed to create user profile: ' + userError.message }, { status: 500 })
     }
 
-    // Step 5: Update usage in coaching_centers and check if access code should be fully consumed
-    usage.coaching_management_used = true;
-    
-    // We update the center features with the new usage
-    const updatedFeatures = {
-      ...(accessCodeRecord.coaching_centers?.features || {}),
-      usage
-    };
-
-    await supabase.from('coaching_centers').update({
-      features: updatedFeatures
-    }).eq('id', centerData.id);
-
-    // If they have exam_engine, and they haven't used it yet, we don't mark the code as "Used" permanently yet
-    // unless they didn't buy exam_engine OR they already used it.
-    const hasExamEngine = services?.exam_engine;
-    const examEngineUsed = usage.exam_engine_used;
-    const fullyConsumed = (!hasExamEngine) || (hasExamEngine && examEngineUsed);
-
-    if (fullyConsumed) {
-      await supabase.from('institute_access_codes').update({ 
-        status: 'Used',
-        coaching_center_id: centerData.id
-      }).eq('id', accessCodeRecord.id)
-    }
+    // Step 5: Mark access code as used and permanently link it
+    await supabase.from('institute_access_codes').update({ 
+      status: 'Used',
+      coaching_center_id: centerData.id
+    }).eq('id', accessCodeRecord.id)
     
     // Step 6: Log audit event
     await supabase.from('audit_logs').insert({

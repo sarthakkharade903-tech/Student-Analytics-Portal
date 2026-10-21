@@ -4,7 +4,7 @@ import { useState } from 'react'
 import useSWR from 'swr'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
-import { ClipboardList, Plus, Trophy, Users, TrendingUp, Calendar, Loader2, ChevronLeft, ChevronRight } from 'lucide-react'
+import { ClipboardList, Plus, Trophy, Users, TrendingUp, Calendar, Loader2, ChevronLeft, ChevronRight, X } from 'lucide-react'
 import StandardTabs from '@/components/dashboard/StandardTabs'
 import type { Test, SubjectConfig } from '@/lib/types'
 import { normaliseSubjects } from '@/lib/subjects'
@@ -31,10 +31,14 @@ function formatDate(dateStr: string) {
   })
 }
 
-export default function TestsClient() {
+export default function TestsClient({ batches = [] }: { batches?: string[] }) {
   const searchParams = useSearchParams()
   const standard = searchParams.get('std') === '12th' ? '12th' : '11th'
   const [page, setPage] = useState(1)
+
+  // Modal State
+  const [isBatchModalOpen, setIsBatchModalOpen] = useState(false)
+  const [selectedBatches, setSelectedBatches] = useState<string[]>(['All Batches'])
 
   // Reset to page 1 when standard changes
   const key = `/api/std-data/tests?std=${standard}&page=${page}`
@@ -50,8 +54,77 @@ export default function TestsClient() {
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
   const errorMsg = data?.error ?? (error ? 'Failed to load tests.' : null)
 
+  const handleCreateOnlineTest = () => {
+    const batchParam = encodeURIComponent(selectedBatches.join(','))
+    window.open(`http://localhost:3000/student/login?batches=${batchParam}`, '_blank')
+    setIsBatchModalOpen(false)
+  }
+
   return (
     <div className="p-6 lg:p-8 max-w-6xl mx-auto">
+      {/* Batch Selection Modal */}
+      {isBatchModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between p-4 border-b border-gray-100 bg-gray-50/50">
+              <h3 className="font-semibold text-gray-900">Select Batches</h3>
+              <button
+                onClick={() => setIsBatchModalOpen(false)}
+                className="p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-5 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Target Batches
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedBatches(['All Batches'])}
+                    className={`px-3 py-1.5 rounded-lg text-sm transition-colors border ${
+                      selectedBatches.includes('All Batches') 
+                        ? 'bg-[var(--primary)] text-white border-[var(--primary)]'
+                        : 'bg-gray-50 text-[var(--muted-foreground)] border-gray-200 hover:border-[var(--primary)]/50'
+                    }`}
+                  >
+                    All Batches
+                  </button>
+                  {batches.map(b => (
+                    <button
+                      key={b}
+                      type="button"
+                      onClick={() => {
+                        setSelectedBatches(prev => {
+                          if (prev.includes('All Batches')) return [b]
+                          const next = prev.includes(b) ? prev.filter(x => x !== b) : [...prev, b]
+                          return next.length === 0 ? ['All Batches'] : next
+                        })
+                      }}
+                      className={`px-3 py-1.5 rounded-lg text-sm transition-colors border ${
+                        !selectedBatches.includes('All Batches') && selectedBatches.includes(b)
+                          ? 'bg-[var(--primary)] text-white border-[var(--primary)]'
+                          : 'bg-gray-50 text-[var(--muted-foreground)] border-gray-200 hover:border-[var(--primary)]/50'
+                      }`}
+                    >
+                      {b}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <button
+                onClick={handleCreateOnlineTest}
+                className="w-full mt-2 py-2.5 bg-[var(--primary)] text-white text-sm font-semibold rounded-xl hover:opacity-90 transition-all glow-primary"
+              >
+                Continue to Test Engine
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Page Header */}
       <div className="flex items-center justify-between gap-4 mb-8">
         <div className="flex items-center gap-3">
@@ -70,14 +143,23 @@ export default function TestsClient() {
             </p>
           </div>
         </div>
-        <Link
-          id="create-test-btn"
-          href={`/dashboard/tests/new?std=${standard}`}
-          className="inline-flex items-center gap-2 px-4 py-2.5 bg-[var(--primary)] text-white text-sm font-semibold rounded-lg hover:opacity-90 transition-all duration-200 glow-primary whitespace-nowrap"
-        >
-          <Plus className="w-4 h-4" />
-          Create Test
-        </Link>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setIsBatchModalOpen(true)}
+            className="inline-flex items-center gap-2 px-4 py-2.5 bg-indigo-50 text-indigo-600 border border-indigo-200 text-sm font-semibold rounded-lg hover:bg-indigo-100 transition-all duration-200 whitespace-nowrap"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+            Create Online Test
+          </button>
+          <Link
+            id="create-test-btn"
+            href={`/dashboard/tests/new?std=${standard}`}
+            className="inline-flex items-center gap-2 px-4 py-2.5 bg-[var(--primary)] text-white text-sm font-semibold rounded-lg hover:opacity-90 transition-all duration-200 glow-primary whitespace-nowrap"
+          >
+            <Plus className="w-4 h-4" />
+            Upload Offline Test
+          </Link>
+        </div>
       </div>
 
       <StandardTabs />
