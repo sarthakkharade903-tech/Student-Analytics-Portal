@@ -4,10 +4,10 @@ import { jwtVerify } from 'jose'
 import { createServerClient } from '@supabase/ssr'
 import { 
   TrendingUp, TrendingDown, AlertCircle, CheckCircle2, 
-  Calendar, Award, Target, BookOpen, AlertTriangle, Activity
+  Calendar, Award, Target, BookOpen, Activity,
+  Building2
 } from 'lucide-react'
 import PerformanceChart from './PerformanceChart'
-import AttendanceChart from './AttendanceChart'
 import AttendanceCalendar from './AttendanceCalendar'
 import RecentTestsTable from './RecentTestsTable'
 import PerformanceSummary from './PerformanceSummary'
@@ -51,6 +51,17 @@ export default async function ParentDashboard() {
     return <BlockedAccess message="Your student profile has been deleted or is no longer accessible." showLogout={true} />
   }
 
+  // Fetch Coaching Center Name
+  let instituteName = 'StudentIQ Coaching'
+  if (student.coaching_center_id) {
+    const { data: center } = await supabase
+      .from('coaching_centers')
+      .select('name')
+      .eq('id', student.coaching_center_id)
+      .single()
+    if (center?.name) instituteName = center.name
+  }
+
   // Fetch all scores for this student (joining tests to get subjects/dates)
   const { data: scores } = await supabase
     .from('scores')
@@ -72,7 +83,7 @@ export default async function ParentDashboard() {
     return dateA - dateB
   })
 
-  // Daily Attendance logic
+  // Daily Attendance records
   const { data: attendanceData } = await supabase
     .from('attendance')
     .select('date, is_present')
@@ -82,50 +93,37 @@ export default async function ParentDashboard() {
   const attendanceRecords = attendanceData || []
   const totalDays = attendanceRecords.length
   const presentDays = attendanceRecords.filter(r => r.is_present).length
-  const absentDays = totalDays - presentDays
   const dailyAttendancePercentage = totalDays > 0 ? Math.round((presentDays / totalDays) * 100) : 100
 
-  const monthlyAttMap = new Map<string, { total: number, present: number }>()
-  attendanceRecords.forEach(r => {
-    const d = new Date(r.date)
-    const month = d.toLocaleString('default', { month: 'short' })
-    const ex = monthlyAttMap.get(month) || { total: 0, present: 0 }
-    ex.total++
-    if (r.is_present) ex.present++
-    monthlyAttMap.set(month, ex)
-  })
-  const attendanceChartData = Array.from(monthlyAttMap.entries()).map(([month, stats]) => ({
-    month,
-    percentage: Math.round((stats.present / stats.total) * 100)
-  }))
+  // Today's Attendance status calculation
+  const todayStr = new Date().toISOString().split('T')[0]
+  const todayRecord = attendanceRecords.find(r => r.date === todayStr)
+  let todayStatusLabel = 'Awaiting Class'
+  let todayBadgeClass = 'bg-[#090d16] text-slate-400 border-slate-800'
+  let todayDotClass = 'bg-slate-500'
 
-  let attStatus = 'No Data'
-  let attColor = 'text-gray-500'
-  let attBadge = 'bg-gray-100 border-gray-300'
-  let circleColor = 'text-gray-500'
-
-  if (totalDays > 0) {
-    if (dailyAttendancePercentage >= 75) {
-      attStatus = dailyAttendancePercentage >= 90 ? 'Excellent Attendance' : 'Good Attendance'
-      attColor = 'text-green-600'
-      attBadge = 'bg-green-50 border-green-200'
-      circleColor = 'text-green-500'
-    } else if (dailyAttendancePercentage >= 50) {
-      attStatus = 'Needs Attention'
-      attColor = 'text-amber-600'
-      attBadge = 'bg-amber-50 border-amber-200'
-      circleColor = 'text-amber-500'
+  if (todayRecord) {
+    if (todayRecord.is_present) {
+      todayStatusLabel = 'Marked Present Today'
+      todayBadgeClass = 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30'
+      todayDotClass = 'bg-emerald-400 animate-pulse'
     } else {
-      attStatus = 'Critical Attendance'
-      attColor = 'text-red-600'
-      attBadge = 'bg-red-50 border-red-200'
-      circleColor = 'text-red-500'
+      todayStatusLabel = 'Marked Absent Today'
+      todayBadgeClass = 'bg-rose-500/10 text-rose-300 border-rose-500/30'
+      todayDotClass = 'bg-rose-400'
     }
   }
 
-  const radius = 22
-  const circumference = 2 * Math.PI * radius
-  const strokeDashoffset = circumference - (dailyAttendancePercentage / 100) * circumference
+  let attStatus = 'No Data'
+  if (totalDays > 0) {
+    if (dailyAttendancePercentage >= 75) {
+      attStatus = dailyAttendancePercentage >= 90 ? 'Excellent Attendance' : 'Good Standing'
+    } else if (dailyAttendancePercentage >= 50) {
+      attStatus = 'Needs Attention'
+    } else {
+      attStatus = 'Critical Attendance'
+    }
+  }
 
   // Latest test logic
   const latestScore = validScores[validScores.length - 1]
@@ -161,7 +159,6 @@ export default async function ParentDashboard() {
 
   // Map and enhance scores for RecentTestsTable
   const enhancedScores = [...validScores].reverse().map((score) => {
-    // Normalise subjects
     const testSubjects = score.tests?.subjects
       ? normaliseSubjects(score.tests.subjects)
       : []
@@ -177,10 +174,10 @@ export default async function ParentDashboard() {
 
       const barColor =
         percentage >= 60
-          ? 'from-green-500 to-emerald-500'
+          ? 'from-emerald-500 to-green-500'
           : percentage >= 40
-          ? 'from-yellow-500 to-amber-500'
-          : 'from-red-500 to-rose-500'
+          ? 'from-amber-500 to-yellow-500'
+          : 'from-rose-500 to-red-500'
 
       return {
         name: sub.name,
@@ -251,196 +248,205 @@ export default async function ParentDashboard() {
 
   const initials = student.name.split(' ').map((n: string) => n[0]).join('').substring(0, 2).toUpperCase()
 
-  // Normalise subjects for the latest score's test (handles legacy string[] or new SubjectConfig[])
   const latestSubjects = latestScore?.tests?.subjects
     ? normaliseSubjects(latestScore.tests.subjects)
     : []
 
   return (
-    <div className="space-y-8 pb-12">
+    <div className="space-y-6 sm:space-y-8 pb-16">
       
-      {/* HEADER */}
-      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-        <div className="flex items-center gap-4">
-          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center text-white text-xl font-bold shadow-lg shadow-blue-500/20">
-            {initials}
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight text-white">{student.name}</h1>
-            <div className="flex flex-wrap items-center gap-2 mt-1">
-              <span className="px-2 py-0.5 rounded bg-[#1a2540] border border-slate-700 text-xs text-slate-300 font-medium">
-                Roll No: {student.roll_no}
-              </span>
-              <span className="px-2 py-0.5 rounded bg-[#1a2540] border border-slate-700 text-xs text-slate-300 font-medium">
-                Batch: {student.batch}
-              </span>
+      {/* ── 1. HEADER & INSTITUTE BRAND (CLEAN & MINIMAL) ────────────────────── */}
+      <div className="bg-[#111827] border border-slate-800/80 rounded-3xl p-5 sm:p-6 shadow-sm">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3.5 sm:gap-4">
+            <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center text-white text-lg sm:text-xl font-bold shadow-lg shadow-blue-500/20 flex-shrink-0">
+              {initials}
             </div>
+            <div>
+              <div className="flex items-center gap-1.5 text-xs text-slate-400 font-medium mb-0.5">
+                <Building2 className="w-3.5 h-3.5 text-blue-400" />
+                <span>{instituteName}</span>
+              </div>
+              <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-white">{student.name}</h1>
+              <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 mt-1.5">
+                <span className="px-2.5 py-0.5 rounded-lg bg-[#090d16] border border-slate-800 text-xs text-slate-300 font-medium">
+                  Roll No: {student.roll_no}
+                </span>
+                <span className="px-2.5 py-0.5 rounded-lg bg-[#090d16] border border-slate-800 text-xs text-slate-300 font-medium">
+                  Batch: {student.batch}
+                </span>
+                {student.standard && (
+                  <span className="px-2.5 py-0.5 rounded-lg bg-[#090d16] border border-slate-800 text-xs text-slate-300 font-medium">
+                    Std: {student.standard}
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Today's Attendance Live Pill */}
+          <div className="w-full sm:w-auto self-stretch sm:self-auto flex sm:flex-col items-center sm:items-end justify-between sm:justify-center border-t sm:border-t-0 pt-3 sm:pt-0 border-slate-800/80">
+            <div className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl border text-xs font-semibold ${todayBadgeClass}`}>
+              <span className={`w-2 h-2 rounded-full ${todayDotClass}`} />
+              <span>{todayStatusLabel}</span>
+            </div>
+            <span className="text-[11px] text-slate-400 mt-1 font-medium hidden sm:inline">
+              Today: {new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
+            </span>
           </div>
         </div>
       </div>
 
-      {/* ── Exam Engine CTA Banner (Disabled - Coming Soon) ───────────────────────────────── */}
-      <div
-        className="block rounded-2xl overflow-hidden border border-slate-700/50 bg-gradient-to-r from-slate-800/40 to-slate-900/40 relative mt-6 mb-8 opacity-75 cursor-not-allowed"
-      >
-        <div className="px-6 py-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 relative">
-          <div className="flex items-center gap-4 opacity-50">
-            <div className="w-12 h-12 rounded-xl bg-slate-700/50 border border-slate-600/50 flex items-center justify-center flex-shrink-0">
-              <svg className="w-6 h-6 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                <path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2v-4M9 21H5a2 2 0 0 1-2-2v-4m0 0h18" />
-              </svg>
+      {/* ── 2. ATTENDANCE & DISCIPLINE HUB (WITH FULLY REACTIVE STATS BOX) ────── */}
+      <div className="bg-[#111827] border border-slate-800/80 rounded-3xl p-5 sm:p-7 shadow-sm">
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-2 mb-6 pb-4 border-b border-slate-800/80">
+          <div>
+            <div className="flex items-center gap-2">
+              <div className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                <Calendar className="w-4 h-4" />
+              </div>
+              <h2 className="text-lg font-bold text-white">Attendance &amp; Classroom Engagement</h2>
             </div>
-            <div>
-              <p className="font-bold text-base text-slate-300">Take an Online Mock Test</p>
-              <p className="text-sm text-slate-500 mt-0.5">JEE Main · JEE Advanced · NEET · MHT-CET — NTA simulator with timer &amp; auto-grading</p>
-            </div>
+            <p className="text-xs text-slate-400 mt-1">
+              Switch between month, week, or overall all-time sessions
+            </p>
           </div>
-          <div className="flex-shrink-0 flex items-center justify-center gap-2 px-5 py-2.5 bg-slate-800 text-slate-400 text-sm font-semibold rounded-xl border border-slate-700 whitespace-nowrap w-full sm:w-auto cursor-not-allowed">
-            Coming Soon 🚀
+
+          <div className={`px-3 py-1 rounded-xl text-xs font-semibold border ${
+            dailyAttendancePercentage >= 75
+              ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+              : 'bg-amber-500/10 text-amber-400 border-amber-500/20'
+          }`}>
+            {attStatus}
           </div>
         </div>
+
+        {/* Fully Interactive Component: Controls both Calendar and the Dynamic Stats Box */}
+        <AttendanceCalendar records={attendanceRecords} />
       </div>
 
       {!latestScore ? (
-        <div className="rounded-2xl p-12 text-center border border-slate-800 bg-[#1a2540] shadow-sm">
-          <div className="w-16 h-16 rounded-full bg-slate-800 flex items-center justify-center mx-auto mb-4">
+        <div className="rounded-3xl p-12 text-center border border-slate-800/80 bg-[#111827] shadow-sm">
+          <div className="w-16 h-16 rounded-full bg-[#090d16] flex items-center justify-center mx-auto mb-4 border border-slate-800">
             <BookOpen className="w-8 h-8 text-slate-500" />
           </div>
-          <h2 className="text-xl font-semibold mb-2 text-white">No test results available yet.</h2>
-          <p className="text-slate-400 text-sm">When the institute uploads test scores, they will appear here.</p>
+          <h2 className="text-xl font-semibold mb-2 text-white">No test results recorded yet.</h2>
+          <p className="text-slate-400 text-sm">When the institute uploads test scores, comprehensive analytics will appear here.</p>
         </div>
       ) : (
         <>
-          {/* SUMMARY CARDS */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            {/* Latest Score */}
-            <div className="bg-[#1a2540] border border-slate-800 rounded-2xl p-4 hover:border-blue-500 hover:shadow-md transition-all duration-300 group shadow-sm flex flex-col justify-between">
-              <div className="flex items-center gap-3 mb-2">
-                <div className="p-1.5 rounded-lg bg-blue-500/10 text-blue-400 group-hover:bg-blue-600 group-hover:text-white transition-colors">
-                  <Target className="w-4 h-4" />
-                </div>
-                <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Latest Score</h3>
-              </div>
-              <div className="flex items-baseline justify-center gap-1.5 mt-1">
-                <span className="text-3xl font-bold text-white">{latestScore.is_absent ? '0' : latestScore.total}</span>
-                <span className="text-sm text-slate-400 font-medium">/ {latestScore.tests?.max_marks || '-'}</span>
-              </div>
-            </div>
+          {/* ── 3. LATEST ASSESSMENT SCORECARD (HERO CARD) ───────────────────────── */}
+          <div className="bg-[#111827] border border-slate-800/80 rounded-3xl p-5 sm:p-7 shadow-sm relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-80 h-80 bg-blue-600/5 rounded-full blur-[90px] pointer-events-none" />
 
-            {/* Latest Rank */}
-            <div className="bg-[#1a2540] border border-slate-800 rounded-2xl p-4 hover:border-purple-500 hover:shadow-md transition-all duration-300 group shadow-sm flex flex-col justify-between">
-              <div className="flex items-center gap-3 mb-2">
-                <div className="p-1.5 rounded-lg bg-purple-500/10 text-purple-400 group-hover:bg-purple-600 group-hover:text-white transition-colors">
-                  <Award className="w-4 h-4" />
+            {/* Test Header */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-slate-800/80">
+              <div>
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="px-2 py-0.5 rounded-md bg-blue-500/10 text-blue-400 border border-blue-500/20 text-[11px] font-bold uppercase tracking-wider">
+                    Latest Assessment
+                  </span>
+                  <span className="text-xs text-slate-400 font-medium">
+                    {latestScore.tests?.test_date ? new Date(latestScore.tests.test_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : ''}
+                  </span>
                 </div>
-                <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Latest Rank</h3>
+                <h2 className="text-xl sm:text-2xl font-bold text-white tracking-tight">
+                  {latestScore.tests?.test_name || 'Latest Test'}
+                </h2>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  Test Type: <span className="text-slate-300 capitalize">{latestScore.tests?.test_type || 'Weekly Test'}</span>
+                </p>
               </div>
-              <div className="flex items-baseline justify-center gap-1.5 mt-1">
-                <span className="text-3xl font-bold text-white">{latestScore.rank || '-'}</span>
-                <span className="text-sm text-slate-400 font-medium">/ {latestTestScores.length}</span>
-              </div>
-            </div>
 
-            {/* Latest Total Percentile */}
-            <div className="bg-[#1a2540] border border-slate-800 rounded-2xl p-4 hover:border-pink-500 hover:shadow-md transition-all duration-300 group shadow-sm flex flex-col justify-between">
-              <div className="flex items-center gap-3 mb-2">
-                <div className="p-1.5 rounded-lg bg-pink-500/10 text-pink-400 group-hover:bg-pink-600 group-hover:text-white transition-colors">
-                  <Activity className="w-4 h-4" />
-                </div>
-                <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Latest Total Percentile</h3>
-              </div>
-              <div className="flex items-baseline justify-center gap-1.5 mt-1">
-                <span className="text-3xl font-bold text-white">{latestScore.is_absent ? '0' : totalPercentile}</span>
-                <span className="text-sm text-slate-400 font-medium">PR</span>
-              </div>
-            </div>
-
-            {/* Attendance (Merged) */}
-            <div className="bg-[#1a2540] border border-slate-800 rounded-2xl p-4 hover:border-emerald-500 hover:shadow-md transition-all duration-300 group shadow-sm flex flex-col justify-between">
-              <div className="flex items-center gap-3 mb-2">
-                <div className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-400 group-hover:bg-emerald-600 group-hover:text-white transition-colors">
-                  <Calendar className="w-4 h-4" />
-                </div>
-                <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Attendance</h3>
-              </div>
-              
-              <div className="flex items-center justify-between mt-1">
-                <div className="flex flex-col gap-1.5">
-                  <div className="flex items-center gap-2 text-[10px] font-semibold">
-                    <span className="px-1.5 py-0.5 rounded bg-green-500/10 text-green-400 border border-green-500/20">{presentDays} Present</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-[10px] font-semibold">
-                    <span className="px-1.5 py-0.5 rounded bg-red-500/10 text-red-400 border border-red-500/20">{absentDays} Absent</span>
-                  </div>
-                  <div className="text-[9px] text-slate-500 mt-0.5 font-medium">Out of {totalDays} days</div>
-                </div>
-
-                <div className="relative w-12 h-12 flex items-center justify-center flex-shrink-0">
-                  <svg className="transform -rotate-90 w-12 h-12">
-                    <circle cx="24" cy="24" r="22" stroke="currentColor" strokeWidth="4" fill="transparent" className="text-slate-800" />
-                    <circle cx="24" cy="24" r="22" stroke="currentColor" strokeWidth="4" fill="transparent" strokeDasharray={circumference} strokeDashoffset={strokeDashoffset} className={`transition-all duration-1000 ease-out ${circleColor}`} />
-                  </svg>
-                  <span className="absolute text-xs font-bold text-white">{dailyAttendancePercentage}%</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* TOP GRID: SUBJECT BREAKDOWN + ALERTS */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* SUBJECT BREAKDOWN */}
-            <div className="bg-[#1a2540] border border-slate-800 rounded-3xl p-6 shadow-sm flex flex-col justify-center">
-              <h2 className="text-lg font-bold mb-1 text-white">Subject Breakdown</h2>
-              <p className="text-xs text-slate-400 mb-5">Latest test performance</p>
+              {/* Status Pill */}
               {latestScore.is_absent ? (
-                <div className="h-40 flex items-center justify-center text-sm text-slate-400 italic">
-                  Absent for latest test
-                </div>
-              ) : latestSubjects.length === 0 ? (
-                <div className="h-40 flex items-center justify-center text-sm text-slate-400 italic">
-                  No subject data available
-                </div>
+                <span className="self-start sm:self-auto px-3.5 py-1.5 rounded-xl bg-rose-500/10 text-rose-300 border border-rose-500/20 text-xs font-bold">
+                  Marked Absent
+                </span>
               ) : (
-                <div className="space-y-5">
+                <div className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl border text-xs font-bold ${
+                  statusColor === 'text-green-500' ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' :
+                  statusColor === 'text-red-500' ? 'bg-rose-500/10 border-rose-500/20 text-rose-400' :
+                  statusColor === 'text-amber-500' ? 'bg-amber-500/10 border-amber-500/20 text-amber-400' :
+                  'bg-blue-500/10 border-blue-500/20 text-blue-400'
+                }`}>
+                  <StatusIcon className="w-4 h-4" />
+                  <span>{status}</span>
+                </div>
+              )}
+            </div>
+
+            {/* 3 Prominent Metrics */}
+            <div className="grid grid-cols-3 gap-3 sm:gap-6 py-6 border-b border-slate-800/80 text-center">
+              <div>
+                <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Total Score</p>
+                <p className="text-xl sm:text-3xl font-extrabold text-white mt-1">
+                  {latestScore.is_absent ? '0' : latestScore.total}
+                  <span className="text-xs sm:text-sm text-slate-400 font-normal"> / {latestScore.tests?.max_marks || '-'}</span>
+                </p>
+              </div>
+
+              <div>
+                <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Batch Rank</p>
+                <p className="text-xl sm:text-3xl font-extrabold text-purple-400 mt-1">
+                  {latestScore.rank ? `#${latestScore.rank}` : '-'}
+                  <span className="text-xs sm:text-sm text-slate-400 font-normal"> / {latestTestScores.length || '-'}</span>
+                </p>
+              </div>
+
+              <div>
+                <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Percentile</p>
+                <p className="text-xl sm:text-3xl font-extrabold text-pink-400 mt-1">
+                  {latestScore.is_absent ? '0' : totalPercentile}
+                  <span className="text-xs sm:text-sm text-slate-400 font-normal"> PR</span>
+                </p>
+              </div>
+            </div>
+
+            {/* Subject Breakdown in New Scorecard */}
+            <div className="pt-6">
+              <h3 className="text-xs font-bold text-slate-300 uppercase tracking-wider mb-4">
+                Subject-wise Performance Breakdown
+              </h3>
+
+              {latestScore.is_absent ? (
+                <p className="text-sm text-slate-400 italic">Absent for latest test</p>
+              ) : latestSubjects.length === 0 ? (
+                <p className="text-sm text-slate-400 italic">No subject data recorded</p>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5 sm:gap-4">
                   {latestSubjects.map((sub) => {
                     const score = latestScore.subject_scores?.[sub.name] ?? 0
                     const subMax = sub.max_marks > 0 ? sub.max_marks : latestScore.tests?.max_marks / latestSubjects.length
                     const perc = subMax > 0 ? Math.min(100, Math.round((score / subMax) * 100)) : 0
-                    
                     const subScores = latestTestScores.map(s => s.subject_scores?.[sub.name] ?? 0)
                     const subPercentile = calculatePercentile(score, subScores)
-
                     const barColor =
                       perc >= 60
-                        ? 'from-green-500 to-emerald-500'
+                        ? 'from-emerald-500 to-green-500'
                         : perc >= 40
-                        ? 'from-yellow-500 to-amber-500'
-                        : 'from-red-500 to-rose-500'
+                        ? 'from-amber-500 to-yellow-500'
+                        : 'from-rose-500 to-red-500'
 
                     return (
-                      <div key={sub.name}>
-                        <div className="flex justify-between items-end mb-2">
-                          <span className="text-sm font-medium capitalize text-white">{sub.name}</span>
-                          <div className="text-right flex items-center justify-end gap-2">
-                            <span className="text-xs font-bold text-white">
-                              {score}
-                              {sub.max_marks > 0 && (
-                                <span className="text-slate-500 font-normal"> / {sub.max_marks}</span>
-                              )}
-                            </span>
-                            <span className="text-[10px] text-slate-400">({perc}%)</span>
-                            {!latestScore.is_absent && (
-                              <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-400">
-                                {subPercentile} PR
-                              </span>
-                            )}
-                          </div>
+                      <div key={sub.name} className="bg-[#090d16] border border-slate-800 rounded-2xl p-4">
+                        <div className="flex justify-between items-center mb-2">
+                          <span className="text-sm font-semibold capitalize text-white">{sub.name}</span>
+                          <span className="text-xs font-bold text-white">
+                            {score} {subMax > 0 && <span className="text-slate-400 font-normal">/ {subMax}</span>}
+                          </span>
                         </div>
-                        <div className="w-full h-2.5 bg-slate-800 rounded-full overflow-hidden">
+                        <div className="w-full h-2 bg-slate-800/80 rounded-full overflow-hidden mb-2">
                           <div
-                            className={`h-full bg-gradient-to-r ${barColor} rounded-full transition-all duration-1000 ease-out`}
+                            className={`h-full bg-gradient-to-r ${barColor} rounded-full`}
                             style={{ width: `${perc}%` }}
                           />
+                        </div>
+                        <div className="flex justify-between items-center text-[11px] text-slate-400">
+                          <span>{perc}% Scored</span>
+                          <span className="px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-400 font-medium">
+                            {subPercentile} PR
+                          </span>
                         </div>
                       </div>
                     )
@@ -448,93 +454,49 @@ export default async function ParentDashboard() {
                 </div>
               )}
             </div>
+          </div>
 
-            {/* ALERTS & STATUS */}
-            <div className="flex flex-col gap-4 justify-center">
-              {/* Status Badge */}
-              {latestScore && (
-                <div className={`flex items-center gap-4 px-6 py-4 rounded-2xl backdrop-blur-md border shadow-sm transition-all duration-300 ${
-                  statusColor === 'text-green-500' ? 'bg-green-500/10 border-green-500/20' :
-                  statusColor === 'text-red-500' ? 'bg-red-500/10 border-red-500/20' :
-                  statusColor === 'text-amber-500' ? 'bg-amber-500/10 border-amber-500/20' :
-                  statusColor === 'text-blue-500' ? 'bg-blue-500/10 border-blue-500/20' :
-                  'bg-slate-800 border-slate-700'
-                }`}>
-                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
-                    statusColor === 'text-green-500' ? 'bg-green-500/20' :
-                    statusColor === 'text-red-500' ? 'bg-red-500/20' :
-                    statusColor === 'text-amber-500' ? 'bg-amber-500/20' :
-                    statusColor === 'text-blue-500' ? 'bg-blue-500/20' :
-                    'bg-slate-700'
-                  }`}>
-                    <StatusIcon className={`w-6 h-6 ${statusColor}`} />
-                  </div>
-                  <div>
-                    <p className="text-[11px] uppercase tracking-[0.15em] font-bold text-slate-400">Current Academic Status</p>
-                    <p className={`text-base font-bold mt-0.5 ${statusColor}`}>{status}</p>
-                  </div>
+          {/* ── 4. RECENT TEST HISTORY TABLE (MOVED RIGHT AFTER LATEST TEST!) ────── */}
+          <div>
+            <div className="bg-[#111827] border border-slate-800/80 rounded-3xl overflow-hidden shadow-sm">
+              <div className="px-6 py-5 border-b border-slate-800/80 flex items-center justify-between">
+                <div>
+                  <h2 className="text-lg font-bold text-white">Recent Tests</h2>
+                  <p className="text-xs text-slate-400 mt-0.5">Comprehensive history of past assessments</p>
                 </div>
-              )}
-
-              {/* Attendance Alert */}
-              {dailyAttendancePercentage < 75 && totalDays > 0 && (
-                <div className="bg-red-500/10 border border-red-500/20 rounded-2xl p-4 flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-red-500/20 flex-shrink-0">
-                    <AlertTriangle className="w-6 h-6 text-red-500" />
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-semibold text-red-400">Attendance Alert</h3>
-                    <p className="text-sm text-red-300 mt-0.5">
-                      Currently at {dailyAttendancePercentage}%. Needs improvement.
-                    </p>
-                  </div>
-                </div>
-              )}
+              </div>
+              <RecentTestsTable scores={enhancedScores} />
             </div>
           </div>
 
-          {/* AI PERFORMANCE SUMMARY */}
-          <PerformanceSummary studentId={studentId} />
+          {/* ── 5. DETAILED ANALYTICS & CHARTS (MOVED TO BOTTOM) ────────────────── */}
+          <div className="space-y-6 pt-2">
+            {/* Subject Performance Donut Chart */}
+            <SubjectPerformance scores={validScores} />
 
-          {/* SUBJECT PERFORMANCE WIDGET */}
-          <SubjectPerformance scores={validScores} />
-
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* PERFORMANCE TREND */}
-            <div className="bg-[#1a2540] border border-slate-800 rounded-3xl p-6 relative overflow-hidden shadow-sm">
-              <div className="absolute top-0 right-0 w-64 h-64 bg-blue-900/20 rounded-full blur-[80px]" />
+            {/* Performance Trend Line Chart */}
+            <div className="bg-[#111827] border border-slate-800/80 rounded-3xl p-6 relative overflow-hidden shadow-sm">
+              <div className="absolute top-0 right-0 w-64 h-64 bg-blue-900/10 rounded-full blur-[80px]" />
               <h2 className="text-lg font-bold mb-6 relative z-10 text-white">Performance Trend</h2>
               <div className="h-[300px] w-full relative z-10">
                 <PerformanceChart data={chartData} />
               </div>
             </div>
-
-            {/* DAILY ATTENDANCE SUMMARY */}
-            <div className="bg-[#1a2540] border border-slate-800 rounded-3xl p-6 flex flex-col items-center shadow-sm">
-              <h2 className="text-lg font-bold mb-4 w-full text-left text-white">Attendance Calendar</h2>
-              <AttendanceCalendar records={attendanceRecords} />
-              <div className="w-full grid grid-cols-2 gap-4 mt-6">
-                <div className="bg-slate-800/50 border border-slate-700 rounded-xl p-3 text-center">
-                  <div className="text-2xl font-bold text-green-400">{presentDays}</div>
-                  <div className="text-xs text-slate-400 uppercase tracking-wider mt-1">Present</div>
-                </div>
-                <div className="bg-slate-800/50 border border-slate-700 rounded-xl p-3 text-center">
-                  <div className="text-2xl font-bold text-red-400">{absentDays}</div>
-                  <div className="text-xs text-slate-400 uppercase tracking-wider mt-1">Absent</div>
-                </div>
-              </div>
-            </div>
           </div>
 
-          <div className="mt-6">
-            {/* RECENT TEST HISTORY */}
-            <div className="bg-[#1a2540] border border-slate-800 rounded-3xl overflow-hidden shadow-sm">
-              <div className="px-6 py-5 border-b border-slate-800 flex items-center justify-between">
-                <h2 className="text-lg font-bold text-white">Recent Tests</h2>
-              </div>
-              <RecentTestsTable scores={enhancedScores} />
-            </div>
-        </div>
+          {/* ── 6. COACHING ACADEMIC REMARKS & INSIGHTS (EN / MR / HI TOGGLE) ──── */}
+          <div>
+            <PerformanceSummary
+              studentName={student.name}
+              studentId={studentId}
+              latestScore={latestScore}
+              previousScore={previousScore}
+              scores={validScores}
+              dailyAttendancePercentage={dailyAttendancePercentage}
+              presentDays={presentDays}
+              totalDays={totalDays}
+            />
+          </div>
         </>
       )}
     </div>

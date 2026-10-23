@@ -70,7 +70,7 @@ export default function SubjectPerformance({ scores }: { scores: any[] }) {
 
   if (!analytics) {
     return (
-      <div className="rounded-3xl p-6 lg:p-8 flex flex-col items-center justify-center min-h-[300px] border border-slate-800 bg-[#1a2540] text-center shadow-sm">
+      <div className="rounded-3xl p-6 lg:p-8 flex flex-col items-center justify-center min-h-[300px] border border-slate-800 bg-[#111827] text-center shadow-sm">
         <Target className="w-12 h-12 text-[var(--muted-foreground)] opacity-50 mb-4" />
         <h3 className="text-lg font-bold text-white mb-2">Subject Performance</h3>
         <p className="text-sm text-[var(--muted-foreground)] max-w-sm">
@@ -83,7 +83,7 @@ export default function SubjectPerformance({ scores }: { scores: any[] }) {
   const { strongest, weakest, mostImproved, pieData } = analytics
 
   return (
-    <div className="rounded-3xl p-6 lg:p-8 flex flex-col md:flex-row items-center gap-8 relative overflow-hidden bg-[#1a2540] border border-slate-800 shadow-sm">
+    <div className="rounded-3xl p-6 lg:p-8 flex flex-col md:flex-row items-center gap-8 relative overflow-hidden bg-[#111827] border border-slate-800 shadow-sm">
       
       {/* 3D Background Glow Effects */}
       <div className="absolute top-0 right-0 w-64 h-64 bg-violet-600/10 rounded-full blur-[80px] pointer-events-none" />
@@ -113,7 +113,7 @@ export default function SubjectPerformance({ scores }: { scores: any[] }) {
                 ))}
               </Pie>
               <Tooltip
-                contentStyle={{ backgroundColor: '#0f1729', borderRadius: '12px', border: '1px solid #1e293b', color: '#fff' }}
+                contentStyle={{ backgroundColor: '#090d16', borderRadius: '12px', border: '1px solid #1e293b', color: '#fff' }}
                 itemStyle={{ color: '#fff', fontWeight: 'bold' }}
                 formatter={(value: any) => [`${value}%`, 'Average']}
               />

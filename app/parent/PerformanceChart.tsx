@@ -23,7 +23,7 @@ export default function PerformanceChart({ data }: { data: ChartData[] }) {
     if (active && payload && payload.length) {
       const dataPoint = payload[0].payload
       return (
-        <div className="bg-[#0f1729]/95 backdrop-blur border border-slate-700 rounded-xl p-3 shadow-xl">
+        <div className="bg-[#090d16]/95 backdrop-blur border border-slate-700 rounded-xl p-3 shadow-xl">
           <p className="text-sm font-semibold text-white mb-1">{label}</p>
           <p className="text-[10px] text-slate-400 mb-2 uppercase tracking-wider">
             {dataPoint.date ? new Date(dataPoint.date).toLocaleDateString() : 'Date unknown'}
@@ -78,7 +78,7 @@ export default function PerformanceChart({ data }: { data: ChartData[] }) {
           strokeWidth={3}
           fillOpacity={1} 
           fill="url(#colorPerc)" 
-          dot={{ r: 4, fill: '#0f1729', stroke: '#3b82f6', strokeWidth: 2 }}
+          dot={{ r: 4, fill: '#090d16', stroke: '#3b82f6', strokeWidth: 2 }}
           activeDot={{ r: 6, fill: '#3b82f6', stroke: '#fff', strokeWidth: 2 }}
         />
         {data.length > 1 && (
@@ -86,7 +86,7 @@ export default function PerformanceChart({ data }: { data: ChartData[] }) {
             dataKey="name" 
             height={30} 
             stroke="#475569" 
-            fill="#0f1729"
+            fill="#090d16"
             travellerWidth={10}
             startIndex={startIndex}
             endIndex={endIndex}

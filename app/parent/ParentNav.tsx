@@ -162,14 +162,14 @@ export default function ParentNav({ studentId, logoUrl }: { studentId: string | 
   }
 
   return (
-    <nav className="bg-[#0f1729]/80 backdrop-blur-xl border-b border-slate-800 sticky top-0 z-50">
+    <nav className="bg-[#090d16]/80 backdrop-blur-xl border-b border-slate-800 sticky top-0 z-50">
       <div className="max-w-5xl mx-auto px-4 lg:px-8 h-16 flex items-center justify-between">
         
         {/* Logo & Back */}
         <div className="flex items-center gap-4">
           <button
             onClick={() => router.back()}
-            className="p-2 -ml-2 rounded-lg text-slate-400 hover:text-white hover:bg-[#1a2540] transition-all"
+            className="p-2 -ml-2 rounded-lg text-slate-400 hover:text-white hover:bg-[#111827] transition-all"
             title="Go Back"
           >
             <ArrowLeft className="w-5 h-5" />
@@ -204,7 +204,7 @@ export default function ParentNav({ studentId, logoUrl }: { studentId: string | 
           <div className="relative">
             <button
               onClick={() => setShowNotifications(!showNotifications)}
-              className="relative p-2 rounded-lg text-slate-400 hover:text-white hover:bg-[#1a2540] transition-all focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
+              className="relative p-2 rounded-lg text-slate-400 hover:text-white hover:bg-[#111827] transition-all focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
             >
               <Bell className="w-5 h-5" />
               {notifications.length > 0 && (
@@ -219,7 +219,7 @@ export default function ParentNav({ studentId, logoUrl }: { studentId: string | 
                   className="fixed inset-0 z-40"
                   onClick={() => setShowNotifications(false)}
                 />
-                <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-[#0f1729]/95 backdrop-blur-xl border border-slate-800 rounded-2xl shadow-2xl overflow-hidden z-50 animate-in fade-in slide-in-from-top-2">
+                <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-[#090d16]/95 backdrop-blur-xl border border-slate-800 rounded-2xl shadow-2xl overflow-hidden z-50 animate-in fade-in slide-in-from-top-2">
                   <div className="px-4 py-3 border-b border-slate-800 bg-slate-800/50">
                     <h3 className="font-semibold text-sm flex items-center justify-between">
                       Notifications
@@ -252,7 +252,7 @@ export default function ParentNav({ studentId, logoUrl }: { studentId: string | 
                       ))
                     ) : (
                       <div className="px-4 py-12 text-center flex flex-col items-center justify-center gap-2">
-                        <div className="w-12 h-12 rounded-full bg-[#1a2540] flex items-center justify-center">
+                        <div className="w-12 h-12 rounded-full bg-[#111827] flex items-center justify-center">
                           <Bell className="w-6 h-6 text-slate-400" />
                         </div>
                         <p className="text-sm text-slate-400 mt-2 font-medium">You're all caught up!</p>
