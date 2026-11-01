@@ -1,0 +1,24 @@
+name: Supabase & Vercel Keep-Alive
+
+on:
+  schedule:
+    # Runs every 2 days at 00:00 UTC (05:30 AM IST)
+    - cron: '0 0 */2 * *'
+  workflow_dispatch: # Allows manual trigger from GitHub anytime
+
+jobs:
+  ping:
+    name: Ping StudentIQ Database
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send keep-alive ping to Supabase & Vercel
+        run: |
+          echo "Pinging StudentIQ Health Endpoint..."
+          RESPONSE=$(curl -s -w "\nHTTP_STATUS:%{http_code}" https://studentiq.vercel.app/api/health)
+          echo "$RESPONSE"
+          STATUS=$(echo "$RESPONSE" | grep "HTTP_STATUS" | cut -d':' -f2)
+          if [ "$STATUS" -ne 200 ]; then
+            echo "Health check failed with status $STATUS"
+            exit 1
+          fi
+          echo "Keep-alive ping successful! Database is awake and active."
