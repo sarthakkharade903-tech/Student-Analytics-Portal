@@ -4,7 +4,8 @@
     "namespace": "android_app",
     "package_name": "com.studentiq.portal",
     "sha256_cert_fingerprints": [
-      "7B:D1:8C:B1:7E:E8:EC:C8:8A:45:68:76:B6:18:DF:EC:DE:46:6E:2F:C1:EE:70:AD:16:E5:07:1A:DE:DB:B3:51"
+      "7B:D1:8C:B1:7E:E8:EC:C8:8A:45:68:76:B6:18:DF:EC:DE:46:6E:2F:C1:EE:70:AD:16:E5:07:1A:DE:DB:B3:51",
+      "A5:24:ED:98:C1:6B:8F:5B:BF:F9:99:FA:D1:7F:A8:71:8E:B3:7B:74:68:F8:A6:13:E4:60:B6:E8:51:A4:90:CA"
     ]
   }
 }]
